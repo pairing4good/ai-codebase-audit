@@ -1,8 +1,8 @@
 # AI Codebase Audit System
 
-This project provides a reusable, production-ready analytical system for auditing JavaScript/TypeScript, Java, and .NET codebases with maximum accuracy.
+This project provides a reusable, production-ready analytical system for auditing JavaScript/TypeScript, Java, .NET, and Python codebases with maximum accuracy.
 
-**Current Status**: All three stacks fully implemented and production-ready!
+**Current Status**: All four stacks fully implemented and production-ready!
 
 ## System Overview
 
@@ -152,6 +152,15 @@ When compacting this context, preserve:
 - **Focus Areas**: ASP.NET Core Identity, CSRF, XSS in Razor, EF Core SQL injection, async/await patterns
 - **Command**: `/audit-dotnet`
 
+### Python ✅ (Fully Implemented)
+- **Status**: Production-ready with complete 7-stage pipeline (Stage 0 = environment validation)
+- **Prerequisites**: Python 3.8+ (recommend 3.11+), pip/poetry/pipenv, requirements.txt/pyproject.toml/setup.py
+- **Stage 0**: Validates Python installed, creates venv, installs dependencies (**PROMPTS on dependency failures**)
+- **Static Tools**: Semgrep, Bandit, Pylint, mypy, Safety, Radon, Snyk, Trivy, SonarQube
+- **Frameworks**: Django, Flask, FastAPI, general Python applications
+- **Focus Areas**: SQL injection, command injection, insecure deserialization (pickle), Django/Flask security, hardcoded secrets
+- **Command**: `/audit-python`
+
 ## Severity Classification
 
 - **Critical**: Security vulnerabilities, data loss risks, system-breaking bugs
@@ -170,6 +179,9 @@ When compacting this context, preserve:
 
 # Run full .NET audit
 /audit-dotnet
+
+# Run full Python audit
+/audit-python
 
 # All skills automatically execute these 7 stages:
 # 0. Validate build tools and compile/install dependencies (STOPS if missing/fails)
