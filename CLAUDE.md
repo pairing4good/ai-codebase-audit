@@ -1,6 +1,8 @@
 # AI Codebase Audit System
 
-This project provides a reusable, production-ready analytical system for auditing JavaScript, Java, and .NET codebases with maximum accuracy.
+This project provides a reusable, production-ready analytical system for auditing JavaScript/TypeScript codebases with maximum accuracy.
+
+**Current Status**: JavaScript/TypeScript fully implemented | Java and .NET planned for future releases
 
 ## System Overview
 
@@ -114,20 +116,26 @@ When compacting this context, preserve:
 
 ## Tech Stack Support
 
-### JavaScript/TypeScript
-- **Static Tools**: ESLint + security plugins, SonarQube, npm audit, Istanbul coverage
+### JavaScript/TypeScript ✅ (Fully Implemented)
+- **Status**: Production-ready with complete 6-stage pipeline
+- **Static Tools**: ESLint + security plugins, Semgrep, Snyk, SonarQube, npm audit, Trivy, Coverage
 - **Frameworks**: React, Vue, Angular, Node.js, Express, Next.js
 - **Focus Areas**: Async patterns, promise handling, dependency management
+- **Command**: `/audit-javascript`
 
-### Java
+### Java 📋 (Planned)
+- **Status**: Not yet implemented (use JavaScript implementation as template)
 - **Static Tools**: SpotBugs + Find Security Bugs, PMD, SonarQube, OWASP Dependency Check
 - **Frameworks**: Spring, Spring Boot, Jakarta EE, Hibernate
 - **Focus Areas**: Concurrency, memory management, exception handling
+- **Command**: `/audit-java` (not available yet)
 
-### .NET (C#/F#)
+### .NET (C#/F#) 📋 (Planned)
+- **Status**: Not yet implemented (use JavaScript implementation as template)
 - **Static Tools**: Roslyn analyzers, Security Code Scan, SonarQube, dotnet-outdated
 - **Frameworks**: ASP.NET Core, Entity Framework, Blazor
 - **Focus Areas**: LINQ patterns, async/await, dependency injection
+- **Command**: `/audit-dotnet` (not available yet)
 
 ## Severity Classification
 
@@ -139,17 +147,23 @@ When compacting this context, preserve:
 ## Usage Examples
 
 ```bash
-# Auto-detect tech stack and run full audit
+# Run full JavaScript/TypeScript audit (currently the only available option)
 /audit-javascript
 
-# Run specific stages only (for debugging/refinement)
-/audit-java --stages=1,2,3  # Stop after static analysis
+# The skill will automatically:
+# 1. Generate architecture artifacts
+# 2. Run 4 parallel independent agent analyses
+# 3. Execute static analysis tools (ESLint, Semgrep, Snyk, npm audit, etc.)
+# 4. Reconcile findings with convergence analysis
+# 5. Run adversarial challenge to eliminate false positives
+# 6. Generate top 10 prioritized improvements
 
-# Custom output directory
-/audit-dotnet --output=/reports/2024-02/
-
-# Focus on specific severity
-/audit-javascript --severity=critical,high
+# Output deliverables:
+# - ANALYSIS-REPORT.md (executive summary with top 10)
+# - ARCHITECTURE-OVERVIEW.md (system documentation)
+# - FINDINGS-DETAILED.json (complete structured data)
+# - CONFIDENCE-MATRIX.md (evidence transparency)
+# - .analysis/ directory (all stage-by-stage outputs)
 ```
 
 ## Custom Memory Sections

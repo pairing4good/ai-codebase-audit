@@ -1,6 +1,8 @@
 # AI Codebase Audit System
 
-A production-ready, reusable analytical system for auditing JavaScript, Java, and .NET codebases with maximum accuracy using Claude Code.
+A production-ready, reusable analytical system for auditing JavaScript/TypeScript codebases with maximum accuracy using Claude Code.
+
+**⚡ Status**: JavaScript/TypeScript fully implemented and ready to use | Java and .NET planned for future releases
 
 ## Overview
 
@@ -18,9 +20,8 @@ This system uses a **6-stage analytical funnel** with **independent sub-agents**
 ### Prerequisites
 
 - [Claude Code](https://code.claude.com) installed
-- For JavaScript: Node.js, npm, ESLint
-- For Java: JDK, Maven/Gradle, SpotBugs
-- For .NET: .NET SDK, dotnet CLI
+- For JavaScript/TypeScript: Node.js, npm
+- (Optional) Static analysis tools: ESLint, Semgrep, Snyk, SonarQube
 
 ### Installation
 
@@ -32,11 +33,14 @@ This system uses a **6-stage analytical funnel** with **independent sub-agents**
 ### Basic Usage
 
 ```bash
-# From within the target repository you want to audit
-/audit-javascript    # For JavaScript/TypeScript projects
-/audit-java          # For Java projects
-/audit-dotnet        # For C#/F# projects
+# Navigate to the JavaScript/TypeScript repository you want to audit
+cd /path/to/your/project
+
+# Run the audit skill
+/audit-javascript
 ```
+
+The audit will run automatically through all 6 stages and produce comprehensive deliverables.
 
 ### What You Get
 
@@ -73,13 +77,13 @@ Each agent produces an independent longlist with zero knowledge of what the othe
 **Output**: `.analysis/stage2-parallel-analysis/`
 
 ### Stage 3: Static Analysis
-Runs stack-specific static analysis tools in parallel:
+Runs JavaScript/TypeScript static analysis tools in parallel:
 
-**JavaScript**: ESLint + security plugins, SonarQube, npm audit, Istanbul coverage
-**Java**: SpotBugs + Find Security Bugs, PMD, SonarQube, OWASP Dependency Check
-**.NET**: Roslyn analyzers, Security Code Scan, SonarQube, dotnet-outdated
+**Tools**: ESLint + security plugins, Semgrep (OWASP/CWE/JWT/API rulesets), Snyk Code, Snyk Open Source, SonarQube, npm audit, Trivy, Coverage
 
-Results are unified into a standardized JSON format for easy consumption.
+The system gracefully handles missing tools - if a tool isn't installed, it continues with available tools.
+
+Results are unified into a standardized JSON format with overlap detection showing which findings converged across multiple tools.
 
 **Output**: `.analysis/stage3-static-analysis/`
 
@@ -159,8 +163,9 @@ Edit the scoring weights in the Stage 6 synthesis:
 ```
 
 ### Running Individual Stages
-For debugging or iterative refinement:
+Currently, the skill runs all 6 stages automatically. Future versions will support:
 ```bash
+# Planned features (not yet implemented):
 /audit-javascript --stages=1      # Just artifacts
 /audit-javascript --stages=1,2,3  # Stop after static analysis
 ```
@@ -173,20 +178,31 @@ Add your own tools by:
 
 ## Tech Stack Details
 
-### JavaScript/TypeScript Support
+### JavaScript/TypeScript Support ✅ (Fully Implemented)
+- **Status**: Production-ready with complete 6-stage pipeline
 - **Frameworks**: React, Vue, Angular, Node.js, Express, Next.js, NestJS
-- **Tools**: ESLint, eslint-plugin-security, eslint-plugin-sonarjs, SonarQube, npm audit, Istanbul/nyc
+- **Static Tools**:
+  - ESLint + eslint-plugin-security + eslint-plugin-sonarjs
+  - Semgrep (OWASP Top 10, CWE Top 25, JWT, API Security rulesets)
+  - Snyk Code (dataflow analysis) + Snyk Open Source (CVE detection)
+  - SonarQube
+  - npm audit
+  - Trivy (IaC and container scanning)
+  - Coverage (Istanbul/nyc)
+- **Tool Overlap Detection**: Identifies findings converged across multiple tools with confidence scoring
 - **Focus**: Async patterns, promise handling, dependency vulnerabilities, security misconfigurations
 
-### Java Support
-- **Frameworks**: Spring, Spring Boot, Jakarta EE, Hibernate, Micronaut
-- **Tools**: SpotBugs, Find Security Bugs, PMD, SonarQube, OWASP Dependency Check, JaCoCo
-- **Focus**: Concurrency issues, memory leaks, exception handling, SQL injection, XXE
+### Java Support 📋 (Planned)
+- **Status**: Not yet implemented - use JavaScript implementation as template
+- **Planned Frameworks**: Spring, Spring Boot, Jakarta EE, Hibernate, Micronaut
+- **Planned Tools**: SpotBugs, Find Security Bugs, PMD, SonarQube, OWASP Dependency Check, JaCoCo
+- **Planned Focus**: Concurrency issues, memory leaks, exception handling, SQL injection, XXE
 
-### .NET Support
-- **Frameworks**: ASP.NET Core, Entity Framework, Blazor, SignalR
-- **Tools**: Roslyn analyzers, Security Code Scan, SonarQube, dotnet-outdated, coverlet
-- **Focus**: LINQ patterns, async/await misuse, dependency injection, authentication
+### .NET Support 📋 (Planned)
+- **Status**: Not yet implemented - use JavaScript implementation as template
+- **Planned Frameworks**: ASP.NET Core, Entity Framework, Blazor, SignalR
+- **Planned Tools**: Roslyn analyzers, Security Code Scan, SonarQube, dotnet-outdated, coverlet
+- **Planned Focus**: LINQ patterns, async/await misuse, dependency injection, authentication
 
 ## Customizing Output Formats
 
