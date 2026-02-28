@@ -1,8 +1,8 @@
 # AI Codebase Audit System
 
-A production-ready, reusable analytical system for auditing JavaScript/TypeScript codebases with maximum accuracy using Claude Code.
+A production-ready, reusable analytical system for auditing JavaScript/TypeScript, Java, and .NET codebases with maximum accuracy using Claude Code.
 
-**⚡ Status**: JavaScript/TypeScript fully implemented and ready to use | Java and .NET planned for future releases
+**⚡ Status**: All three stacks fully implemented and ready to use!
 
 ## Overview
 
@@ -192,17 +192,36 @@ Add your own tools by:
 - **Tool Overlap Detection**: Identifies findings converged across multiple tools with confidence scoring
 - **Focus**: Async patterns, promise handling, dependency vulnerabilities, security misconfigurations
 
-### Java Support 📋 (Planned)
-- **Status**: Not yet implemented - use JavaScript implementation as template
-- **Planned Frameworks**: Spring, Spring Boot, Jakarta EE, Hibernate, Micronaut
-- **Planned Tools**: SpotBugs, Find Security Bugs, PMD, SonarQube, OWASP Dependency Check, JaCoCo
-- **Planned Focus**: Concurrency issues, memory leaks, exception handling, SQL injection, XXE
+### Java Support ✅ (Fully Implemented)
+- **Status**: Production-ready with complete 7-stage pipeline (includes Stage 0 build validation)
+- **Frameworks**: Spring, Spring Boot, Jakarta EE, Hibernate, Micronaut
+- **Static Tools**:
+  - Semgrep (OWASP Top 10, CWE Top 25, JWT/OAuth, Spring Security rulesets)
+  - SpotBugs + Find Security Bugs (OWASP Top 10, bytecode analysis)
+  - PMD (Code quality, complexity detection)
+  - Checkstyle (Code style and consistency)
+  - Snyk Code (SAST) + Snyk Open Source (CVE detection)
+  - OWASP Dependency-Check (CVE scanning)
+  - Trivy (Container/IaC scanning)
+  - SonarQube (Comprehensive analysis)
+- **Tool Overlap Detection**: Identifies findings converged across 8 tools with confidence scoring
+- **Focus**: Spring Security, SQL injection, XXE, deserialization, concurrency, JPA performance
+- **Command**: `/audit-java`
 
-### .NET Support 📋 (Planned)
-- **Status**: Not yet implemented - use JavaScript implementation as template
-- **Planned Frameworks**: ASP.NET Core, Entity Framework, Blazor, SignalR
-- **Planned Tools**: Roslyn analyzers, Security Code Scan, SonarQube, dotnet-outdated, coverlet
-- **Planned Focus**: LINQ patterns, async/await misuse, dependency injection, authentication
+### .NET Support ✅ (Fully Implemented)
+- **Status**: Production-ready with complete 7-stage pipeline (includes Stage 0 build validation)
+- **Frameworks**: ASP.NET Core, Entity Framework, Blazor, SignalR
+- **Static Tools**:
+  - Semgrep (OWASP Top 10, CWE Top 25, JWT/OAuth for C#)
+  - Roslyn Analyzers (Built-in code quality, runs during build)
+  - Security Code Scan (OWASP Top 10 for .NET, NuGet analyzer)
+  - Snyk Code (SAST) + Snyk Open Source (CVE detection)
+  - dotnet-outdated (Dependency version checking)
+  - Trivy (Container/IaC scanning)
+  - SonarQube (Comprehensive analysis)
+- **Tool Overlap Detection**: Identifies findings converged across 7 tools with confidence scoring
+- **Focus**: ASP.NET Core Identity, CSRF, XSS in Razor, EF Core SQL injection, async/await patterns
+- **Command**: `/audit-dotnet`
 
 ## Customizing Output Formats
 

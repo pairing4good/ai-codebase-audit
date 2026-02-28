@@ -53,19 +53,19 @@ code .  # or however you launch your editor with Claude Code
 In Claude Code, run the appropriate command for your project type:
 
 ```bash
-# For JavaScript/TypeScript projects (✅ Currently Available)
+# For JavaScript/TypeScript projects (✅ Fully Implemented)
 /audit-javascript
 
-# For Java projects (📋 Planned - Not Yet Implemented)
+# For Java projects (✅ Fully Implemented)
 /audit-java
 
-# For .NET/C#/F# projects (📋 Planned - Not Yet Implemented)
+# For .NET/C#/F# projects (✅ Fully Implemented)
 /audit-dotnet
 ```
 
-**Note**: Currently only `/audit-javascript` is implemented. Java and .NET support are planned for future releases.
+**All three stacks are now fully implemented!** Each runs through 7 stages (Stage 0-6) including build validation.
 
-That's it! The audit will run automatically through all 6 stages.
+The audit will run automatically through all stages.
 
 ---
 
@@ -95,17 +95,17 @@ In Claude Code, add both folders to your workspace.
 Navigate to any project in your workspace and run the appropriate command:
 
 ```bash
-# For JavaScript/TypeScript projects (✅ Currently Available)
+# For JavaScript/TypeScript projects (✅ Fully Implemented)
 /audit-javascript
 
-# For Java projects (📋 Planned - Not Yet Implemented)
+# For Java projects (✅ Fully Implemented)
 /audit-java
 
-# For .NET/C#/F# projects (📋 Planned - Not Yet Implemented)
+# For .NET/C#/F# projects (✅ Fully Implemented)
 /audit-dotnet
 ```
 
-**Note**: Currently only `/audit-javascript` is implemented. Java and .NET support are planned for future releases.
+**All three stacks are now fully implemented!**
 
 The skills and agents from the audit system will be available to all projects in the workspace.
 
@@ -518,14 +518,10 @@ cp -r /path/to/ai-codebase-audit/.claude .
 code .
 
 # 3. Run the audit (in Claude Code)
-# For JavaScript/TypeScript (✅ Available Now):
-/audit-javascript
-
-# For Java (📋 Coming Soon):
-# /audit-java
-
-# For .NET/C# (📋 Coming Soon):
-# /audit-dotnet
+# All three stacks are now available:
+/audit-javascript  # For JavaScript/TypeScript
+/audit-java        # For Java/Spring Boot
+/audit-dotnet      # For .NET/ASP.NET Core
 
 # 4. Wait 15-30 minutes
 
@@ -535,7 +531,7 @@ open ANALYSIS-REPORT.md
 
 **That's it!** You now have a comprehensive analysis of your codebase with prioritized improvements.
 
-**Current Status**: Only JavaScript/TypeScript is currently supported. Java and .NET implementations are planned for future releases.
+**Current Status**: JavaScript/TypeScript, Java, and .NET are all fully implemented and production-ready!
 
 ---
 
