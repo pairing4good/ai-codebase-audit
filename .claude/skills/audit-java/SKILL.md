@@ -16,9 +16,9 @@ Execute all 7 stages sequentially (Stage 0 is NEW - build validation), using spe
 
 ---
 
-## Stage 0: Build Validation (CRITICAL - NEW FOR JAVA)
+## Stage 0: Build Validation (CRITICAL - MANDATORY)
 
-**Objective**: Ensure the Java project compiles before analysis begins. Many static analysis tools (SpotBugs, PMD) require compiled bytecode.
+**Objective**: Ensure Java/JDK is installed and the project compiles before analysis. **DO NOT PROCEED** without a successful build.
 
 ### Your Actions
 
@@ -26,66 +26,148 @@ Execute all 7 stages sequentially (Stage 0 is NEW - build validation), using spe
 
 2. Mark Stage 0 as in_progress
 
-3. Detect build tool:
+3. **Check for Java/JDK** (MANDATORY - STOP IF MISSING):
+
+```bash
+if ! command -v java >/dev/null 2>&1; then
+  echo "❌ ERROR: Java (JDK) is not installed!"
+  echo ""
+  echo "Java/JDK is required to:"
+  echo "  - Build the project (validate it compiles)"
+  echo "  - Run SpotBugs, PMD, Checkstyle (bytecode analysis)"
+  echo "  - Execute Maven/Gradle build tools"
+  echo "  - Ensure accurate analysis of Java code"
+  echo ""
+  echo "Please install Java JDK 11+ (recommend JDK 17 or 21):"
+  echo "  • macOS: brew install openjdk@17"
+  echo "  • Linux (Ubuntu): sudo apt install openjdk-17-jdk"
+  echo "  • Linux (RHEL): sudo yum install java-17-openjdk-devel"
+  echo "  • Windows: https://adoptium.net/"
+  echo ""
+  echo "After installation, verify with: java -version"
+  echo ""
+  echo "⛔ Audit cannot proceed without Java/JDK."
+  exit 1
+fi
+```
+
+4. Verify Java version:
+
+```bash
+echo "✅ Java detected: $(java -version 2>&1 | head -1)"
+```
+
+5. Detect build tool (STOP IF MISSING):
 
 ```bash
 # Check which build tool is present
 if [ -f "pom.xml" ]; then
-  echo "Maven project detected"
+  if ! command -v mvn >/dev/null 2>&1; then
+    echo "❌ ERROR: Maven project detected (pom.xml) but mvn is not installed!"
+    echo ""
+    echo "Install Maven:"
+    echo "  • macOS: brew install maven"
+    echo "  • Linux: sudo apt install maven"
+    echo "  • Windows: https://maven.apache.org/download.cgi"
+    echo ""
+    echo "⛔ Audit cannot proceed without Maven."
+    exit 1
+  fi
+  echo "✅ Maven project detected: pom.xml"
   BUILD_TOOL="maven"
 elif [ -f "build.gradle" ] || [ -f "build.gradle.kts" ]; then
-  echo "Gradle project detected"
+  if [ ! -f "./gradlew" ]; then
+    if ! command -v gradle >/dev/null 2>&1; then
+      echo "❌ ERROR: Gradle project detected but ./gradlew wrapper not found and gradle not in PATH!"
+      echo ""
+      echo "Install Gradle:"
+      echo "  • macOS: brew install gradle"
+      echo "  • Linux: sudo apt install gradle"
+      echo "  • Windows: https://gradle.org/install/"
+      echo ""
+      echo "⛔ Audit cannot proceed without Gradle."
+      exit 1
+    fi
+  fi
+  echo "✅ Gradle project detected: build.gradle"
   BUILD_TOOL="gradle"
 else
-  echo "ERROR: No pom.xml or build.gradle found. Is this a Java project?"
+  echo "❌ ERROR: No Java build files found!"
+  echo "Expected to find: pom.xml (Maven) or build.gradle (Gradle)"
+  echo "Is this a Java project? Change to the project directory and try again."
   exit 1
 fi
 ```
 
-4. Run build with compilation (skip tests for speed):
+6. Run build with compilation (skip tests for speed):
 
-**For Maven**:
 ```bash
-mvn clean compile -DskipTests -q
-BUILD_STATUS=$?
+echo "Building project to verify it compiles..."
+
+if [ "$BUILD_TOOL" = "maven" ]; then
+  mvn clean compile -DskipTests -q
+  BUILD_STATUS=$?
+elif [ "$BUILD_TOOL" = "gradle" ]; then
+  if [ -f "./gradlew" ]; then
+    ./gradlew clean compileJava compileTestJava --no-daemon --quiet
+  else
+    gradle clean compileJava compileTestJava --no-daemon --quiet
+  fi
+  BUILD_STATUS=$?
+fi
 ```
 
-**For Gradle**:
-```bash
-./gradlew clean compileJava compileTestJava --no-daemon --quiet
-BUILD_STATUS=$?
-```
-
-5. Check build status:
+7. Check build status (STOP IF FAILED):
 
 ```bash
 if [ $BUILD_STATUS -ne 0 ]; then
-  echo "ERROR: Project does not compile. Please fix compilation errors before running the audit."
-  echo "Run 'mvn compile' or './gradlew compileJava' to see detailed errors."
+  echo ""
+  echo "❌ ERROR: Project does not compile!"
+  echo ""
+  echo "Build errors must be fixed before running the audit."
+  echo "Reasons:"
+  echo "  - SpotBugs analyzes .class files (requires compilation)"
+  echo "  - PMD benefits from resolved classpaths"
+  echo "  - Cannot analyze code that doesn't build"
+  echo ""
+  echo "To see detailed build errors, run:"
+  if [ "$BUILD_TOOL" = "maven" ]; then
+    echo "  mvn compile"
+  else
+    echo "  ./gradlew compileJava"
+  fi
+  echo ""
+  echo "⛔ Audit cannot proceed with build failures."
   exit 1
 fi
 ```
 
-6. Extract classpath for tools (used by SpotBugs, PMD):
+8. Extract classpath for tools (used by SpotBugs, PMD):
 
-**For Maven**:
 ```bash
-mvn dependency:build-classpath -Dmdep.outputFile=.analysis/classpath.txt -q
+mkdir -p .analysis
+
+if [ "$BUILD_TOOL" = "maven" ]; then
+  mvn dependency:build-classpath -Dmdep.outputFile=.analysis/classpath.txt -q
+elif [ "$BUILD_TOOL" = "gradle" ]; then
+  if [ -f "./gradlew" ]; then
+    ./gradlew dependencies --configuration compileClasspath > .analysis/gradle-dependencies.txt
+  else
+    gradle dependencies --configuration compileClasspath > .analysis/gradle-dependencies.txt
+  fi
+fi
 ```
 
-**For Gradle**:
-```bash
-./gradlew dependencies --configuration compileClasspath > .analysis/gradle-dependencies.txt
-```
-
-7. Inform user:
+9. Inform user:
 ```
 ✅ Build successful! Java classes compiled.
 📦 Build tool: [Maven/Gradle]
 📂 Compiled output ready for static analysis tools.
 ```
 
-8. Mark Stage 0 as completed
+10. Mark Stage 0 as completed
+
+**CRITICAL**: If any of steps 3, 5, or 7 fail, **STOP IMMEDIATELY** and inform the user. Do NOT proceed to Stage 1.
 
 **Why this matters**:
 - SpotBugs analyzes .class files, not .java files
@@ -879,19 +961,29 @@ All stage-by-stage outputs available in `.analysis/`:
 
 ## Error Handling
 
-**If Stage 0 fails (build)**: STOP - Cannot analyze code that doesn't compile. Guide user to fix compilation errors.
+**If Stage 0 fails** (any of these):
+- ❌ Java/JDK not installed → **STOP** - Provide installation instructions, do NOT proceed
+- ❌ Maven/Gradle not installed → **STOP** - Provide installation instructions, do NOT proceed
+- ❌ No build files found → **STOP** - Verify this is a Java project
+- ❌ Build fails → **STOP** - Instruct user to fix build errors first
 
-**If Stage 1 fails**: STOP - Cannot continue without architecture artifacts
+**DO NOT**:
+- Proceed with "partial analysis" when build fails
+- Try to analyze without Java/JDK or build tools
+- Suggest workarounds to skip build validation
 
-**If Stage 2 agent fails**: Log warning, continue with available agents (minimum 2 required)
+**ALWAYS**:
+- Stop immediately when Stage 0 validation fails
+- Provide clear installation/fix instructions
+- Wait for user to resolve the issue before proceeding
 
-**If Stage 3 tools unavailable**: Continue with agent-only analysis (note lower confidence in report)
-
-**If Stage 4 reconciliation fails**: STOP - Cannot continue to adversarial challenge
-
-**If Stage 5 adversarial fails**: Fallback to Stage 4 reconciled findings (note in report)
-
-**If Stage 6 fails**: Debug and retry - all inputs should be ready
+**For other stages**:
+- **Stage 1 fails**: STOP - Cannot continue without architecture artifacts
+- **Stage 2 agent fails**: Log warning, continue with available agents (minimum 2 required)
+- **Stage 3 tools unavailable**: Continue with agent-only analysis (note lower confidence in report)
+- **Stage 4 reconciliation fails**: STOP - Cannot continue to adversarial challenge
+- **Stage 5 adversarial fails**: Fallback to Stage 4 reconciled findings (note in report)
+- **Stage 6 fails**: Debug and retry - all inputs should be ready
 
 ---
 

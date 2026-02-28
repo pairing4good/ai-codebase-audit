@@ -16,9 +16,9 @@ Execute all 7 stages sequentially (Stage 0 is build validation), using specializ
 
 ---
 
-## Stage 0: Build Validation (CRITICAL - NEW FOR .NET)
+## Stage 0: Build Validation (CRITICAL - MANDATORY)
 
-**Objective**: Ensure the .NET project compiles before analysis. Roslyn analyzers run during build.
+**Objective**: Ensure .NET SDK is installed and the project compiles before analysis. **DO NOT PROCEED** without a successful build.
 
 ### Your Actions
 
@@ -26,44 +26,98 @@ Execute all 7 stages sequentially (Stage 0 is build validation), using specializ
 
 2. Mark Stage 0 as in_progress
 
-3. Detect .NET project:
+3. **Check for .NET SDK** (MANDATORY - STOP IF MISSING):
 
 ```bash
-# Check for .NET project files
-if ls *.csproj >/dev/null 2>&1 || ls *.fsproj >/dev/null 2>&1; then
-  echo ".NET project detected"
-else
-  echo "ERROR: No .csproj or .fsproj found. Is this a .NET project?"
+if ! command -v dotnet >/dev/null 2>&1; then
+  echo "❌ ERROR: .NET SDK is not installed!"
+  echo ""
+  echo "The .NET SDK is required to:"
+  echo "  - Build the project (validate it compiles)"
+  echo "  - Run Roslyn analyzers (built into dotnet build)"
+  echo "  - Execute dotnet-outdated (dependency analysis)"
+  echo "  - Ensure accurate analysis of C#/F# code"
+  echo ""
+  echo "Please install the .NET SDK:"
+  echo "  • macOS: brew install dotnet"
+  echo "  • Linux: https://learn.microsoft.com/en-us/dotnet/core/install/linux"
+  echo "  • Windows: https://dotnet.microsoft.com/download"
+  echo ""
+  echo "After installation, verify with: dotnet --version"
+  echo ""
+  echo "⛔ Audit cannot proceed without .NET SDK."
   exit 1
 fi
 ```
 
-4. Run build:
+4. Verify .NET SDK version:
 
 ```bash
+echo "✅ .NET SDK detected: $(dotnet --version)"
+```
+
+5. Detect .NET project:
+
+```bash
+# Check for .NET project files
+if ! (ls *.csproj >/dev/null 2>&1 || ls *.fsproj >/dev/null 2>&1 || ls *.sln >/dev/null 2>&1); then
+  echo "❌ ERROR: No .NET project files found (.csproj, .fsproj, or .sln)"
+  echo "Is this a .NET project? Change to the project directory and try again."
+  exit 1
+fi
+
+# Detect solution or project files
+if ls *.sln >/dev/null 2>&1; then
+  echo "✅ .NET solution detected: $(ls *.sln | head -1)"
+elif ls *.csproj >/dev/null 2>&1; then
+  echo "✅ .NET C# project detected: $(ls *.csproj | head -1)"
+elif ls *.fsproj >/dev/null 2>&1; then
+  echo "✅ .NET F# project detected: $(ls *.fsproj | head -1)"
+fi
+```
+
+6. Run restore and build:
+
+```bash
+echo "Restoring NuGet packages..."
 dotnet restore
+
+echo "Building project (Release configuration)..."
 dotnet build --no-restore --configuration Release
 BUILD_STATUS=$?
 ```
 
-5. Check build status:
+7. Check build status (STOP IF FAILED):
 
 ```bash
 if [ $BUILD_STATUS -ne 0 ]; then
-  echo "ERROR: Project does not compile. Please fix compilation errors before running the audit."
-  echo "Run 'dotnet build' to see detailed errors."
+  echo ""
+  echo "❌ ERROR: Project does not compile!"
+  echo ""
+  echo "Build errors must be fixed before running the audit."
+  echo "Reasons:"
+  echo "  - Roslyn analyzers run during compilation"
+  echo "  - Cannot analyze code that doesn't build"
+  echo "  - Static analysis tools require valid assemblies"
+  echo ""
+  echo "To see detailed build errors, run:"
+  echo "  dotnet build"
+  echo ""
+  echo "⛔ Audit cannot proceed with build failures."
   exit 1
 fi
 ```
 
-6. Inform user:
+8. Inform user:
 ```
 ✅ Build successful! .NET assemblies compiled.
 📦 Build configuration: Release
 📂 Compiled output ready for analysis.
 ```
 
-7. Mark Stage 0 as completed
+9. Mark Stage 0 as completed
+
+**CRITICAL**: If any of steps 3, 5, or 7 fail, **STOP IMMEDIATELY** and inform the user. Do NOT proceed to Stage 1.
 
 ---
 
@@ -439,9 +493,22 @@ All stage-by-stage outputs available in `.analysis/`:
 
 ## Error Handling
 
-**If Stage 0 fails (build)**: STOP - Cannot analyze code that doesn't compile
+**If Stage 0 fails** (any of these):
+- ❌ .NET SDK not installed → **STOP** - Provide installation instructions, do NOT proceed
+- ❌ No .NET project files found → **STOP** - Verify this is a .NET project
+- ❌ Build fails → **STOP** - Instruct user to fix build errors first
 
-(Rest same as Java)
+**DO NOT**:
+- Proceed with "partial analysis" when build fails
+- Try to analyze without .NET SDK
+- Suggest workarounds to skip build validation
+
+**ALWAYS**:
+- Stop immediately when Stage 0 validation fails
+- Provide clear installation/fix instructions
+- Wait for user to resolve the issue before proceeding
+
+(For other errors during Stages 1-6, continue with degraded capabilities but warn user)
 
 ---
 

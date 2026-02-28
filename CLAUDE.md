@@ -6,14 +6,20 @@ This project provides a reusable, production-ready analytical system for auditin
 
 ## System Overview
 
-The audit system uses a **6-stage analytical funnel** with **independent sub-agents** to eliminate bias and maximize finding confidence:
+The audit system uses a **7-stage analytical funnel** with **independent sub-agents** to eliminate bias and maximize finding confidence:
 
-1. **Stage 1: Artifact Generation** - Creates architecture diagrams and documentation
-2. **Stage 2: Parallel Independent Analysis** - 4 specialist agents analyze in isolation
-3. **Stage 3: Static Analysis** - Stack-specific tools provide objective metrics
-4. **Stage 4: Reconciliation** - Synthesizes findings with convergence analysis
-5. **Stage 5: Adversarial Challenge** - Independent agent challenges findings
-6. **Stage 6: Final Synthesis** - Produces top 10 prioritized improvements
+1. **Stage 0: Build Validation** - Ensures build tools installed and project compiles (**MANDATORY**)
+2. **Stage 1: Artifact Generation** - Creates architecture diagrams and documentation
+3. **Stage 2: Parallel Independent Analysis** - 4 specialist agents analyze in isolation
+4. **Stage 3: Static Analysis** - Stack-specific tools provide objective metrics
+5. **Stage 4: Reconciliation** - Synthesizes findings with convergence analysis
+6. **Stage 5: Adversarial Challenge** - Independent agent challenges findings
+7. **Stage 6: Final Synthesis** - Produces top 10 prioritized improvements
+
+**CRITICAL**: Stage 0 is mandatory. The audit will **STOP** if:
+- Required build tools are not installed (.NET SDK, Java/Maven/Gradle, or Node.js)
+- Project files are missing (no .csproj/.sln, no pom.xml/build.gradle, or no package.json)
+- Project does not compile/build (.NET and Java require successful compilation)
 
 ## Project Conventions
 
@@ -54,6 +60,7 @@ target-repo/
     │   ├── ARCHITECTURE-OVERVIEW.md     # System architecture docs
     │   ├── FINDINGS-DETAILED.json       # Complete structured data
     │   └── CONFIDENCE-MATRIX.md         # Evidence transparency matrix
+    ├── stage0-build-validation/ # Build logs and validation (NEW)
     ├── stage1-artifacts/        # Architecture diagrams and tech debt map
     ├── stage2-parallel-analysis/  # 4 independent agent analyses
     ├── stage3-static-analysis/  # Static tool results
@@ -109,7 +116,8 @@ target-repo/
 ## Compact Instructions
 
 When compacting this context, preserve:
-- 6-stage funnel structure and sequencing
+- 7-stage funnel structure and sequencing (including Stage 0 build validation)
+- Stage 0 is MANDATORY - audit stops if build tools missing or project doesn't compile
 - Independence requirement for Stage 2 agents
 - Output format requirements (file:line, evidence sources, confidence levels)
 - Deliverables structure (4 top-level files + .analysis/ directory)
@@ -118,7 +126,9 @@ When compacting this context, preserve:
 ## Tech Stack Support
 
 ### JavaScript/TypeScript ✅ (Fully Implemented)
-- **Status**: Production-ready with complete 6-stage pipeline
+- **Status**: Production-ready with complete 7-stage pipeline (Stage 0 = dependency validation)
+- **Prerequisites**: Node.js (18+), npm/yarn/pnpm, package.json
+- **Stage 0**: Validates Node.js installed, installs dependencies, attempts build if build script present
 - **Static Tools**: ESLint + security plugins, Semgrep, Snyk, SonarQube, npm audit, Trivy, Coverage
 - **Frameworks**: React, Vue, Angular, Node.js, Express, Next.js
 - **Focus Areas**: Async patterns, promise handling, dependency management
@@ -126,6 +136,8 @@ When compacting this context, preserve:
 
 ### Java ✅ (Fully Implemented)
 - **Status**: Production-ready with complete 7-stage pipeline (Stage 0 = build validation)
+- **Prerequisites**: Java/JDK 11+ (recommend 17+), Maven or Gradle, pom.xml or build.gradle
+- **Stage 0**: Validates Java/JDK installed, validates Maven/Gradle, compiles project (**STOPS if build fails**)
 - **Static Tools**: Semgrep, SpotBugs + Find Security Bugs, PMD, Checkstyle, Snyk, OWASP Dependency-Check, Trivy, SonarQube
 - **Frameworks**: Spring, Spring Boot, Jakarta EE, Hibernate, Micronaut
 - **Focus Areas**: Spring Security, SQL injection, XXE, deserialization, concurrency, JPA performance
@@ -133,6 +145,8 @@ When compacting this context, preserve:
 
 ### .NET (C#/F#) ✅ (Fully Implemented)
 - **Status**: Production-ready with complete 7-stage pipeline (Stage 0 = build validation)
+- **Prerequisites**: .NET SDK 6.0+, .csproj/.fsproj/.sln files
+- **Stage 0**: Validates .NET SDK installed, compiles project with dotnet build (**STOPS if build fails**)
 - **Static Tools**: Semgrep, Roslyn Analyzers, Security Code Scan, Snyk, dotnet-outdated, Trivy, SonarQube
 - **Frameworks**: ASP.NET Core, Entity Framework, Blazor, SignalR
 - **Focus Areas**: ASP.NET Core Identity, CSRF, XSS in Razor, EF Core SQL injection, async/await patterns
@@ -148,13 +162,20 @@ When compacting this context, preserve:
 ## Usage Examples
 
 ```bash
-# Run full JavaScript/TypeScript audit (currently the only available option)
+# Run full JavaScript/TypeScript audit
 /audit-javascript
 
-# The skill will automatically:
+# Run full Java audit
+/audit-java
+
+# Run full .NET audit
+/audit-dotnet
+
+# All skills automatically execute these 7 stages:
+# 0. Validate build tools and compile/install dependencies (STOPS if missing/fails)
 # 1. Generate architecture artifacts
 # 2. Run 4 parallel independent agent analyses
-# 3. Execute static analysis tools (ESLint, Semgrep, Snyk, npm audit, etc.)
+# 3. Execute static analysis tools (stack-specific)
 # 4. Reconcile findings with convergence analysis
 # 5. Run adversarial challenge to eliminate false positives
 # 6. Generate top 10 prioritized improvements

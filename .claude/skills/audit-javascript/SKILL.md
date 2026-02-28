@@ -6,13 +6,178 @@ user-invocable: true
 
 # JavaScript Codebase Audit - Executable Orchestration
 
-You are orchestrating a complete 6-stage analytical funnel to produce the top 10 highest-priority improvements for this JavaScript/TypeScript codebase.
+You are orchestrating a complete 7-stage analytical funnel to produce the top 10 highest-priority improvements for this JavaScript/TypeScript codebase.
 
 ## Your Mission
 
-Execute all 6 stages sequentially, using specialized agents at each stage. Track progress with TodoWrite and present evaluation checkpoints to the user after key stages.
+Execute all 7 stages sequentially (Stage 0 is build/dependency validation), using specialized agents at each stage. Track progress with TodoWrite and present evaluation checkpoints to the user after key stages.
 
 **IMPORTANT**: You MUST actually execute this audit, not just describe what would happen. Use the Task tool to invoke agents, Bash tool to run commands, and Write tool to create outputs.
+
+---
+
+## Stage 0: Build and Dependency Validation (CRITICAL - MANDATORY)
+
+**Objective**: Ensure Node.js is installed and dependencies are available before analysis. **DO NOT PROCEED** without successful dependency installation.
+
+### Your Actions
+
+1. Create todo tracking with all 7 stages (including Stage 0)
+
+2. Mark Stage 0 as in_progress
+
+3. **Check for Node.js** (MANDATORY - STOP IF MISSING):
+
+```bash
+if ! command -v node >/dev/null 2>&1; then
+  echo "❌ ERROR: Node.js is not installed!"
+  echo ""
+  echo "Node.js is required to:"
+  echo "  - Install and verify dependencies (npm/yarn/pnpm)"
+  echo "  - Run build scripts and validate project setup"
+  echo "  - Execute static analysis tools (ESLint, etc.)"
+  echo "  - Ensure accurate analysis of JavaScript/TypeScript code"
+  echo ""
+  echo "Please install Node.js (recommend LTS version 18+ or 20+):"
+  echo "  • macOS: brew install node"
+  echo "  • Linux (Ubuntu): sudo apt install nodejs npm"
+  echo "  • Linux (using nvm): curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash && nvm install --lts"
+  echo "  • Windows: https://nodejs.org/en/download/"
+  echo ""
+  echo "After installation, verify with: node --version"
+  echo ""
+  echo "⛔ Audit cannot proceed without Node.js."
+  exit 1
+fi
+```
+
+4. Verify Node.js version:
+
+```bash
+echo "✅ Node.js detected: $(node --version)"
+echo "✅ npm version: $(npm --version)"
+```
+
+5. Detect package manager and project files (STOP IF MISSING):
+
+```bash
+# Check for JavaScript/TypeScript project
+if [ -f "package.json" ]; then
+  echo "✅ JavaScript/TypeScript project detected: package.json found"
+else
+  echo "❌ ERROR: No package.json found!"
+  echo "Is this a JavaScript/TypeScript project? Change to the project directory and try again."
+  exit 1
+fi
+
+# Detect package manager
+if [ -f "package-lock.json" ]; then
+  echo "✅ Package manager: npm (package-lock.json detected)"
+  PKG_MANAGER="npm"
+elif [ -f "yarn.lock" ]; then
+  if ! command -v yarn >/dev/null 2>&1; then
+    echo "⚠️ WARNING: yarn.lock found but yarn not installed. Will use npm instead."
+    PKG_MANAGER="npm"
+  else
+    echo "✅ Package manager: yarn (yarn.lock detected)"
+    PKG_MANAGER="yarn"
+  fi
+elif [ -f "pnpm-lock.yaml" ]; then
+  if ! command -v pnpm >/dev/null 2>&1; then
+    echo "⚠️ WARNING: pnpm-lock.yaml found but pnpm not installed. Will use npm instead."
+    PKG_MANAGER="npm"
+  else
+    echo "✅ Package manager: pnpm (pnpm-lock.yaml detected)"
+    PKG_MANAGER="pnpm"
+  fi
+else
+  echo "✅ Package manager: npm (default - no lockfile detected)"
+  PKG_MANAGER="npm"
+fi
+```
+
+6. Install dependencies:
+
+```bash
+echo "Installing dependencies..."
+
+if [ "$PKG_MANAGER" = "npm" ]; then
+  npm install --legacy-peer-deps 2>&1 | tail -20
+  INSTALL_STATUS=$?
+elif [ "$PKG_MANAGER" = "yarn" ]; then
+  yarn install 2>&1 | tail -20
+  INSTALL_STATUS=$?
+elif [ "$PKG_MANAGER" = "pnpm" ]; then
+  pnpm install 2>&1 | tail -20
+  INSTALL_STATUS=$?
+fi
+```
+
+7. Check installation status:
+
+```bash
+if [ $INSTALL_STATUS -ne 0 ]; then
+  echo ""
+  echo "⚠️ WARNING: Dependency installation had errors!"
+  echo ""
+  echo "This may affect analysis accuracy. Common issues:"
+  echo "  - Peer dependency conflicts"
+  echo "  - Outdated lockfiles"
+  echo "  - Network connectivity issues"
+  echo ""
+  echo "You can:"
+  echo "  1. Fix dependency issues and re-run the audit"
+  echo "  2. Continue anyway (analysis may have reduced coverage)"
+  echo ""
+  read -p "Continue with analysis? (y/n): " CONTINUE
+  if [ "$CONTINUE" != "y" ]; then
+    echo "⛔ Audit cancelled. Please fix dependency issues first."
+    exit 1
+  fi
+fi
+```
+
+8. Attempt build validation (optional - continue if fails):
+
+```bash
+# Check if there's a build script
+if grep -q '"build"' package.json; then
+  echo "Build script detected. Attempting build validation..."
+
+  if [ "$PKG_MANAGER" = "npm" ]; then
+    timeout 120 npm run build 2>&1 | tail -20
+    BUILD_STATUS=$?
+  elif [ "$PKG_MANAGER" = "yarn" ]; then
+    timeout 120 yarn build 2>&1 | tail -20
+    BUILD_STATUS=$?
+  elif [ "$PKG_MANAGER" = "pnpm" ]; then
+    timeout 120 pnpm build 2>&1 | tail -20
+    BUILD_STATUS=$?
+  fi
+
+  if [ $BUILD_STATUS -eq 0 ]; then
+    echo "✅ Build successful!"
+  else
+    echo "⚠️ Build failed or timed out. Continuing with analysis (many projects don't require build for analysis)."
+  fi
+else
+  echo "ℹ️ No build script found. Skipping build validation."
+fi
+```
+
+9. Inform user:
+```
+✅ Stage 0 Complete: Dependencies validated
+📦 Package manager: [npm/yarn/pnpm]
+📂 node_modules installed
+🔍 Ready for static analysis
+```
+
+10. Mark Stage 0 as completed
+
+**CRITICAL**: If step 3 (Node.js check) or step 5 (package.json check) fail, **STOP IMMEDIATELY** and inform the user. Do NOT proceed to Stage 1.
+
+For dependency installation failures (step 7), prompt user whether to continue with reduced coverage.
 
 ---
 
@@ -27,11 +192,9 @@ Execute all 6 stages sequentially, using specialized agents at each stage. Track
 mkdir -p .analysis/stage1-artifacts
 ```
 
-2. Initialize todo tracking with all 6 stages
+2. Mark Stage 1 as in_progress (todos already initialized in Stage 0)
 
-3. Mark Stage 1 as in_progress
-
-4. Invoke the `artifact-generator` agent using the Task tool with subagent_type="artifact-generator":
+3. Invoke the `artifact-generator` agent using the Task tool with subagent_type="artifact-generator":
 
 **Prompt for artifact-generator**:
 ```
@@ -53,9 +216,9 @@ Follow the complete process outlined in your agent definition (.claude/agents/ar
 Output all files to .analysis/stage1-artifacts/
 ```
 
-5. After the agent completes, read `.analysis/stage1-artifacts/architecture-overview.md` and present a summary to the user
+4. After the agent completes, read `.analysis/stage1-artifacts/architecture-overview.md` and present a summary to the user
 
-6. Mark Stage 1 as completed
+5. Mark Stage 1 as completed
 
 ---
 
@@ -568,17 +731,28 @@ All stage-by-stage outputs available in `.analysis/`:
 
 ## Error Handling
 
-**If Stage 1 fails**: STOP - Cannot continue without architecture artifacts
+**If Stage 0 fails** (any of these):
+- ❌ Node.js not installed → **STOP** - Provide installation instructions, do NOT proceed
+- ❌ No package.json found → **STOP** - Verify this is a JavaScript/TypeScript project
+- ❌ Dependency installation fails → **PROMPT USER** - Ask whether to continue with reduced coverage or stop
 
-**If Stage 2 agent fails**: Log warning, continue with available agents (minimum 2 required)
+**DO NOT**:
+- Proceed without Node.js installed
+- Skip dependency installation entirely
+- Ignore missing package.json
 
-**If Stage 3 tools unavailable**: Continue with agent-only analysis (note lower confidence in report)
+**ALWAYS**:
+- Stop immediately when Node.js is missing
+- Provide clear installation instructions
+- Give user choice on dependency failures (continue with warnings vs. stop)
 
-**If Stage 4 reconciliation fails**: STOP - Cannot continue to adversarial challenge
-
-**If Stage 5 adversarial fails**: Fallback to Stage 4 reconciled findings (note in report)
-
-**If Stage 6 fails**: Debug and retry - all inputs should be ready
+**For other stages**:
+- **Stage 1 fails**: STOP - Cannot continue without architecture artifacts
+- **Stage 2 agent fails**: Log warning, continue with available agents (minimum 2 required)
+- **Stage 3 tools unavailable**: Continue with agent-only analysis (note lower confidence in report)
+- **Stage 4 reconciliation fails**: STOP - Cannot continue to adversarial challenge
+- **Stage 5 adversarial fails**: Fallback to Stage 4 reconciled findings (note in report)
+- **Stage 6 fails**: Debug and retry - all inputs should be ready
 
 ---
 
