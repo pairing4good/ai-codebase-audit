@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(*)",
+      "Grep(*)",
+      "Glob(*)",
+      "Bash(git *)",
+      "Bash(npm *)",
+      "Bash(node *)",
+      "Bash(npx *)",
+      "Bash(mvn *)",
+      "Bash(gradle *)",
+      "Bash(java *)",
+      "Bash(dotnet *)",
+      "Bash(eslint *)",
+      "Bash(sonar-scanner *)",
+      "Bash(spotbugs *)",
+      "Bash(pmd *)",
+      "Write(.analysis/**)",
+      "Write(ANALYSIS-REPORT.md)",
+      "Write(ARCHITECTURE-OVERVIEW.md)",
+      "Write(FINDINGS-DETAILED.json)",
+      "Write(CONFIDENCE-MATRIX.md)"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(**/.env*)",
+      "Read(**/credentials.json)",
+      "Read(**/*.key)",
+      "Read(**/*.pem)",
+      "Bash(rm *)",
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Write(.claude/settings.json)",
+      "Write(.git/**)"
+    ]
+  },
+  "env": {
+    "ANALYSIS_OUTPUT_DIR": "${CLAUDE_PROJECT_DIR}/.analysis",
+    "SEVERITY_THRESHOLD": "medium",
+    "CONFIDENCE_THRESHOLD": "medium",
+    "MAX_FINDINGS_PER_AGENT": "50",
+    "ENABLE_GIT_CHURN_ANALYSIS": "true",
+    "PARALLEL_AGENT_EXECUTION": "true"
+  },
+  "defaultModel": "sonnet",
+  "alwaysThinkingEnabled": false,
+  "sandbox": {
+    "enabled": true,
+    "allowNetwork": false,
+    "allowFilesystem": true
+  },
+  "todoMode": "auto",
+  "hooks": {
+    "pre-audit": "git status --porcelain | wc -l",
+    "post-audit": "echo 'Analysis complete. Review ANALYSIS-REPORT.md for findings.'"
+  }
+}
