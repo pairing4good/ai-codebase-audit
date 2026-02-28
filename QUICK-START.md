@@ -511,14 +511,21 @@ A: Not yet, but it's a planned feature. Currently requires interactive Claude Co
 
 ```bash
 # 1. Copy the audit system
-cd /path/to/your/javascript/repo
+cd /path/to/your/project
 cp -r /path/to/ai-codebase-audit/.claude .
 
 # 2. Open in Claude Code
 code .
 
 # 3. Run the audit (in Claude Code)
+# For JavaScript/TypeScript (✅ Available Now):
 /audit-javascript
+
+# For Java (📋 Coming Soon):
+# /audit-java
+
+# For .NET/C# (📋 Coming Soon):
+# /audit-dotnet
 
 # 4. Wait 15-30 minutes
 
@@ -527,6 +534,8 @@ open ANALYSIS-REPORT.md
 ```
 
 **That's it!** You now have a comprehensive analysis of your codebase with prioritized improvements.
+
+**Current Status**: Only JavaScript/TypeScript is currently supported. Java and .NET implementations are planned for future releases.
 
 ---
 
