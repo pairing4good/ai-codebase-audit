@@ -55,9 +55,7 @@ Output all files to .analysis/stage1-artifacts/
 
 5. After the agent completes, read `.analysis/stage1-artifacts/architecture-overview.md` and present a summary to the user
 
-6. Ask the user: "Does this architecture overview correctly describe your system? (Y/n)"
-
-7. Mark Stage 1 as completed
+6. Mark Stage 1 as completed
 
 ---
 
