@@ -416,7 +416,13 @@ mkdir -p .analysis/stage3-static-analysis/raw-outputs
 
 2. Mark Stage 3 as in_progress
 
-3. Detect available tools and run them:
+3. **Auto-install missing tools** (attempts automatic installation where possible):
+```bash
+echo "Checking and installing static analysis tools..."
+bash .claude/skills/audit-java/tools/auto-install-tools.sh
+```
+
+4. Detect available tools and run them:
 
 **Tool 1: Semgrep** (OWASP Top 10, CWE/SANS 25, JWT/OAuth)
 ```bash
@@ -498,7 +504,7 @@ else
 fi
 ```
 
-4. Unify results using format-static-results.js:
+5. Unify results using format-static-results.js:
 ```bash
 node .claude/skills/audit-java/tools/format-static-results.js .analysis/stage3-static-analysis
 ```
@@ -508,11 +514,11 @@ This creates:
 - `.analysis/stage3-static-analysis/tool-comparison.md` (which tools found what)
 - `.analysis/stage3-static-analysis/overlap-analysis.json` (convergence across tools)
 
-5. Read `tool-comparison.md` and present summary to user
+6. Read `tool-comparison.md` and present summary to user
 
-6. Write `.analysis/stage3-static-analysis/metadata.json` with tool execution status
+7. Write `.analysis/stage3-static-analysis/metadata.json` with tool execution status
 
-7. Mark Stage 3 as completed
+8. Mark Stage 3 as completed
 
 ---
 

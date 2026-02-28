@@ -205,14 +205,20 @@ mkdir -p .analysis/stage3-static-analysis/raw-outputs
 
 2. Mark Stage 3 as in_progress
 
-3. Detect available tools:
+3. **Auto-install missing tools** (attempts automatic installation where possible):
+```bash
+echo "Checking and installing static analysis tools..."
+bash .claude/skills/audit-javascript/tools/auto-install-tools.sh
+```
+
+4. Detect available tools:
    - Check for ESLint configuration (.eslintrc.*, package.json scripts)
    - Check for npm (always available)
    - Check for test coverage configuration
    - Check if Semgrep is installed
    - Check if Snyk is available
 
-4. Run available tools:
+5. Run available tools:
 
 **ESLint** (if configured):
 ```bash
@@ -238,7 +244,7 @@ if command -v snyk >/dev/null 2>&1; then
 fi
 ```
 
-5. Unify results using format-static-results.js:
+6. Unify results using format-static-results.js:
 ```bash
 node .claude/skills/audit-javascript/tools/format-static-results.js .analysis/stage3-static-analysis
 ```
@@ -248,11 +254,11 @@ This creates:
 - `.analysis/stage3-static-analysis/tool-comparison.md` (which tools found what)
 - `.analysis/stage3-static-analysis/overlap-analysis.json` (convergence across tools)
 
-6. Read `tool-comparison.md` and present summary to user
+7. Read `tool-comparison.md` and present summary to user
 
-7. Write `.analysis/stage3-static-analysis/metadata.json` with tool execution status
+8. Write `.analysis/stage3-static-analysis/metadata.json` with tool execution status
 
-8. Mark Stage 3 as completed
+9. Mark Stage 3 as completed
 
 ---
 

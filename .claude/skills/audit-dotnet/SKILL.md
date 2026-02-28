@@ -106,7 +106,20 @@ Output all files to .analysis/stage1-artifacts/
 
 ### Your Actions
 
-Run available .NET tools:
+1. Create directory:
+```bash
+mkdir -p .analysis/stage3-static-analysis/raw-outputs
+```
+
+2. Mark Stage 3 as in_progress
+
+3. **Auto-install missing tools** (attempts automatic installation where possible):
+```bash
+echo "Checking and installing static analysis tools..."
+bash .claude/skills/audit-dotnet/tools/auto-install-tools.sh
+```
+
+4. Run available .NET tools:
 
 **Tool 1: Semgrep** (OWASP/CWE for C#)
 ```bash
@@ -151,10 +164,16 @@ if command -v sonar-scanner >/dev/null 2>&1; then
 fi
 ```
 
-Unify results:
+5. Unify results:
 ```bash
 node .claude/skills/audit-dotnet/tools/format-static-results.js .analysis/stage3-static-analysis
 ```
+
+6. Read `tool-comparison.md` and present summary to user
+
+7. Write `.analysis/stage3-static-analysis/metadata.json` with tool execution status
+
+8. Mark Stage 3 as completed
 
 ---
 
