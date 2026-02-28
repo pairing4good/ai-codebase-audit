@@ -923,13 +923,26 @@ All stage-by-stage outputs available in `.analysis/`:
 - Stage 6: Prioritization matrix and patterns
 ```
 
-**`.analysis/final-report/ARCHITECTURE-OVERVIEW.md`**: Copy from `.analysis/stage1-artifacts/architecture-overview.md`
+9. **Create ARCHITECTURE-OVERVIEW.md**:
+```bash
+cp .analysis/stage1-artifacts/architecture-overview.md .analysis/final-report/ARCHITECTURE-OVERVIEW.md
+```
 
-**`.analysis/final-report/FINDINGS-DETAILED.json`**: Export all upheld findings with complete structure (must include `example` field with `file`, `line_start`, `line_end`, and `code` for each finding)
+10. **Create FINDINGS-DETAILED.json**: Export all upheld findings with complete structure (must include `example` field with `file`, `line_start`, `line_end`, and `code` for each finding)
 
-**`.analysis/final-report/CONFIDENCE-MATRIX.md`**: Create evidence transparency table showing which agents/tools found each finding
+11. **Create CONFIDENCE-MATRIX.md**: Generate evidence transparency table showing which agents/tools found each finding
 
-9. Present final summary to user:
+Example format:
+```markdown
+# Confidence Matrix
+
+| Finding | Location | security-analyzer | architecture-analyzer | maintainability-analyzer | dependency-analyzer | Semgrep | SpotBugs | PMD | Snyk | Confidence |
+|---------|----------|-------------------|----------------------|-------------------------|---------------------|---------|----------|-----|------|------------|
+| SQL Injection | UserService.java:156 | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | High (3 sources) |
+...
+```
+
+12. Present final summary to user:
 ```
 ## Analysis Complete! 🎯
 
@@ -955,7 +968,7 @@ All stage-by-stage outputs available in `.analysis/`:
 **Next Step**: Review `.analysis/final-report/ANALYSIS-REPORT.md` for your prioritized improvements.
 ```
 
-10. Mark Stage 6 as completed
+13. Mark Stage 6 as completed
 
 ---
 
