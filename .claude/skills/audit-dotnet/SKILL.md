@@ -196,12 +196,240 @@ node .claude/skills/audit-dotnet/tools/format-static-results.js .analysis/stage3
 
 ## Stage 6: Final Synthesis
 
-**.NET Security Bonus** (add +0.5 to priority_score):
+**Objective**: Generate top 10 prioritized findings and create executive deliverables.
+
+### Your Actions
+
+1. Create directory:
+```bash
+mkdir -p .analysis/stage6-final-synthesis
+```
+
+2. Mark Stage 6 as in_progress
+
+3. Read `.analysis/stage5-adversarial/challenged-findings.json`
+
+4. Filter to UPHELD findings only (exclude DISMISSED)
+
+5. Apply prioritization formula to rank findings:
+
+**Prioritization Formula** (.NET-specific weighting):
+```
+priority_score = (severity_weight × severity_score) +
+                 (confidence_weight × confidence_score) +
+                 (effort_to_value_weight × effort_value_score) +
+                 (dotnet_security_bonus)
+
+Weights:
+- severity_weight: 0.4
+- confidence_weight: 0.3
+- effort_to_value_weight: 0.3
+
+Severity scores:
+- critical: 4
+- high: 3
+- medium: 2
+- low: 1
+
+Confidence scores:
+- high: 3
+- medium: 2
+- low: 1
+
+Effort-to-value scores (estimate):
+- Low effort, high value: 3
+- Medium effort, high value: 2
+- High effort: 1
+
+.NET Security Bonus (add +0.5 to priority_score):
 - ASP.NET Core Identity misconfigurations
 - CSRF token validation missing
 - XSS in Razor views
 - SQL injection in Entity Framework
 - Async/await deadlock patterns
+```
+
+6. Sort by priority_score descending and select top 10
+
+7. Write Stage 6 outputs:
+   - `.analysis/stage6-final-synthesis/prioritization-matrix.json` (all findings with scores)
+   - `.analysis/stage6-final-synthesis/top-10-detailed.json` (top 10 with full details)
+   - `.analysis/stage6-final-synthesis/honorable-mentions.md` (findings 11-20)
+   - `.analysis/stage6-final-synthesis/quick-wins.md` (low effort, high impact items)
+   - `.analysis/stage6-final-synthesis/systemic-patterns.md` (recurring .NET issues)
+   - `.analysis/stage6-final-synthesis/metadata.json` (statistics)
+
+8. Generate the 4 executive deliverables at repository root:
+
+**ANALYSIS-REPORT.md**:
+```markdown
+# .NET Codebase Analysis Report
+
+*Generated: [DATE] | Overall Confidence: [High/Medium] | [X] findings analyzed → Top 10 selected*
+
+## Executive Summary
+
+[1-2 paragraph overview: what was analyzed, methodology (6-stage funnel), key findings summary, overall codebase health assessment for .NET/C#/F# application]
+
+## Methodology
+
+This audit used a 6-stage analytical funnel with independent agents and static analysis:
+
+1. **Build Validation**: Ensured project compiles (dotnet build)
+2. **Artifact Generation**: Architecture mapping and tech debt surface analysis
+3. **Parallel Independent Analysis**: 4 specialist agents (architecture, security, maintainability, dependency) operating in isolation
+4. **Static Analysis**: .NET-specific tools (Semgrep, Roslyn, Security Code Scan, Snyk, dotnet-outdated, Trivy)
+5. **Reconciliation**: Statistical convergence analysis across all sources
+6. **Adversarial Challenge**: Independent skeptic eliminated false positives
+7. **Final Synthesis**: Evidence-based prioritization
+
+**Confidence Principle**: Findings that converged across multiple independent agents AND static tools receive "High" confidence.
+
+## Top 10 Improvements
+
+[For each finding 1-10:]
+
+### [#]. [Critical/High/Medium] [Title]
+
+**Location**: [Controllers/UserController.cs:42-56] (clickable link)
+**Confidence**: [High/Medium/Low] (converged: [list agent names] + [list tool names])
+**Priority Score**: [X.XX]
+**Effort**: [Low/Medium/High]
+**Impact**: [Critical/High/Medium/Low]
+
+**Problem**:
+[Clear description of what's wrong with .NET-specific context]
+
+**Evidence**:
+- Identified by agents: [architecture-analyzer, security-analyzer]
+- Identified by tools: [Semgrep (csharp/security/sql-injection), Security Code Scan (SCS0002)]
+- Convergence score: [0.85] (high confidence - multiple independent sources)
+
+**Code Example**:
+```csharp
+// Controllers/UserController.cs:156-162
+public async Task<IActionResult> GetUsersByRole(string role)
+{
+    var query = $"SELECT * FROM Users WHERE Role = '{role}'";  // VULNERABLE
+    var users = await _context.Users.FromSqlRaw(query).ToListAsync();
+    return Ok(users);
+}
+```
+
+**Impact**:
+[Business/technical impact - why this matters for .NET/ASP.NET Core applications]
+- Allows SQL injection attacks via role parameter
+- Entire user database could be compromised
+- Violates OWASP Top 10 (A03:2021 - Injection)
+- CWE-89: SQL Injection vulnerability
+
+**Recommendation**:
+Use parameterized queries with Entity Framework:
+
+```csharp
+// Fixed version:
+public async Task<IActionResult> GetUsersByRole(string role)
+{
+    var users = await _context.Users
+        .Where(u => u.Role == role)  // LINQ prevents injection
+        .ToListAsync();
+    return Ok(users);
+}
+
+// Or with FromSqlRaw using parameters:
+public async Task<IActionResult> GetUsersByRole(string role)
+{
+    var users = await _context.Users
+        .FromSqlRaw("SELECT * FROM Users WHERE Role = {0}", role)  // Parameterized
+        .ToListAsync();
+    return Ok(users);
+}
+```
+
+**Survived Adversarial Challenge**: Yes - Confirmed as genuine SQL injection risk, not a false positive. Both pattern-based (Semgrep) and Roslyn analyzer tools identified it independently.
+
+---
+
+[Repeat for all 10 findings - EACH MUST INCLUDE actual code snippets from the codebase]
+
+## Summary Statistics
+
+- **Total Findings Analyzed**: [X]
+- **High Confidence**: [X] findings (converged across agents + tools)
+- **Medium Confidence**: [X] findings
+- **Low Confidence**: [X] findings
+- **False Positives Dismissed**: [X] findings
+- **Severity Adjustments**: [X] findings downgraded
+
+## .NET-Specific Insights
+
+**Most Common Issues**:
+1. SQL Injection (Entity Framework raw SQL): [X] instances
+2. Missing CSRF protection in POST endpoints: [X] instances
+3. Async/await deadlock risks: [X] instances
+4. Missing IDisposable implementation: [X] instances
+
+## What Makes These Recommendations Trustworthy
+
+1. **Independent Analysis**: 4 specialist agents analyzed separately (no confirmation bias)
+2. **Tool Validation**: 6-7 .NET-specific static analysis tools provided objective verification
+3. **Convergence Scoring**: Findings appearing across multiple sources scored higher
+4. **Adversarial Challenge**: Independent skeptic eliminated [X] false positives
+5. **Evidence Transparency**: Every finding shows which agents/tools identified it AND includes actual code snippets
+
+## Next Steps
+
+1. Review this report and prioritize which findings to address first
+2. See `FINDINGS-DETAILED.json` for complete structured data
+3. See `CONFIDENCE-MATRIX.md` for evidence transparency matrix
+4. See `.analysis/` directory for complete stage-by-stage outputs
+5. Consider running `/audit-dotnet` again after fixes to measure improvement
+
+## Full Details
+
+All stage-by-stage outputs available in `.analysis/`:
+- Stage 0: Build validation logs
+- Stage 1: Architecture artifacts
+- Stage 2: 4 independent agent analyses
+- Stage 3: Static analysis tool results (Semgrep, Roslyn, Security Code Scan, Snyk, dotnet-outdated, Trivy)
+- Stage 4: Reconciliation and convergence analysis
+- Stage 5: Adversarial challenge results
+- Stage 6: Prioritization matrix and patterns
+```
+
+**ARCHITECTURE-OVERVIEW.md**: Copy from `.analysis/stage1-artifacts/architecture-overview.md`
+
+**FINDINGS-DETAILED.json**: Export all upheld findings with complete structure (must include `example` field with `file`, `line_start`, `line_end`, and `code` for each finding)
+
+**CONFIDENCE-MATRIX.md**: Create evidence transparency table showing which agents/tools found each finding
+
+9. Present final summary to user:
+```
+## Analysis Complete! 🎯
+
+**Executive Deliverables** (at repository root):
+- ANALYSIS-REPORT.md - Top 10 with detailed recommendations
+- ARCHITECTURE-OVERVIEW.md - .NET system architecture documentation
+- FINDINGS-DETAILED.json - Complete structured data
+- CONFIDENCE-MATRIX.md - Evidence transparency matrix
+
+**Summary**:
+- [X] total findings analyzed
+- Top 10 selected via evidence-based prioritization
+- [X] critical, [X] high, [X] medium severity in top 10
+- Average confidence: [High/Medium] ([X]% convergence rate)
+- [X] false positives eliminated
+
+**.NET-Specific Findings**:
+- ASP.NET Core security issues: [X]
+- Entity Framework SQL injection risks: [X]
+- Async/await pattern issues: [X]
+- Dependency vulnerabilities: [X]
+
+**Next Step**: Review ANALYSIS-REPORT.md for your prioritized improvements.
+```
+
+10. Mark Stage 6 as completed
 
 ---
 
@@ -220,5 +448,26 @@ node .claude/skills/audit-dotnet/tools/format-static-results.js .analysis/stage3
 3. **Run Stage 2 agents in PARALLEL**
 4. **Update todos** after each stage
 5. **.NET-specific focus** - Prioritize ASP.NET Core security, EF Core issues, async/await patterns
+6. **Include clickable file:line references** in all outputs (format: `Controllers/UserController.cs:42`)
+
+## CRITICAL: Evidence Requirements
+
+**EVERY finding MUST include**:
+1. **Exact location**: `file:line` or `file:line-range` format
+2. **Actual code snippet**: Copy the problematic code from the file (not paraphrased)
+3. **Multiple sources**: List which agents AND which tools identified it
+4. **Convergence score**: Calculate based on number of independent sources
+
+**Validation checklist before Stage 6 completion**:
+- [ ] All top 10 findings have exact `file:line` references
+- [ ] All top 10 findings include actual code snippets from the codebase
+- [ ] Code snippets show the ACTUAL vulnerable/problematic code (not examples)
+- [ ] Each finding lists specific agents and tools that identified it
+- [ ] Recommendations include fixed code examples
+
+**If a finding lacks evidence** (no file:line or code snippet):
+- It should be downgraded in priority OR
+- Marked as "needs investigation" OR
+- Excluded from top 10 (replaced with next best finding that HAS evidence)
 
 Begin execution now!

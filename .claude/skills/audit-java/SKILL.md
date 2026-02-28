@@ -712,11 +712,136 @@ Java Security Bonus (add +0.5 to priority_score):
 
 8. Generate the 4 executive deliverables at repository root:
 
-**ANALYSIS-REPORT.md**: (See full template at end of this document)
+**ANALYSIS-REPORT.md**:
+```markdown
+# Java Codebase Analysis Report
+
+*Generated: [DATE] | Overall Confidence: [High/Medium] | [X] findings analyzed → Top 10 selected*
+
+## Executive Summary
+
+[1-2 paragraph overview: what was analyzed, methodology (6-stage funnel), key findings summary, overall codebase health assessment for Java application]
+
+## Methodology
+
+This audit used a 6-stage analytical funnel with independent agents and static analysis:
+
+1. **Build Validation**: Ensured project compiles (Maven/Gradle)
+2. **Artifact Generation**: Architecture mapping and tech debt surface analysis
+3. **Parallel Independent Analysis**: 4 specialist agents (architecture, security, maintainability, dependency) operating in isolation
+4. **Static Analysis**: Java-specific tools (Semgrep, SpotBugs, PMD, Checkstyle, Snyk, OWASP Dependency-Check)
+5. **Reconciliation**: Statistical convergence analysis across all sources
+6. **Adversarial Challenge**: Independent skeptic eliminated false positives
+7. **Final Synthesis**: Evidence-based prioritization
+
+**Confidence Principle**: Findings that converged across multiple independent agents AND static tools receive "High" confidence.
+
+## Top 10 Improvements
+
+[For each finding 1-10:]
+
+### [#]. [Critical/High/Medium] [Title]
+
+**Location**: [src/main/java/com/example/Service.java:42-56] (clickable link)
+**Confidence**: [High/Medium/Low] (converged: [list agent names] + [list tool names])
+**Priority Score**: [X.XX]
+**Effort**: [Low/Medium/High]
+**Impact**: [Critical/High/Medium/Low]
+
+**Problem**:
+[Clear description of what's wrong with Java-specific context]
+
+**Evidence**:
+- Identified by agents: [architecture-analyzer, security-analyzer]
+- Identified by tools: [Semgrep (owasp/java/sql-injection), SpotBugs (SQL_INJECTION_JDBC)]
+- Convergence score: [0.85] (high confidence - multiple independent sources)
+
+**Code Example**:
+```java
+// src/main/java/com/example/UserService.java:156-162
+public List<User> getUsersByRole(String role) {
+    String query = "SELECT * FROM users WHERE role = '" + role + "'";  // VULNERABLE
+    Statement stmt = connection.createStatement();
+    ResultSet rs = stmt.executeQuery(query);
+    return mapResultSet(rs);
+}
+```
+
+**Impact**:
+[Business/technical impact - why this matters for Java/Spring applications]
+- Allows SQL injection attacks via role parameter
+- Entire user database could be compromised
+- Violates OWASP Top 10 (A03:2021 - Injection)
+- CWE-89: SQL Injection vulnerability
+
+**Recommendation**:
+Use PreparedStatement for all database queries:
+
+```java
+// Fixed version:
+public List<User> getUsersByRole(String role) {
+    String query = "SELECT * FROM users WHERE role = ?";
+    PreparedStatement pstmt = connection.prepareStatement(query);
+    pstmt.setString(1, role);  // Parameterized query prevents injection
+    ResultSet rs = pstmt.executeQuery();
+    return mapResultSet(rs);
+}
+```
+
+**Survived Adversarial Challenge**: Yes - Confirmed as genuine SQL injection risk, not a false positive. Both pattern-based (Semgrep) and bytecode-based (SpotBugs) tools identified it independently.
+
+---
+
+[Repeat for all 10 findings - EACH MUST INCLUDE actual code snippets from the codebase]
+
+## Summary Statistics
+
+- **Total Findings Analyzed**: [X]
+- **High Confidence**: [X] findings (converged across agents + tools)
+- **Medium Confidence**: [X] findings
+- **Low Confidence**: [X] findings
+- **False Positives Dismissed**: [X] findings
+- **Severity Adjustments**: [X] findings downgraded
+
+## Java-Specific Insights
+
+**Most Common Issues**:
+1. SQL Injection (JPQL string concatenation): [X] instances
+2. Missing @Transactional boundaries: [X] instances
+3. Thread-safety issues in @Singleton beans: [X] instances
+4. N+1 query problems in JPA: [X] instances
+
+## What Makes These Recommendations Trustworthy
+
+1. **Independent Analysis**: 4 specialist agents analyzed separately (no confirmation bias)
+2. **Tool Validation**: 7-8 Java-specific static analysis tools provided objective verification
+3. **Convergence Scoring**: Findings appearing across multiple sources scored higher
+4. **Adversarial Challenge**: Independent skeptic eliminated [X] false positives
+5. **Evidence Transparency**: Every finding shows which agents/tools identified it AND includes actual code snippets
+
+## Next Steps
+
+1. Review this report and prioritize which findings to address first
+2. See `FINDINGS-DETAILED.json` for complete structured data
+3. See `CONFIDENCE-MATRIX.md` for evidence transparency matrix
+4. See `.analysis/` directory for complete stage-by-stage outputs
+5. Consider running `/audit-java` again after fixes to measure improvement
+
+## Full Details
+
+All stage-by-stage outputs available in `.analysis/`:
+- Stage 0: Build validation logs
+- Stage 1: Architecture artifacts
+- Stage 2: 4 independent agent analyses
+- Stage 3: Static analysis tool results (Semgrep, SpotBugs, PMD, Checkstyle, Snyk, Dependency-Check, Trivy)
+- Stage 4: Reconciliation and convergence analysis
+- Stage 5: Adversarial challenge results
+- Stage 6: Prioritization matrix and patterns
+```
 
 **ARCHITECTURE-OVERVIEW.md**: Copy from `.analysis/stage1-artifacts/architecture-overview.md`
 
-**FINDINGS-DETAILED.json**: Export all upheld findings with complete structure
+**FINDINGS-DETAILED.json**: Export all upheld findings with complete structure (must include `example` field with `file`, `line_start`, `line_end`, and `code` for each finding)
 
 **CONFIDENCE-MATRIX.md**: Create evidence transparency table showing which agents/tools found each finding
 
@@ -779,5 +904,25 @@ Java Security Bonus (add +0.5 to priority_score):
 7. **Include clickable file:line references** in all outputs (format: `src/main/java/com/example/Service.java:42`)
 8. **Be thorough** - This is a comprehensive audit, not a quick scan
 9. **Java-specific focus** - Prioritize Spring Security, SQL injection, XXE, concurrency issues
+
+## CRITICAL: Evidence Requirements
+
+**EVERY finding MUST include**:
+1. **Exact location**: `file:line` or `file:line-range` format
+2. **Actual code snippet**: Copy the problematic code from the file (not paraphrased)
+3. **Multiple sources**: List which agents AND which tools identified it
+4. **Convergence score**: Calculate based on number of independent sources
+
+**Validation checklist before Stage 6 completion**:
+- [ ] All top 10 findings have exact `file:line` references
+- [ ] All top 10 findings include actual code snippets from the codebase
+- [ ] Code snippets show the ACTUAL vulnerable/problematic code (not examples)
+- [ ] Each finding lists specific agents and tools that identified it
+- [ ] Recommendations include fixed code examples
+
+**If a finding lacks evidence** (no file:line or code snippet):
+- It should be downgraded in priority OR
+- Marked as "needs investigation" OR
+- Excluded from top 10 (replaced with next best finding that HAS evidence)
 
 Begin execution now!

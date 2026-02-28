@@ -591,4 +591,24 @@ All stage-by-stage outputs available in `.analysis/`:
 7. **Include clickable file:line references** in all outputs
 8. **Be thorough** - This is a comprehensive audit, not a quick scan
 
+## CRITICAL: Evidence Requirements
+
+**EVERY finding MUST include**:
+1. **Exact location**: `file:line` or `file:line-range` format
+2. **Actual code snippet**: Copy the problematic code from the file (not paraphrased)
+3. **Multiple sources**: List which agents AND which tools identified it
+4. **Convergence score**: Calculate based on number of independent sources
+
+**Validation checklist before Stage 6 completion**:
+- [ ] All top 10 findings have exact `file:line` references
+- [ ] All top 10 findings include actual code snippets from the codebase
+- [ ] Code snippets show the ACTUAL vulnerable/problematic code (not examples)
+- [ ] Each finding lists specific agents and tools that identified it
+- [ ] Recommendations include fixed code examples
+
+**If a finding lacks evidence** (no file:line or code snippet):
+- It should be downgraded in priority OR
+- Marked as "needs investigation" OR
+- Excluded from top 10 (replaced with next best finding that HAS evidence)
+
 Begin execution now!
