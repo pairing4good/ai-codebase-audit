@@ -50,11 +50,20 @@ code .  # or however you launch your editor with Claude Code
 
 #### Step 4: Run the Audit
 
-In Claude Code, simply type:
+In Claude Code, run the appropriate command for your project type:
 
-```
+```bash
+# For JavaScript/TypeScript projects (✅ Currently Available)
 /audit-javascript
+
+# For Java projects (📋 Planned - Not Yet Implemented)
+/audit-java
+
+# For .NET/C#/F# projects (📋 Planned - Not Yet Implemented)
+/audit-dotnet
 ```
+
+**Note**: Currently only `/audit-javascript` is implemented. Java and .NET support are planned for future releases.
 
 That's it! The audit will run automatically through all 6 stages.
 
@@ -83,11 +92,20 @@ In Claude Code, add both folders to your workspace.
 
 #### Step 3: Run Audits
 
-Navigate to any project in your workspace and run:
+Navigate to any project in your workspace and run the appropriate command:
 
-```
+```bash
+# For JavaScript/TypeScript projects (✅ Currently Available)
 /audit-javascript
+
+# For Java projects (📋 Planned - Not Yet Implemented)
+/audit-java
+
+# For .NET/C#/F# projects (📋 Planned - Not Yet Implemented)
+/audit-dotnet
 ```
+
+**Note**: Currently only `/audit-javascript` is implemented. Java and .NET support are planned for future releases.
 
 The skills and agents from the audit system will be available to all projects in the workspace.
 
