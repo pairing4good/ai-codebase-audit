@@ -44,13 +44,15 @@ The audit will run automatically through all 6 stages and produce comprehensive 
 
 ### What You Get
 
-After the audit completes, you'll find these files in your target repository:
+After the audit completes, you'll find all outputs in the `.analysis/` directory:
 
+**Start here:** `.analysis/final-report/`
 1. **ANALYSIS-REPORT.md** - Executive summary with top 10 prioritized improvements
 2. **ARCHITECTURE-OVERVIEW.md** - System architecture documentation with diagrams
 3. **FINDINGS-DETAILED.json** - Complete structured data for all findings
 4. **CONFIDENCE-MATRIX.md** - Evidence transparency showing what converged across sources
-5. **.analysis/** - All stage-by-stage outputs for detailed review
+
+**Detailed analysis:** `.analysis/stage1-artifacts/`, `.analysis/stage2-parallel-analysis/`, etc.
 
 ## The 6-Stage Analytical Funnel
 
@@ -148,7 +150,7 @@ Review `.analysis/stage4-reconciliation/contradictions.md` to see where agents d
 Check `.analysis/stage5-adversarial/false-positives-identified.md` to see what was dismissed. This builds trust in the final recommendations.
 
 ### After Stage 6
-The top-level `ANALYSIS-REPORT.md` contains your final top 10 with complete evidence and recommendations.
+The `.analysis/final-report/ANALYSIS-REPORT.md` contains your final top 10 with complete evidence and recommendations.
 
 ## Customization
 

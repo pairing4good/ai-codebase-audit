@@ -259,7 +259,11 @@ Effort-to-value scores (estimate):
    - `.analysis/stage6-final-synthesis/systemic-patterns.md` (recurring .NET issues)
    - `.analysis/stage6-final-synthesis/metadata.json` (statistics)
 
-8. Generate the 4 executive deliverables at repository root:
+8. Create the final report directory and generate the 4 executive deliverables:
+
+```bash
+mkdir -p .analysis/final-report
+```
 
 **ANALYSIS-REPORT.md**:
 ```markdown
@@ -380,8 +384,8 @@ public async Task<IActionResult> GetUsersByRole(string role)
 ## Next Steps
 
 1. Review this report and prioritize which findings to address first
-2. See `FINDINGS-DETAILED.json` for complete structured data
-3. See `CONFIDENCE-MATRIX.md` for evidence transparency matrix
+2. See `.analysis/final-report/FINDINGS-DETAILED.json` for complete structured data
+3. See `.analysis/final-report/CONFIDENCE-MATRIX.md` for evidence transparency matrix
 4. See `.analysis/` directory for complete stage-by-stage outputs
 5. Consider running `/audit-dotnet` again after fixes to measure improvement
 
@@ -397,17 +401,17 @@ All stage-by-stage outputs available in `.analysis/`:
 - Stage 6: Prioritization matrix and patterns
 ```
 
-**ARCHITECTURE-OVERVIEW.md**: Copy from `.analysis/stage1-artifacts/architecture-overview.md`
+**`.analysis/final-report/ARCHITECTURE-OVERVIEW.md`**: Copy from `.analysis/stage1-artifacts/architecture-overview.md`
 
-**FINDINGS-DETAILED.json**: Export all upheld findings with complete structure (must include `example` field with `file`, `line_start`, `line_end`, and `code` for each finding)
+**`.analysis/final-report/FINDINGS-DETAILED.json`**: Export all upheld findings with complete structure (must include `example` field with `file`, `line_start`, `line_end`, and `code` for each finding)
 
-**CONFIDENCE-MATRIX.md**: Create evidence transparency table showing which agents/tools found each finding
+**`.analysis/final-report/CONFIDENCE-MATRIX.md`**: Create evidence transparency table showing which agents/tools found each finding
 
 9. Present final summary to user:
 ```
 ## Analysis Complete! 🎯
 
-**Executive Deliverables** (at repository root):
+**Executive Deliverables** (in .analysis/final-report/):
 - ANALYSIS-REPORT.md - Top 10 with detailed recommendations
 - ARCHITECTURE-OVERVIEW.md - .NET system architecture documentation
 - FINDINGS-DETAILED.json - Complete structured data
@@ -426,7 +430,7 @@ All stage-by-stage outputs available in `.analysis/`:
 - Async/await pattern issues: [X]
 - Dependency vulnerabilities: [X]
 
-**Next Step**: Review ANALYSIS-REPORT.md for your prioritized improvements.
+**Next Step**: Review `.analysis/final-report/ANALYSIS-REPORT.md` for your prioritized improvements.
 ```
 
 10. Mark Stage 6 as completed

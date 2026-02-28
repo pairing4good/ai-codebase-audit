@@ -48,17 +48,18 @@ All findings must include:
 When auditing a target repository, outputs go to:
 
 target-repo/
-├── ANALYSIS-REPORT.md           # Executive summary (main deliverable)
-├── ARCHITECTURE-OVERVIEW.md     # System architecture docs
-├── FINDINGS-DETAILED.json       # Complete structured data
-├── CONFIDENCE-MATRIX.md         # Evidence transparency matrix
-└── .analysis/                   # All stage-by-stage outputs
-    ├── stage1-artifacts/
-    ├── stage2-parallel-analysis/
-    ├── stage3-static-analysis/
-    ├── stage4-reconciliation/
-    ├── stage5-adversarial/
-    └── stage6-final-synthesis/
+└── .analysis/                   # All audit outputs
+    ├── final-report/            # Executive deliverables (start here!)
+    │   ├── ANALYSIS-REPORT.md           # Top 10 prioritized improvements
+    │   ├── ARCHITECTURE-OVERVIEW.md     # System architecture docs
+    │   ├── FINDINGS-DETAILED.json       # Complete structured data
+    │   └── CONFIDENCE-MATRIX.md         # Evidence transparency matrix
+    ├── stage1-artifacts/        # Architecture diagrams and tech debt map
+    ├── stage2-parallel-analysis/  # 4 independent agent analyses
+    ├── stage3-static-analysis/  # Static tool results
+    ├── stage4-reconciliation/   # Convergence analysis
+    ├── stage5-adversarial/      # False positive elimination
+    └── stage6-final-synthesis/  # Prioritization matrix
 ```
 
 ## Agent-Specific Instructions
