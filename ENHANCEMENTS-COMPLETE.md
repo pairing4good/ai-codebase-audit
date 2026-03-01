@@ -306,16 +306,16 @@ Where convergence_score considers:
 
 **Group 1 - Fast Pattern Matchers** (run in parallel):
 ```bash
-semgrep-runner.sh .analysis/stage3-static-analysis/raw-outputs . &
-npx eslint . --format json --output-file .analysis/stage3-static-analysis/raw-outputs/eslint.json &
-npm audit --json > .analysis/stage3-static-analysis/raw-outputs/npm-audit.json &
+semgrep-runner.sh .analysis/{language}/stage3-static-analysis/raw-outputs . &
+npx eslint . --format json --output-file .analysis/{language}/stage3-static-analysis/raw-outputs/eslint.json &
+npm audit --json > .analysis/{language}/stage3-static-analysis/raw-outputs/npm-audit.json &
 wait
 ```
 
 **Group 2 - Dataflow & Dependency Scanners** (run in parallel):
 ```bash
-snyk-runner.sh .analysis/stage3-static-analysis/raw-outputs . &
-trivy-runner.sh .analysis/stage3-static-analysis/raw-outputs . &
+snyk-runner.sh .analysis/{language}/stage3-static-analysis/raw-outputs . &
+trivy-runner.sh .analysis/{language}/stage3-static-analysis/raw-outputs . &
 wait
 ```
 
@@ -326,7 +326,7 @@ sonar-scanner  # Only if configured
 
 **Unification**:
 ```bash
-node format-static-results.js .analysis/stage3-static-analysis \
+node format-static-results.js .analysis/{language}/stage3-static-analysis \
   --eslint=.../eslint.json \
   --semgrep=.../semgrep.json \
   --snyk-code=.../snyk-code.json \

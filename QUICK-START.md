@@ -246,10 +246,10 @@ your-repo/
 └── CONFIDENCE-MATRIX.md         # ✅ Evidence transparency matrix
 ```
 
-#### Detailed Stage Outputs (`.analysis/` Directory)
+#### Detailed Stage Outputs (`.analysis/{language}/` Directory)
 
 ```
-your-repo/.analysis/
+your-repo/.analysis/{language}/
 ├── stage1-artifacts/           # Architecture diagrams and docs
 ├── stage2-parallel-analysis/   # 4 independent agent analyses
 ├── stage3-static-analysis/     # Unified tool results
@@ -352,7 +352,7 @@ cp -r /path/to/ai-codebase-audit/.claude .
 
 **Fix**: Check `.claude/settings.json` permissions section. The default permissions allow:
 - Reading all files except secrets (.env, .key, .pem)
-- Writing to `.analysis/` and deliverable files
+- Writing to `.analysis/{language}/` and deliverable files
 - Running git, npm, node, and analysis tools
 
 ### "Agent produced empty output"
@@ -360,7 +360,7 @@ cp -r /path/to/ai-codebase-audit/.claude .
 **Cause**: The agent may have hit context limits or permission issues.
 
 **Fix**:
-1. Check `.analysis/stage{N}/metadata.json` for error messages
+1. Check `.analysis/{language}/stage{N}/metadata.json` for error messages
 2. Verify the repository has a `package.json` (must be JavaScript/TypeScript project)
 3. Try running on a smaller repository first
 
@@ -368,14 +368,14 @@ cp -r /path/to/ai-codebase-audit/.claude .
 
 **Cause**: This is often normal! It means findings are specialized to one domain.
 
-**Fix**: This isn't necessarily a problem. Low convergence doesn't mean findings are wrong, just that they're specific. Review `.analysis/stage4-reconciliation/agent-only-findings.md` for context.
+**Fix**: This isn't necessarily a problem. Low convergence doesn't mean findings are wrong, just that they're specific. Review `.analysis/{language}/stage4-reconciliation/agent-only-findings.md` for context.
 
 ### "Tools failed to run"
 
 **Cause**: Tools may not be installed or not configured properly.
 
 **Fix**:
-1. Check `.analysis/stage3-static-analysis/metadata.json` for tool status
+1. Check `.analysis/{language}/stage3-static-analysis/metadata.json` for tool status
 2. Install missing tools using `install-tools.sh`
 3. The system will continue with available tools - this is by design
 
@@ -383,7 +383,7 @@ cp -r /path/to/ai-codebase-audit/.claude .
 
 **Cause**: Prioritization formula may not align with your priorities.
 
-**Fix**: Review `.analysis/stage6-final-synthesis/prioritization-matrix.json` to see all candidates ranked. You can adjust weights and re-run Stage 6.
+**Fix**: Review `.analysis/{language}/stage6-final-synthesis/prioritization-matrix.json` to see all candidates ranked. You can adjust weights and re-run Stage 6.
 
 ---
 
@@ -395,27 +395,27 @@ After each stage, you can review intermediate outputs:
 
 **After Stage 1**: Verify architecture understanding
 ```bash
-cat .analysis/stage1-artifacts/architecture-overview.md
+cat .analysis/{language}/stage1-artifacts/architecture-overview.md
 ```
 
 **After Stage 2**: See what agents independently found
 ```bash
-cat .analysis/stage2-parallel-analysis/convergence-preview.md
+cat .analysis/{language}/stage2-parallel-analysis/convergence-preview.md
 ```
 
 **After Stage 3**: Check which tools ran
 ```bash
-cat .analysis/stage3-static-analysis/tool-comparison.md
+cat .analysis/{language}/stage3-static-analysis/tool-comparison.md
 ```
 
 **After Stage 4**: See high-confidence findings
 ```bash
-cat .analysis/stage4-reconciliation/convergence-analysis.md
+cat .analysis/{language}/stage4-reconciliation/convergence-analysis.md
 ```
 
 **After Stage 5**: See what was dismissed as false positives
 ```bash
-cat .analysis/stage5-adversarial/false-positives-identified.md
+cat .analysis/{language}/stage5-adversarial/false-positives-identified.md
 ```
 
 ### Customizing the Audit
@@ -444,7 +444,7 @@ rm -rf .claude
 # - FINDINGS-DETAILED.json
 # - CONFIDENCE-MATRIX.md
 
-# Optionally keep .analysis/ for detailed review
+# Optionally keep .analysis/{language}/ for detailed review
 ```
 
 ### Remove Everything
@@ -460,7 +460,7 @@ If you want to run audits regularly but not commit results:
 
 ```bash
 # Add to your .gitignore
-echo ".analysis/" >> .gitignore
+echo ".analysis/{language}/" >> .gitignore
 echo "ANALYSIS-REPORT.md" >> .gitignore
 echo "ARCHITECTURE-OVERVIEW.md" >> .gitignore
 echo "FINDINGS-DETAILED.json" >> .gitignore

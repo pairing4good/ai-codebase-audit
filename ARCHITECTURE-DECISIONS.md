@@ -287,9 +287,9 @@ Should the audit system:
 
 ### Decision
 
-**Preserve all stage outputs in `.analysis/` directory while also generating polished final deliverables at repository root.**
+**Preserve all stage outputs in `.analysis/{language}/` directory while also generating polished final deliverables at repository root.**
 
-Every stage writes its complete output to `.analysis/stageN-*/` for review.
+Every stage writes its complete output to `.analysis/{language}/stageN-*/` for review.
 
 ### Rationale
 
@@ -325,7 +325,7 @@ target-repo/
 ├── FINDINGS-DETAILED.json       # Polished structured data
 ├── CONFIDENCE-MATRIX.md         # Polished evidence matrix
 │
-└── .analysis/                   # Complete stage outputs
+└── .analysis/{language}/                   # Complete stage outputs under the specific language (java, python, etc.)
     ├── stage1-artifacts/
     ├── stage2-parallel-analysis/
     ├── stage3-static-analysis/
@@ -356,7 +356,7 @@ target-repo/
 
 **For Executives**: Read `ANALYSIS-REPORT.md` only
 
-**For Developers**: Review top 10, drill into `.analysis/` for details
+**For Developers**: Review top 10, drill into `.analysis/{language}/` for details
 
 **For Validators**: Use evaluation checklist to review each stage
 

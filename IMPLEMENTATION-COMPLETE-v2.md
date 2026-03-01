@@ -178,7 +178,7 @@ cp -r /path/to/ai-codebase-audit/.claude .
 3. **FINDINGS-DETAILED.json** - Complete structured data
 4. **CONFIDENCE-MATRIX.md** - Evidence transparency matrix
 
-**Detailed Stage Outputs** (`.analysis/` Directory):
+**Detailed Stage Outputs** (`.analysis/{language}/` Directory):
 - **Stage 0** (Java/.NET only): Build validation logs
 - **Stage 1**: Architecture artifacts (7 files)
 - **Stage 2**: 4 independent agent analyses

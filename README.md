@@ -44,15 +44,15 @@ The audit will run automatically through all 6 stages and produce comprehensive 
 
 ### What You Get
 
-After the audit completes, you'll find all outputs in the `.analysis/` directory:
+After the audit completes, you'll find all outputs in the `.analysis/{language}/` directory:
 
-**Start here:** `.analysis/final-report/`
+**Start here:** `.analysis/{language}/final-report/`
 1. **ANALYSIS-REPORT.md** - Executive summary with top 10 prioritized improvements
 2. **ARCHITECTURE-OVERVIEW.md** - System architecture documentation with diagrams
 3. **FINDINGS-DETAILED.json** - Complete structured data for all findings
 4. **CONFIDENCE-MATRIX.md** - Evidence transparency showing what converged across sources
 
-**Detailed analysis:** `.analysis/stage1-artifacts/`, `.analysis/stage2-parallel-analysis/`, etc.
+**Detailed analysis:** `.analysis/{language}/stage1-artifacts/`, `.analysis/{language}/stage2-parallel-analysis/`, etc.
 
 ## The 6-Stage Analytical Funnel
 
@@ -65,7 +65,7 @@ Creates comprehensive architecture documentation before any analysis:
 - Entity relationship overview
 - Tech debt surface map
 
-**Output**: `.analysis/stage1-artifacts/`
+**Output**: `.analysis/{language}/stage1-artifacts/`
 
 ### Stage 2: Parallel Independent Analysis
 Four specialist agents analyze your codebase in complete isolation:
@@ -76,7 +76,7 @@ Four specialist agents analyze your codebase in complete isolation:
 
 Each agent produces an independent longlist with zero knowledge of what the others found.
 
-**Output**: `.analysis/stage2-parallel-analysis/`
+**Output**: `.analysis/{language}/stage2-parallel-analysis/`
 
 ### Stage 3: Static Analysis
 Runs JavaScript/TypeScript static analysis tools in parallel:
@@ -87,7 +87,7 @@ The system gracefully handles missing tools - if a tool isn't installed, it cont
 
 Results are unified into a standardized JSON format with overlap detection showing which findings converged across multiple tools.
 
-**Output**: `.analysis/stage3-static-analysis/`
+**Output**: `.analysis/{language}/stage3-static-analysis/`
 
 ### Stage 4: Reconciliation
 A fresh agent (with no prior analysis) synthesizes all findings:
@@ -96,7 +96,7 @@ A fresh agent (with no prior analysis) synthesizes all findings:
 - Assigns confidence scores based on convergence
 - Produces merged longlist with evidence tracking
 
-**Output**: `.analysis/stage4-reconciliation/`
+**Output**: `.analysis/{language}/stage4-reconciliation/`
 
 ### Stage 5: Adversarial Challenge
 An independent agent challenges every finding to eliminate false positives:
@@ -105,7 +105,7 @@ An independent agent challenges every finding to eliminate false positives:
 - Verifies severity classifications
 - Produces verdicts: upheld/downgraded/dismissed
 
-**Output**: `.analysis/stage5-adversarial/`
+**Output**: `.analysis/{language}/stage5-adversarial/`
 
 ### Stage 6: Final Synthesis
 Generates final top 10 prioritized by:
@@ -113,7 +113,7 @@ Generates final top 10 prioritized by:
 - **Confidence**: High (converged) > Medium > Low
 - **Effort-to-Value**: Quick wins prioritized
 
-**Output**: `.analysis/stage6-final-synthesis/` + top-level deliverables
+**Output**: `.analysis/{language}/stage6-final-synthesis/` + top-level deliverables
 
 ## Understanding Output Confidence Levels
 
@@ -135,22 +135,22 @@ Example: Only one agent or one tool identified it
 ## Evaluating Stage Outputs
 
 ### After Stage 1
-Review `.analysis/stage1-artifacts/architecture-overview.md` to verify Claude understood your system correctly. If the architecture description is wrong, the rest of the analysis will be compromised.
+Review `.analysis/{language}/stage1-artifacts/architecture-overview.md` to verify Claude understood your system correctly. If the architecture description is wrong, the rest of the analysis will be compromised.
 
 ### After Stage 2
-Review `.analysis/stage2-parallel-analysis/convergence-preview.md` to see what multiple agents independently flagged. These are your highest-signal findings.
+Review `.analysis/{language}/stage2-parallel-analysis/convergence-preview.md` to see what multiple agents independently flagged. These are your highest-signal findings.
 
 ### After Stage 3
-Check `.analysis/stage3-static-analysis/tool-comparison.md` to see which tools found what. If a tool failed to run, you'll see it here.
+Check `.analysis/{language}/stage3-static-analysis/tool-comparison.md` to see which tools found what. If a tool failed to run, you'll see it here.
 
 ### After Stage 4
-Review `.analysis/stage4-reconciliation/contradictions.md` to see where agents disagreed with static tools. These areas often need human judgment.
+Review `.analysis/{language}/stage4-reconciliation/contradictions.md` to see where agents disagreed with static tools. These areas often need human judgment.
 
 ### After Stage 5
-Check `.analysis/stage5-adversarial/false-positives-identified.md` to see what was dismissed. This builds trust in the final recommendations.
+Check `.analysis/{language}/stage5-adversarial/false-positives-identified.md` to see what was dismissed. This builds trust in the final recommendations.
 
 ### After Stage 6
-The `.analysis/final-report/ANALYSIS-REPORT.md` contains your final top 10 with complete evidence and recommendations.
+The `.analysis/{language}/final-report/ANALYSIS-REPORT.md` contains your final top 10 with complete evidence and recommendations.
 
 ## Customization
 
@@ -271,13 +271,13 @@ Instead, formats are defined inline where they're used, making the system simple
 Install the required tools for your tech stack. See the tech stack section for tool lists.
 
 ### "Agent produced empty output"
-Check `.analysis/stage{N}/metadata.json` for error messages. The agent may have hit context limits or permission issues.
+Check `.analysis/{language}/stage{N}/metadata.json` for error messages. The agent may have hit context limits or permission issues.
 
 ### "Convergence score is low"
 This is normal for codebases where issues are very specific to one domain. Low convergence doesn't mean findings are wrong, just that they're specialized.
 
 ### "Top 10 doesn't match my expectations"
-Review `.analysis/stage6-final-synthesis/all_candidates_ranked.json` to see the complete prioritization. You can adjust weights and re-run Stage 6.
+Review `.analysis/{language}/stage6-final-synthesis/all_candidates_ranked.json` to see the complete prioritization. You can adjust weights and re-run Stage 6.
 
 ## Contributing
 

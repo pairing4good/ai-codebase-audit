@@ -27,7 +27,7 @@ The audit system uses a **7-stage analytical funnel** with **independent sub-age
 
 1. **Independence First**: Specialist agents must never see each other's outputs until reconciliation
 2. **Evidence-Based Prioritization**: Findings ranked by severity × confidence × effort-to-value
-3. **Transparency Through Stages**: Every stage produces reviewable artifacts in `.analysis/` directories
+3. **Transparency Through Stages**: Every stage produces reviewable artifacts in `.analysis/{language}/` directories
 4. **Convergence = Confidence**: Findings that appear across multiple independent agents/tools are high-confidence
 
 ### Output Standards
@@ -54,7 +54,7 @@ All findings must include:
 When auditing a target repository, outputs go to:
 
 target-repo/
-└── .analysis/                   # All audit outputs
+└── .analysis/{language}/                   # All audit outputs under the specific language (java, python, etc.)
     ├── final-report/            # Executive deliverables (start here!)
     │   ├── ANALYSIS-REPORT.md           # Top 10 prioritized improvements
     │   ├── ARCHITECTURE-OVERVIEW.md     # System architecture docs
@@ -120,7 +120,7 @@ When compacting this context, preserve:
 - Stage 0 is MANDATORY - audit stops if build tools missing or project doesn't compile
 - Independence requirement for Stage 2 agents
 - Output format requirements (file:line, evidence sources, confidence levels)
-- Deliverables structure (4 top-level files + .analysis/ directory)
+- Deliverables structure (4 top-level files + .analysis/{language}/ directory)
 - Convergence = high confidence principle
 
 ## Tech Stack Support
@@ -197,7 +197,7 @@ When compacting this context, preserve:
 # - ARCHITECTURE-OVERVIEW.md (system documentation)
 # - FINDINGS-DETAILED.json (complete structured data)
 # - CONFIDENCE-MATRIX.md (evidence transparency)
-# - .analysis/ directory (all stage-by-stage outputs)
+# - .analysis/{language}/ directory (all stage-by-stage outputs)
 ```
 
 ## Custom Memory Sections

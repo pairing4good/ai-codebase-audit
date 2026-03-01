@@ -27,7 +27,7 @@ This repository contains a production-ready, reusable analytical system for audi
   - Generates architecture diagrams (Mermaid)
   - Creates data flow and sequence diagrams
   - Maps technical debt surface
-  - Output: `.analysis/stage1-artifacts/`
+  - Output: `.analysis/{language}/stage1-artifacts/`
 
 #### Stage 2 Agents (4 Independent Specialists)
 - **architecture-analyzer** (`.claude/agents/architecture-analyzer.md`)
@@ -192,7 +192,7 @@ your-project/
 ├── FINDINGS-DETAILED.json          # ⭐ Complete data
 ├── CONFIDENCE-MATRIX.md            # ⭐ Evidence matrix
 │
-└── .analysis/                      # 🔍 All stage outputs
+└── .analysis/{language}/                      # 🔍 All stage outputs
     ├── stage1-artifacts/
     ├── stage2-parallel-analysis/
     ├── stage3-static-analysis/
@@ -286,7 +286,7 @@ Every finding includes:
 
 ### Staged Deliverables
 
-Each stage outputs to `.analysis/stageN-*/`:
+Each stage outputs to `.analysis/{language}/stageN-*/`:
 - Stage outputs are preserved for review
 - Final deliverables synthesized at repository root
 - Can review any stage's reasoning
