@@ -227,7 +227,7 @@ For dependency installation failures (step 7), prompt user whether to continue w
 
 1. Create the directory structure:
 ```bash
-mkdir -p .analysis/stage1-artifacts
+mkdir -p .analysis/python/stage1-artifacts
 ```
 
 2. Mark Stage 1 as in_progress (todos already initialized in Stage 0)
@@ -249,7 +249,7 @@ IMPORTANT: This is a PYTHON project. Focus on Python-specific patterns:
 
 Your task:
 1. Analyze the repository structure comprehensively
-2. Generate ALL required artifacts in .analysis/stage1-artifacts/:
+2. Generate ALL required artifacts in .analysis/python/stage1-artifacts/:
    - architecture-overview.md (system purpose, tech stack, framework, architecture layers)
    - component-dependency.mermaid (module/package dependency graph)
    - data-flow-diagrams/ directory with flows for:
@@ -273,10 +273,10 @@ Python-specific items to include:
 
 Follow the complete process outlined in your agent definition (.claude/agents/artifact-generator.md).
 
-Output all files to .analysis/stage1-artifacts/
+Output all files to .analysis/python/stage1-artifacts/
 ```
 
-4. After the agent completes, read `.analysis/stage1-artifacts/architecture-overview.md` and present a summary to the user
+4. After the agent completes, read `.analysis/python/stage1-artifacts/architecture-overview.md` and present a summary to the user
 
 5. Mark Stage 1 as completed
 
@@ -290,7 +290,7 @@ Output all files to .analysis/stage1-artifacts/
 
 1. Create directory:
 ```bash
-mkdir -p .analysis/stage2-parallel-analysis
+mkdir -p .analysis/python/stage2-parallel-analysis
 ```
 
 2. Mark Stage 2 as in_progress
@@ -305,7 +305,7 @@ You are analyzing this Python codebase for architectural issues.
 
 IMPORTANT: This is a PYTHON project. Focus on Python-specific architectural patterns.
 
-Read Stage 1 artifacts from .analysis/stage1-artifacts/ for context.
+Read Stage 1 artifacts from .analysis/python/stage1-artifacts/ for context.
 
 Analyze for Python-specific issues:
 - **Django patterns** (if Django detected):
@@ -350,7 +350,7 @@ Common Python architectural anti-patterns to detect:
 
 You have NO ACCESS to other agents' outputs. Operate completely independently.
 
-Output your findings to: .analysis/stage2-parallel-analysis/architecture-analysis.json
+Output your findings to: .analysis/python/stage2-parallel-analysis/architecture-analysis.json
 
 Use the exact JSON schema defined in your agent definition (.claude/agents/architecture-analyzer.md).
 ```
@@ -361,7 +361,7 @@ You are analyzing this Python codebase for security vulnerabilities.
 
 IMPORTANT: This is a PYTHON project. Focus on Python-specific security issues.
 
-Read Stage 1 artifacts from .analysis/stage1-artifacts/ for context.
+Read Stage 1 artifacts from .analysis/python/stage1-artifacts/ for context.
 
 Analyze for Python-specific OWASP Top 10 vulnerabilities:
 
@@ -437,7 +437,7 @@ Flask-specific security checks:
 
 You have NO ACCESS to other agents' outputs. Operate completely independently.
 
-Output your findings to: .analysis/stage2-parallel-analysis/security-analysis.json
+Output your findings to: .analysis/python/stage2-parallel-analysis/security-analysis.json
 
 Use the exact JSON schema defined in your agent definition (.claude/agents/security-analyzer.md).
 ```
@@ -448,7 +448,7 @@ You are analyzing this Python codebase for code quality and technical debt.
 
 IMPORTANT: This is a PYTHON project. Focus on Python-specific code quality issues.
 
-Read Stage 1 artifacts from .analysis/stage1-artifacts/ for context.
+Read Stage 1 artifacts from .analysis/python/stage1-artifacts/ for context.
 
 Analyze for Python-specific code quality issues:
 - **Complexity metrics**:
@@ -517,7 +517,7 @@ Analyze for Python-specific code quality issues:
 
 You have NO ACCESS to other agents' outputs. Operate completely independently.
 
-Output your findings to: .analysis/stage2-parallel-analysis/maintainability-analysis.json
+Output your findings to: .analysis/python/stage2-parallel-analysis/maintainability-analysis.json
 
 Use the exact JSON schema defined in your agent definition (.claude/agents/maintainability-analyzer.md).
 ```
@@ -582,7 +582,7 @@ Analyze for Python-specific dependency issues:
 
 You have NO ACCESS to other agents' outputs. Operate completely independently.
 
-Output your findings to: .analysis/stage2-parallel-analysis/dependency-analysis.json
+Output your findings to: .analysis/python/stage2-parallel-analysis/dependency-analysis.json
 
 Use the exact JSON schema defined in your agent definition (.claude/agents/dependency-analyzer.md).
 ```
@@ -592,8 +592,8 @@ Use the exact JSON schema defined in your agent definition (.claude/agents/depen
 5. Generate a convergence preview by identifying findings that appear in multiple agent outputs:
    - Group findings by file:line location
    - Count how many agents flagged each location
-   - Write `.analysis/stage2-parallel-analysis/convergence-preview.md` showing multi-agent findings
-   - Write `.analysis/stage2-parallel-analysis/metadata.json` with counts
+   - Write `.analysis/python/stage2-parallel-analysis/convergence-preview.md` showing multi-agent findings
+   - Write `.analysis/python/stage2-parallel-analysis/metadata.json` with counts
 
 6. Present convergence preview to user showing high-confidence findings
 
@@ -609,7 +609,7 @@ Use the exact JSON schema defined in your agent definition (.claude/agents/depen
 
 1. Create directory:
 ```bash
-mkdir -p .analysis/stage3-static-analysis/raw-outputs
+mkdir -p .analysis/python/stage3-static-analysis/raw-outputs
 ```
 
 2. Mark Stage 3 as in_progress
@@ -626,7 +626,7 @@ bash .claude/skills/audit-python/tools/auto-install-tools.sh
 ```bash
 if command -v semgrep >/dev/null 2>&1; then
   echo "Running Semgrep with Python OWASP/CWE rulesets..."
-  bash .claude/skills/audit-python/tools/semgrep-runner.sh . .analysis/stage3-static-analysis/raw-outputs/semgrep-report.json
+  bash .claude/skills/audit-python/tools/semgrep-runner.sh . .analysis/python/stage3-static-analysis/raw-outputs/semgrep-report.json
 else
   echo "⚠️ Semgrep not installed (optional but recommended)"
 fi
@@ -636,7 +636,7 @@ fi
 ```bash
 if command -v bandit >/dev/null 2>&1 || $PIP_CMD list | grep -q bandit; then
   echo "Running Bandit for Python security analysis..."
-  bash .claude/skills/audit-python/tools/bandit-runner.sh . .analysis/stage3-static-analysis/raw-outputs/bandit-report.json
+  bash .claude/skills/audit-python/tools/bandit-runner.sh . .analysis/python/stage3-static-analysis/raw-outputs/bandit-report.json
 else
   echo "⚠️ Bandit not installed (will attempt to install)"
 fi
@@ -646,7 +646,7 @@ fi
 ```bash
 if command -v pylint >/dev/null 2>&1 || $PIP_CMD list | grep -q pylint; then
   echo "Running Pylint for code quality analysis..."
-  bash .claude/skills/audit-python/tools/pylint-runner.sh . .analysis/stage3-static-analysis/raw-outputs/pylint-report.json
+  bash .claude/skills/audit-python/tools/pylint-runner.sh . .analysis/python/stage3-static-analysis/raw-outputs/pylint-report.json
 else
   echo "⚠️ Pylint not installed (will attempt to install)"
 fi
@@ -656,7 +656,7 @@ fi
 ```bash
 if command -v mypy >/dev/null 2>&1 || $PIP_CMD list | grep -q mypy; then
   echo "Running mypy for static type checking..."
-  bash .claude/skills/audit-python/tools/mypy-runner.sh . .analysis/stage3-static-analysis/raw-outputs/mypy-report.json
+  bash .claude/skills/audit-python/tools/mypy-runner.sh . .analysis/python/stage3-static-analysis/raw-outputs/mypy-report.json
 else
   echo "⚠️ mypy not installed (optional)"
 fi
@@ -666,7 +666,7 @@ fi
 ```bash
 if command -v safety >/dev/null 2>&1 || $PIP_CMD list | grep -q safety; then
   echo "Running Safety for dependency vulnerability scanning..."
-  bash .claude/skills/audit-python/tools/safety-runner.sh . .analysis/stage3-static-analysis/raw-outputs/safety-report.json
+  bash .claude/skills/audit-python/tools/safety-runner.sh . .analysis/python/stage3-static-analysis/raw-outputs/safety-report.json
 else
   echo "⚠️ Safety not installed (will attempt to install)"
 fi
@@ -676,7 +676,7 @@ fi
 ```bash
 if command -v snyk >/dev/null 2>&1; then
   echo "Running Snyk Code and Open Source analysis..."
-  bash .claude/skills/audit-python/tools/snyk-runner.sh . .analysis/stage3-static-analysis/raw-outputs
+  bash .claude/skills/audit-python/tools/snyk-runner.sh . .analysis/python/stage3-static-analysis/raw-outputs
 else
   echo "⚠️ Snyk not installed (optional but recommended for CVE detection)"
 fi
@@ -686,7 +686,7 @@ fi
 ```bash
 if command -v trivy >/dev/null 2>&1; then
   echo "Running Trivy for container and dependency scanning..."
-  bash .claude/skills/audit-python/tools/trivy-runner.sh . .analysis/stage3-static-analysis/raw-outputs/trivy-report.json
+  bash .claude/skills/audit-python/tools/trivy-runner.sh . .analysis/python/stage3-static-analysis/raw-outputs/trivy-report.json
 else
   echo "⚠️ Trivy not installed (optional)"
 fi
@@ -696,7 +696,7 @@ fi
 ```bash
 if command -v radon >/dev/null 2>&1 || $PIP_CMD list | grep -q radon; then
   echo "Running Radon for complexity analysis..."
-  bash .claude/skills/audit-python/tools/radon-runner.sh . .analysis/stage3-static-analysis/raw-outputs/radon-report.json
+  bash .claude/skills/audit-python/tools/radon-runner.sh . .analysis/python/stage3-static-analysis/raw-outputs/radon-report.json
 else
   echo "⚠️ Radon not installed (optional)"
 fi
@@ -706,7 +706,7 @@ fi
 ```bash
 if [ -f "sonar-project.properties" ] && command -v sonar-scanner >/dev/null 2>&1; then
   echo "Running SonarQube Scanner..."
-  bash .claude/skills/audit-python/tools/sonarqube-runner.sh . .analysis/stage3-static-analysis/raw-outputs/sonarqube-report.json
+  bash .claude/skills/audit-python/tools/sonarqube-runner.sh . .analysis/python/stage3-static-analysis/raw-outputs/sonarqube-report.json
 else
   echo "⚠️ SonarQube not configured (optional)"
 fi
@@ -714,17 +714,17 @@ fi
 
 5. Unify results using format-static-results.js:
 ```bash
-node .claude/skills/audit-python/tools/format-static-results.js .analysis/stage3-static-analysis
+node .claude/skills/audit-python/tools/format-static-results.js .analysis/python/stage3-static-analysis
 ```
 
 This creates:
-- `.analysis/stage3-static-analysis/unified-results.json` (normalized format)
-- `.analysis/stage3-static-analysis/tool-comparison.md` (which tools found what)
-- `.analysis/stage3-static-analysis/overlap-analysis.json` (convergence across tools)
+- `.analysis/python/stage3-static-analysis/unified-results.json` (normalized format)
+- `.analysis/python/stage3-static-analysis/tool-comparison.md` (which tools found what)
+- `.analysis/python/stage3-static-analysis/overlap-analysis.json` (convergence across tools)
 
 6. Read `tool-comparison.md` and present summary to user
 
-7. Write `.analysis/stage3-static-analysis/metadata.json` with tool execution status
+7. Write `.analysis/python/stage3-static-analysis/metadata.json` with tool execution status
 
 8. Mark Stage 3 as completed
 
@@ -738,7 +738,7 @@ This creates:
 
 1. Create directory:
 ```bash
-mkdir -p .analysis/stage4-reconciliation
+mkdir -p .analysis/python/stage4-reconciliation
 ```
 
 2. Mark Stage 4 as in_progress
@@ -752,9 +752,9 @@ You are synthesizing findings from multiple independent sources for a PYTHON cod
 You have NEVER analyzed this codebase before. You are coming to this fresh with no prior analytical bias.
 
 Your inputs:
-- Stage 1 artifacts: .analysis/stage1-artifacts/ (Python architecture context)
-- Stage 2 agent outputs: .analysis/stage2-parallel-analysis/*.json (4 independent analyses)
-- Stage 3 static analysis: .analysis/stage3-static-analysis/unified-results.json (Python tool findings)
+- Stage 1 artifacts: .analysis/python/stage1-artifacts/ (Python architecture context)
+- Stage 2 agent outputs: .analysis/python/stage2-parallel-analysis/*.json (4 independent analyses)
+- Stage 3 static analysis: .analysis/python/stage3-static-analysis/unified-results.json (Python tool findings)
 
 Your task:
 1. Read ALL inputs
@@ -764,7 +764,7 @@ Your task:
 5. Identify contradictions (agent vs tool disagreements)
 6. Generate merged longlist with evidence tracking
 
-Output to .analysis/stage4-reconciliation/:
+Output to .analysis/python/stage4-reconciliation/:
 - reconciled-longlist.json (all findings with confidence scores and evidence)
 - convergence-analysis.md (which findings converged across sources)
 - agent-only-findings.md (findings only agents caught)
@@ -794,7 +794,7 @@ Confidence levels:
 
 1. Create directory:
 ```bash
-mkdir -p .analysis/stage5-adversarial
+mkdir -p .analysis/python/stage5-adversarial
 ```
 
 2. Mark Stage 5 as in_progress
@@ -808,7 +808,7 @@ You are challenging reconciled findings from a PYTHON codebase to eliminate fals
 You have NEVER been involved in this audit before. You are the independent skeptic.
 
 Your input:
-- Reconciled findings: .analysis/stage4-reconciliation/reconciled-longlist.json
+- Reconciled findings: .analysis/python/stage4-reconciliation/reconciled-longlist.json
 
 Your task:
 Attack each finding using the 5-point challenge framework:
@@ -838,7 +838,7 @@ Expected metrics:
 - Downgraded: 10-20%
 - Dismissed: 5-15%
 
-Output to .analysis/stage5-adversarial/:
+Output to .analysis/python/stage5-adversarial/:
 - challenged-findings.json (all findings with verdicts and adjusted severity)
 - false-positives-identified.md (dismissed findings with reasoning)
 - severity-adjustments.md (downgraded findings with justification)
@@ -864,12 +864,12 @@ Be SKEPTICAL. Make findings prove they deserve to be in the top 10.
 
 1. Create directory:
 ```bash
-mkdir -p .analysis/stage6-final-synthesis
+mkdir -p .analysis/python/stage6-final-synthesis
 ```
 
 2. Mark Stage 6 as in_progress
 
-3. Read `.analysis/stage5-adversarial/challenged-findings.json`
+3. Read `.analysis/python/stage5-adversarial/challenged-findings.json`
 
 4. Filter to UPHELD findings only (exclude DISMISSED)
 
@@ -914,17 +914,17 @@ Python Security Bonus (add +0.5 to priority_score):
 6. Sort by priority_score descending and select top 10
 
 7. Write Stage 6 outputs:
-   - `.analysis/stage6-final-synthesis/prioritization-matrix.json` (all findings with scores)
-   - `.analysis/stage6-final-synthesis/top-10-detailed.json` (top 10 with full details)
-   - `.analysis/stage6-final-synthesis/honorable-mentions.md` (findings 11-20)
-   - `.analysis/stage6-final-synthesis/quick-wins.md` (low effort, high impact items)
-   - `.analysis/stage6-final-synthesis/systemic-patterns.md` (recurring Python issues)
-   - `.analysis/stage6-final-synthesis/metadata.json` (statistics)
+   - `.analysis/python/stage6-final-synthesis/prioritization-matrix.json` (all findings with scores)
+   - `.analysis/python/stage6-final-synthesis/top-10-detailed.json` (top 10 with full details)
+   - `.analysis/python/stage6-final-synthesis/honorable-mentions.md` (findings 11-20)
+   - `.analysis/python/stage6-final-synthesis/quick-wins.md` (low effort, high impact items)
+   - `.analysis/python/stage6-final-synthesis/systemic-patterns.md` (recurring Python issues)
+   - `.analysis/python/stage6-final-synthesis/metadata.json` (statistics)
 
 8. Create the final report directory and generate the 4 executive deliverables:
 
 ```bash
-mkdir -p .analysis/final-report
+mkdir -p .analysis/python/final-report
 ```
 
 **ANALYSIS-REPORT.md**:
@@ -1045,14 +1045,14 @@ def get_users_by_role(request):
 ## Next Steps
 
 1. Review this report and prioritize which findings to address first
-2. See `.analysis/final-report/FINDINGS-DETAILED.json` for complete structured data
-3. See `.analysis/final-report/CONFIDENCE-MATRIX.md` for evidence transparency matrix
-4. See `.analysis/` directory for complete stage-by-stage outputs
+2. See `.analysis/python/final-report/FINDINGS-DETAILED.json` for complete structured data
+3. See `.analysis/python/final-report/CONFIDENCE-MATRIX.md` for evidence transparency matrix
+4. See `.analysis/python/` directory for complete stage-by-stage outputs
 5. Consider running `/audit-python` again after fixes to measure improvement
 
 ## Full Details
 
-All stage-by-stage outputs available in `.analysis/`:
+All stage-by-stage outputs available in `.analysis/python/`:
 - Stage 0: Environment validation logs
 - Stage 1: Architecture artifacts
 - Stage 2: 4 independent agent analyses
@@ -1064,7 +1064,7 @@ All stage-by-stage outputs available in `.analysis/`:
 
 9. **Create ARCHITECTURE-OVERVIEW.md**:
 ```bash
-cp .analysis/stage1-artifacts/architecture-overview.md .analysis/final-report/ARCHITECTURE-OVERVIEW.md
+cp .analysis/python/stage1-artifacts/architecture-overview.md .analysis/python/final-report/ARCHITECTURE-OVERVIEW.md
 ```
 
 10. **Create FINDINGS-DETAILED.json**: Export all upheld findings with complete structure (must include `example` field with `file`, `line_start`, `line_end`, and `code` for each finding)
@@ -1090,7 +1090,7 @@ Example format:
 ```
 ## Analysis Complete! 🎯
 
-**Executive Deliverables** (in .analysis/final-report/):
+**Executive Deliverables** (in .analysis/python/final-report/):
 - ANALYSIS-REPORT.md - Top 10 with detailed recommendations
 - ARCHITECTURE-OVERVIEW.md - Python system architecture documentation
 - FINDINGS-DETAILED.json - Complete structured data
@@ -1109,7 +1109,7 @@ Example format:
 - Command Injection: [X]
 - Dependency vulnerabilities: [X]
 
-**Next Step**: Review `.analysis/final-report/ANALYSIS-REPORT.md` for your prioritized improvements.
+**Next Step**: Review `.analysis/python/final-report/ANALYSIS-REPORT.md` for your prioritized improvements.
 ```
 
 13. Mark Stage 6 as completed

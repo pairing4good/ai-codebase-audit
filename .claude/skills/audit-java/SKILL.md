@@ -148,12 +148,12 @@ fi
 mkdir -p .analysis
 
 if [ "$BUILD_TOOL" = "maven" ]; then
-  mvn dependency:build-classpath -Dmdep.outputFile=.analysis/classpath.txt -q
+  mvn dependency:build-classpath -Dmdep.outputFile=.analysis/java/classpath.txt -q
 elif [ "$BUILD_TOOL" = "gradle" ]; then
   if [ -f "./gradlew" ]; then
-    ./gradlew dependencies --configuration compileClasspath > .analysis/gradle-dependencies.txt
+    ./gradlew dependencies --configuration compileClasspath > .analysis/java/gradle-dependencies.txt
   else
-    gradle dependencies --configuration compileClasspath > .analysis/gradle-dependencies.txt
+    gradle dependencies --configuration compileClasspath > .analysis/java/gradle-dependencies.txt
   fi
 fi
 ```
@@ -185,7 +185,7 @@ fi
 
 1. Create the directory structure:
 ```bash
-mkdir -p .analysis/stage1-artifacts
+mkdir -p .analysis/java/stage1-artifacts
 ```
 
 2. Mark Stage 1 as in_progress
@@ -225,7 +225,7 @@ IMPORTANT: This is a JAVA project. Focus on Java-specific patterns:
 
 Your task:
 1. Analyze the repository structure comprehensively
-2. Generate ALL required artifacts in .analysis/stage1-artifacts/:
+2. Generate ALL required artifacts in .analysis/java/stage1-artifacts/:
    - architecture-overview.md (system purpose, tech stack, Spring Boot vs Jakarta EE, architecture layers)
    - component-dependency.mermaid (module/package dependency graph)
    - data-flow-diagrams/ directory with flows for:
@@ -250,10 +250,10 @@ Java-specific items to include:
 
 Follow the complete process outlined in your agent definition (.claude/agents/artifact-generator.md).
 
-Output all files to .analysis/stage1-artifacts/
+Output all files to .analysis/java/stage1-artifacts/
 ```
 
-5. After the agent completes, read `.analysis/stage1-artifacts/architecture-overview.md` and present a summary to the user
+5. After the agent completes, read `.analysis/java/stage1-artifacts/architecture-overview.md` and present a summary to the user
 
 6. Mark Stage 1 as completed
 
@@ -267,7 +267,7 @@ Output all files to .analysis/stage1-artifacts/
 
 1. Create directory:
 ```bash
-mkdir -p .analysis/stage2-parallel-analysis
+mkdir -p .analysis/java/stage2-parallel-analysis
 ```
 
 2. Mark Stage 2 as in_progress
@@ -282,7 +282,7 @@ You are analyzing this Java codebase for architectural issues.
 
 IMPORTANT: This is a JAVA project. Focus on Java-specific architectural patterns.
 
-Read Stage 1 artifacts from .analysis/stage1-artifacts/ for context.
+Read Stage 1 artifacts from .analysis/java/stage1-artifacts/ for context.
 
 Analyze for Java-specific issues:
 - **Spring Framework patterns**: Proper use of @Autowired, @Component, @Service, @Repository
@@ -306,7 +306,7 @@ Common Java architectural anti-patterns to detect:
 
 You have NO ACCESS to other agents' outputs. Operate completely independently.
 
-Output your findings to: .analysis/stage2-parallel-analysis/architecture-analysis.json
+Output your findings to: .analysis/java/stage2-parallel-analysis/architecture-analysis.json
 
 Use the exact JSON schema defined in your agent definition (.claude/agents/architecture-analyzer.md).
 ```
@@ -317,7 +317,7 @@ You are analyzing this Java codebase for security vulnerabilities.
 
 IMPORTANT: This is a JAVA project. Focus on Java-specific security issues.
 
-Read Stage 1 artifacts from .analysis/stage1-artifacts/ for context.
+Read Stage 1 artifacts from .analysis/java/stage1-artifacts/ for context.
 
 Analyze for Java-specific OWASP Top 10 vulnerabilities:
 1. **SQL Injection**:
@@ -376,7 +376,7 @@ JWT/OAuth2 specific checks:
 
 You have NO ACCESS to other agents' outputs. Operate completely independently.
 
-Output your findings to: .analysis/stage2-parallel-analysis/security-analysis.json
+Output your findings to: .analysis/java/stage2-parallel-analysis/security-analysis.json
 
 Use the exact JSON schema defined in your agent definition (.claude/agents/security-analyzer.md).
 ```
@@ -387,7 +387,7 @@ You are analyzing this Java codebase for code quality and technical debt.
 
 IMPORTANT: This is a JAVA project. Focus on Java-specific code quality issues.
 
-Read Stage 1 artifacts from .analysis/stage1-artifacts/ for context.
+Read Stage 1 artifacts from .analysis/java/stage1-artifacts/ for context.
 
 Analyze for Java-specific code quality issues:
 - **Cyclomatic complexity**: Methods with >10 decision points
@@ -417,7 +417,7 @@ Analyze for Java-specific code quality issues:
 
 You have NO ACCESS to other agents' outputs. Operate completely independently.
 
-Output your findings to: .analysis/stage2-parallel-analysis/maintainability-analysis.json
+Output your findings to: .analysis/java/stage2-parallel-analysis/maintainability-analysis.json
 
 Use the exact JSON schema defined in your agent definition (.claude/agents/maintainability-analyzer.md).
 ```
@@ -464,7 +464,7 @@ Supply chain security:
 
 You have NO ACCESS to other agents' outputs. Operate completely independently.
 
-Output your findings to: .analysis/stage2-parallel-analysis/dependency-analysis.json
+Output your findings to: .analysis/java/stage2-parallel-analysis/dependency-analysis.json
 
 Use the exact JSON schema defined in your agent definition (.claude/agents/dependency-analyzer.md).
 ```
@@ -474,8 +474,8 @@ Use the exact JSON schema defined in your agent definition (.claude/agents/depen
 5. Generate a convergence preview by identifying findings that appear in multiple agent outputs:
    - Group findings by file:line location
    - Count how many agents flagged each location
-   - Write `.analysis/stage2-parallel-analysis/convergence-preview.md` showing multi-agent findings
-   - Write `.analysis/stage2-parallel-analysis/metadata.json` with counts
+   - Write `.analysis/java/stage2-parallel-analysis/convergence-preview.md` showing multi-agent findings
+   - Write `.analysis/java/stage2-parallel-analysis/metadata.json` with counts
 
 6. Present convergence preview to user showing high-confidence findings
 
@@ -491,7 +491,7 @@ Use the exact JSON schema defined in your agent definition (.claude/agents/depen
 
 1. Create directory:
 ```bash
-mkdir -p .analysis/stage3-static-analysis/raw-outputs
+mkdir -p .analysis/java/stage3-static-analysis/raw-outputs
 ```
 
 2. Mark Stage 3 as in_progress
@@ -508,7 +508,7 @@ bash .claude/skills/audit-java/tools/auto-install-tools.sh
 ```bash
 if command -v semgrep >/dev/null 2>&1; then
   echo "Running Semgrep with Java OWASP/CWE/JWT rulesets..."
-  bash .claude/skills/audit-java/tools/semgrep-runner.sh . .analysis/stage3-static-analysis/raw-outputs/semgrep-report.json
+  bash .claude/skills/audit-java/tools/semgrep-runner.sh . .analysis/java/stage3-static-analysis/raw-outputs/semgrep-report.json
 else
   echo "⚠️ Semgrep not installed (optional but recommended)"
 fi
@@ -518,7 +518,7 @@ fi
 ```bash
 if command -v mvn >/dev/null 2>&1 || command -v gradle >/dev/null 2>&1; then
   echo "Running SpotBugs with Find Security Bugs plugin..."
-  bash .claude/skills/audit-java/tools/spotbugs-runner.sh . .analysis/stage3-static-analysis/raw-outputs/spotbugs-report.xml
+  bash .claude/skills/audit-java/tools/spotbugs-runner.sh . .analysis/java/stage3-static-analysis/raw-outputs/spotbugs-report.xml
 else
   echo "⚠️ Maven or Gradle not found for SpotBugs"
 fi
@@ -528,7 +528,7 @@ fi
 ```bash
 if command -v mvn >/dev/null 2>&1 || command -v gradle >/dev/null 2>&1; then
   echo "Running PMD for code quality analysis..."
-  bash .claude/skills/audit-java/tools/pmd-runner.sh . .analysis/stage3-static-analysis/raw-outputs/pmd-report.xml
+  bash .claude/skills/audit-java/tools/pmd-runner.sh . .analysis/java/stage3-static-analysis/raw-outputs/pmd-report.xml
 else
   echo "⚠️ Maven or Gradle not found for PMD"
 fi
@@ -538,7 +538,7 @@ fi
 ```bash
 if command -v mvn >/dev/null 2>&1 || command -v gradle >/dev/null 2>&1; then
   echo "Running Checkstyle..."
-  bash .claude/skills/audit-java/tools/checkstyle-runner.sh . .analysis/stage3-static-analysis/raw-outputs/checkstyle-report.xml
+  bash .claude/skills/audit-java/tools/checkstyle-runner.sh . .analysis/java/stage3-static-analysis/raw-outputs/checkstyle-report.xml
 else
   echo "⚠️ Maven or Gradle not found for Checkstyle"
 fi
@@ -548,7 +548,7 @@ fi
 ```bash
 if command -v snyk >/dev/null 2>&1; then
   echo "Running Snyk Code and Open Source analysis..."
-  bash .claude/skills/audit-java/tools/snyk-runner.sh . .analysis/stage3-static-analysis/raw-outputs
+  bash .claude/skills/audit-java/tools/snyk-runner.sh . .analysis/java/stage3-static-analysis/raw-outputs
 else
   echo "⚠️ Snyk not installed (optional but recommended for CVE detection)"
 fi
@@ -558,7 +558,7 @@ fi
 ```bash
 if command -v dependency-check >/dev/null 2>&1; then
   echo "Running OWASP Dependency-Check..."
-  bash .claude/skills/audit-java/tools/dependency-check-runner.sh . .analysis/stage3-static-analysis/raw-outputs/dependency-check-report.json
+  bash .claude/skills/audit-java/tools/dependency-check-runner.sh . .analysis/java/stage3-static-analysis/raw-outputs/dependency-check-report.json
 else
   echo "⚠️ OWASP Dependency-Check not installed (optional)"
 fi
@@ -568,7 +568,7 @@ fi
 ```bash
 if command -v trivy >/dev/null 2>&1; then
   echo "Running Trivy for container and IaC scanning..."
-  bash .claude/skills/audit-java/tools/trivy-runner.sh . .analysis/stage3-static-analysis/raw-outputs/trivy-report.json
+  bash .claude/skills/audit-java/tools/trivy-runner.sh . .analysis/java/stage3-static-analysis/raw-outputs/trivy-report.json
 else
   echo "⚠️ Trivy not installed (optional)"
 fi
@@ -578,7 +578,7 @@ fi
 ```bash
 if [ -f "sonar-project.properties" ] && command -v sonar-scanner >/dev/null 2>&1; then
   echo "Running SonarQube Scanner..."
-  bash .claude/skills/audit-java/tools/sonarqube-runner.sh . .analysis/stage3-static-analysis/raw-outputs/sonarqube-report.json
+  bash .claude/skills/audit-java/tools/sonarqube-runner.sh . .analysis/java/stage3-static-analysis/raw-outputs/sonarqube-report.json
 else
   echo "⚠️ SonarQube not configured (optional)"
 fi
@@ -586,17 +586,17 @@ fi
 
 5. Unify results using format-static-results.js:
 ```bash
-node .claude/skills/audit-java/tools/format-static-results.js .analysis/stage3-static-analysis
+node .claude/skills/audit-java/tools/format-static-results.js .analysis/java/stage3-static-analysis
 ```
 
 This creates:
-- `.analysis/stage3-static-analysis/unified-results.json` (normalized format)
-- `.analysis/stage3-static-analysis/tool-comparison.md` (which tools found what)
-- `.analysis/stage3-static-analysis/overlap-analysis.json` (convergence across tools)
+- `.analysis/java/stage3-static-analysis/unified-results.json` (normalized format)
+- `.analysis/java/stage3-static-analysis/tool-comparison.md` (which tools found what)
+- `.analysis/java/stage3-static-analysis/overlap-analysis.json` (convergence across tools)
 
 6. Read `tool-comparison.md` and present summary to user
 
-7. Write `.analysis/stage3-static-analysis/metadata.json` with tool execution status
+7. Write `.analysis/java/stage3-static-analysis/metadata.json` with tool execution status
 
 8. Mark Stage 3 as completed
 
@@ -610,7 +610,7 @@ This creates:
 
 1. Create directory:
 ```bash
-mkdir -p .analysis/stage4-reconciliation
+mkdir -p .analysis/java/stage4-reconciliation
 ```
 
 2. Mark Stage 4 as in_progress
@@ -624,9 +624,9 @@ You are synthesizing findings from multiple independent sources for a JAVA codeb
 You have NEVER analyzed this codebase before. You are coming to this fresh with no prior analytical bias.
 
 Your inputs:
-- Stage 1 artifacts: .analysis/stage1-artifacts/ (Java architecture context)
-- Stage 2 agent outputs: .analysis/stage2-parallel-analysis/*.json (4 independent analyses)
-- Stage 3 static analysis: .analysis/stage3-static-analysis/unified-results.json (Java tool findings)
+- Stage 1 artifacts: .analysis/java/stage1-artifacts/ (Java architecture context)
+- Stage 2 agent outputs: .analysis/java/stage2-parallel-analysis/*.json (4 independent analyses)
+- Stage 3 static analysis: .analysis/java/stage3-static-analysis/unified-results.json (Java tool findings)
 
 Your task:
 1. Read ALL inputs
@@ -636,7 +636,7 @@ Your task:
 5. Identify contradictions (agent vs tool disagreements)
 6. Generate merged longlist with evidence tracking
 
-Output to .analysis/stage4-reconciliation/:
+Output to .analysis/java/stage4-reconciliation/:
 - reconciled-longlist.json (all findings with confidence scores and evidence)
 - convergence-analysis.md (which findings converged across sources)
 - agent-only-findings.md (findings only agents caught)
@@ -666,7 +666,7 @@ Confidence levels:
 
 1. Create directory:
 ```bash
-mkdir -p .analysis/stage5-adversarial
+mkdir -p .analysis/java/stage5-adversarial
 ```
 
 2. Mark Stage 5 as in_progress
@@ -680,7 +680,7 @@ You are challenging reconciled findings from a JAVA codebase to eliminate false 
 You have NEVER been involved in this audit before. You are the independent skeptic.
 
 Your input:
-- Reconciled findings: .analysis/stage4-reconciliation/reconciled-longlist.json
+- Reconciled findings: .analysis/java/stage4-reconciliation/reconciled-longlist.json
 
 Your task:
 Attack each finding using the 5-point challenge framework:
@@ -707,7 +707,7 @@ Expected metrics:
 - Downgraded: 10-20%
 - Dismissed: 5-15%
 
-Output to .analysis/stage5-adversarial/:
+Output to .analysis/java/stage5-adversarial/:
 - challenged-findings.json (all findings with verdicts and adjusted severity)
 - false-positives-identified.md (dismissed findings with reasoning)
 - severity-adjustments.md (downgraded findings with justification)
@@ -733,12 +733,12 @@ Be SKEPTICAL. Make findings prove they deserve to be in the top 10.
 
 1. Create directory:
 ```bash
-mkdir -p .analysis/stage6-final-synthesis
+mkdir -p .analysis/java/stage6-final-synthesis
 ```
 
 2. Mark Stage 6 as in_progress
 
-3. Read `.analysis/stage5-adversarial/challenged-findings.json`
+3. Read `.analysis/java/stage5-adversarial/challenged-findings.json`
 
 4. Filter to UPHELD findings only (exclude DISMISSED)
 
@@ -783,17 +783,17 @@ Java Security Bonus (add +0.5 to priority_score):
 6. Sort by priority_score descending and select top 10
 
 7. Write Stage 6 outputs:
-   - `.analysis/stage6-final-synthesis/prioritization-matrix.json` (all findings with scores)
-   - `.analysis/stage6-final-synthesis/top-10-detailed.json` (top 10 with full details)
-   - `.analysis/stage6-final-synthesis/honorable-mentions.md` (findings 11-20)
-   - `.analysis/stage6-final-synthesis/quick-wins.md` (low effort, high impact items)
-   - `.analysis/stage6-final-synthesis/systemic-patterns.md` (recurring Java issues)
-   - `.analysis/stage6-final-synthesis/metadata.json` (statistics)
+   - `.analysis/java/stage6-final-synthesis/prioritization-matrix.json` (all findings with scores)
+   - `.analysis/java/stage6-final-synthesis/top-10-detailed.json` (top 10 with full details)
+   - `.analysis/java/stage6-final-synthesis/honorable-mentions.md` (findings 11-20)
+   - `.analysis/java/stage6-final-synthesis/quick-wins.md` (low effort, high impact items)
+   - `.analysis/java/stage6-final-synthesis/systemic-patterns.md` (recurring Java issues)
+   - `.analysis/java/stage6-final-synthesis/metadata.json` (statistics)
 
 8. Create the final report directory and generate the 4 executive deliverables:
 
 ```bash
-mkdir -p .analysis/final-report
+mkdir -p .analysis/java/final-report
 ```
 
 **ANALYSIS-REPORT.md**:
@@ -906,14 +906,14 @@ public List<User> getUsersByRole(String role) {
 ## Next Steps
 
 1. Review this report and prioritize which findings to address first
-2. See `.analysis/final-report/FINDINGS-DETAILED.json` for complete structured data
-3. See `.analysis/final-report/CONFIDENCE-MATRIX.md` for evidence transparency matrix
-4. See `.analysis/` directory for complete stage-by-stage outputs
+2. See `.analysis/java/final-report/FINDINGS-DETAILED.json` for complete structured data
+3. See `.analysis/java/final-report/CONFIDENCE-MATRIX.md` for evidence transparency matrix
+4. See `.analysis/java/` directory for complete stage-by-stage outputs
 5. Consider running `/audit-java` again after fixes to measure improvement
 
 ## Full Details
 
-All stage-by-stage outputs available in `.analysis/`:
+All stage-by-stage outputs available in `.analysis/java/`:
 - Stage 0: Build validation logs
 - Stage 1: Architecture artifacts
 - Stage 2: 4 independent agent analyses
@@ -925,7 +925,7 @@ All stage-by-stage outputs available in `.analysis/`:
 
 9. **Create ARCHITECTURE-OVERVIEW.md**:
 ```bash
-cp .analysis/stage1-artifacts/architecture-overview.md .analysis/final-report/ARCHITECTURE-OVERVIEW.md
+cp .analysis/java/stage1-artifacts/architecture-overview.md .analysis/java/final-report/ARCHITECTURE-OVERVIEW.md
 ```
 
 10. **Create FINDINGS-DETAILED.json**: Export all upheld findings with complete structure (must include `example` field with `file`, `line_start`, `line_end`, and `code` for each finding)
@@ -946,7 +946,7 @@ Example format:
 ```
 ## Analysis Complete! 🎯
 
-**Executive Deliverables** (in .analysis/final-report/):
+**Executive Deliverables** (in .analysis/java/final-report/):
 - ANALYSIS-REPORT.md - Top 10 with detailed recommendations
 - ARCHITECTURE-OVERVIEW.md - Java system architecture documentation
 - FINDINGS-DETAILED.json - Complete structured data
@@ -965,7 +965,7 @@ Example format:
 - Concurrency problems: [X]
 - JPA performance issues: [X]
 
-**Next Step**: Review `.analysis/final-report/ANALYSIS-REPORT.md` for your prioritized improvements.
+**Next Step**: Review `.analysis/java/final-report/ANALYSIS-REPORT.md` for your prioritized improvements.
 ```
 
 13. Mark Stage 6 as completed
