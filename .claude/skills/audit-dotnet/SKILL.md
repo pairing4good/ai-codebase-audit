@@ -137,7 +137,7 @@ IMPORTANT: This is a .NET project. Focus on .NET-specific patterns:
 - API endpoints (look for [ApiController], [HttpGet], [HttpPost])
 - Blazor component structure (if Blazor detected)
 
-Output all files to .analysis/dotnet/stage1-artifacts/
+Output all files to $PROJECT_ROOT/.analysis/dotnet/stage1-artifacts/
 ```
 
 ---
@@ -162,7 +162,7 @@ Output all files to .analysis/dotnet/stage1-artifacts/
 
 1. Create directory:
 ```bash
-mkdir -p .analysis/dotnet/stage3-static-analysis/raw-outputs
+mkdir -p $PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs
 ```
 
 2. Mark Stage 3 as in_progress
@@ -178,54 +178,54 @@ bash .claude/skills/audit-dotnet/tools/auto-install-tools.sh
 **Tool 1: Semgrep** (OWASP/CWE for C#)
 ```bash
 if command -v semgrep >/dev/null 2>&1; then
-  bash .claude/skills/audit-dotnet/tools/semgrep-runner.sh . .analysis/dotnet/stage3-static-analysis/raw-outputs/semgrep-report.json
+  bash .claude/skills/audit-dotnet/tools/semgrep-runner.sh . $PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs/semgrep-report.json
 fi
 ```
 
 **Tool 2: Roslyn Analyzers** (built into dotnet build)
 ```bash
-bash .claude/skills/audit-dotnet/tools/roslyn-analyzer-runner.sh . .analysis/dotnet/stage3-static-analysis/raw-outputs/roslyn-report.json
+bash .claude/skills/audit-dotnet/tools/roslyn-analyzer-runner.sh . $PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs/roslyn-report.json
 ```
 
 **Tool 3: Security Code Scan** (NuGet analyzer)
 ```bash
-bash .claude/skills/audit-dotnet/tools/security-code-scan-runner.sh . .analysis/dotnet/stage3-static-analysis/raw-outputs/security-code-scan-report.json
+bash .claude/skills/audit-dotnet/tools/security-code-scan-runner.sh . $PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs/security-code-scan-report.json
 ```
 
 **Tool 4: Snyk** (SAST + Dependencies)
 ```bash
 if command -v snyk >/dev/null 2>&1; then
-  bash .claude/skills/audit-dotnet/tools/snyk-runner.sh . .analysis/dotnet/stage3-static-analysis/raw-outputs
+  bash .claude/skills/audit-dotnet/tools/snyk-runner.sh . $PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs
 fi
 ```
 
 **Tool 5: dotnet-outdated** (Dependency versions)
 ```bash
-bash .claude/skills/audit-dotnet/tools/dotnet-outdated-runner.sh . .analysis/dotnet/stage3-static-analysis/raw-outputs/dotnet-outdated-report.json
+bash .claude/skills/audit-dotnet/tools/dotnet-outdated-runner.sh . $PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs/dotnet-outdated-report.json
 ```
 
 **Tool 6: Trivy** (Container/IaC)
 ```bash
 if command -v trivy >/dev/null 2>&1; then
-  bash .claude/skills/audit-dotnet/tools/trivy-runner.sh . .analysis/dotnet/stage3-static-analysis/raw-outputs/trivy-report.json
+  bash .claude/skills/audit-dotnet/tools/trivy-runner.sh . $PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs/trivy-report.json
 fi
 ```
 
 **Tool 7: SonarQube** (if configured)
 ```bash
 if command -v sonar-scanner >/dev/null 2>&1; then
-  bash .claude/skills/audit-dotnet/tools/sonarqube-runner.sh . .analysis/dotnet/stage3-static-analysis/raw-outputs/sonarqube-report.json
+  bash .claude/skills/audit-dotnet/tools/sonarqube-runner.sh . $PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs/sonarqube-report.json
 fi
 ```
 
 5. Unify results:
 ```bash
-node .claude/skills/audit-dotnet/tools/format-static-results.js .analysis/dotnet/stage3-static-analysis
+node .claude/skills/audit-dotnet/tools/format-static-results.js $PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis
 ```
 
 6. Read `tool-comparison.md` and present summary to user
 
-7. Write `.analysis/dotnet/stage3-static-analysis/metadata.json` with tool execution status
+7. Write `$PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/metadata.json` with tool execution status
 
 8. Mark Stage 3 as completed
 
@@ -256,12 +256,12 @@ node .claude/skills/audit-dotnet/tools/format-static-results.js .analysis/dotnet
 
 1. Create directory:
 ```bash
-mkdir -p .analysis/dotnet/stage6-final-synthesis
+mkdir -p $PROJECT_ROOT/.analysis/dotnet/stage6-final-synthesis
 ```
 
 2. Mark Stage 6 as in_progress
 
-3. Read `.analysis/dotnet/stage5-adversarial/challenged-findings.json`
+3. Read `$PROJECT_ROOT/.analysis/dotnet/stage5-adversarial/challenged-findings.json`
 
 4. Filter to UPHELD findings only (exclude DISMISSED)
 
@@ -306,17 +306,17 @@ Effort-to-value scores (estimate):
 6. Sort by priority_score descending and select top 10
 
 7. Write Stage 6 outputs:
-   - `.analysis/dotnet/stage6-final-synthesis/prioritization-matrix.json` (all findings with scores)
-   - `.analysis/dotnet/stage6-final-synthesis/top-10-detailed.json` (top 10 with full details)
-   - `.analysis/dotnet/stage6-final-synthesis/honorable-mentions.md` (findings 11-20)
-   - `.analysis/dotnet/stage6-final-synthesis/quick-wins.md` (low effort, high impact items)
-   - `.analysis/dotnet/stage6-final-synthesis/systemic-patterns.md` (recurring .NET issues)
-   - `.analysis/dotnet/stage6-final-synthesis/metadata.json` (statistics)
+   - `$PROJECT_ROOT/.analysis/dotnet/stage6-final-synthesis/prioritization-matrix.json` (all findings with scores)
+   - `$PROJECT_ROOT/.analysis/dotnet/stage6-final-synthesis/top-10-detailed.json` (top 10 with full details)
+   - `$PROJECT_ROOT/.analysis/dotnet/stage6-final-synthesis/honorable-mentions.md` (findings 11-20)
+   - `$PROJECT_ROOT/.analysis/dotnet/stage6-final-synthesis/quick-wins.md` (low effort, high impact items)
+   - `$PROJECT_ROOT/.analysis/dotnet/stage6-final-synthesis/systemic-patterns.md` (recurring .NET issues)
+   - `$PROJECT_ROOT/.analysis/dotnet/stage6-final-synthesis/metadata.json` (statistics)
 
 8. Create the final report directory and generate the 4 executive deliverables:
 
 ```bash
-mkdir -p .analysis/dotnet/final-report
+mkdir -p $PROJECT_ROOT/.analysis/dotnet/final-report
 ```
 
 **ANALYSIS-REPORT.md**:
@@ -438,14 +438,14 @@ public async Task<IActionResult> GetUsersByRole(string role)
 ## Next Steps
 
 1. Review this report and prioritize which findings to address first
-2. See `.analysis/dotnet/final-report/FINDINGS-DETAILED.json` for complete structured data
-3. See `.analysis/dotnet/final-report/CONFIDENCE-MATRIX.md` for evidence transparency matrix
-4. See `.analysis/dotnet/` directory for complete stage-by-stage outputs
+2. See `$PROJECT_ROOT/.analysis/dotnet/final-report/FINDINGS-DETAILED.json` for complete structured data
+3. See `$PROJECT_ROOT/.analysis/dotnet/final-report/CONFIDENCE-MATRIX.md` for evidence transparency matrix
+4. See `$PROJECT_ROOT/.analysis/dotnet/` directory for complete stage-by-stage outputs
 5. Consider running `/audit-dotnet` again after fixes to measure improvement
 
 ## Full Details
 
-All stage-by-stage outputs available in `.analysis/dotnet/`:
+All stage-by-stage outputs available in `$PROJECT_ROOT/.analysis/dotnet/`:
 - Stage 0: Build validation logs
 - Stage 1: Architecture artifacts
 - Stage 2: 4 independent agent analyses
@@ -457,7 +457,7 @@ All stage-by-stage outputs available in `.analysis/dotnet/`:
 
 9. **Create ARCHITECTURE-OVERVIEW.md**:
 ```bash
-cp .analysis/dotnet/stage1-artifacts/architecture-overview.md .analysis/dotnet/final-report/ARCHITECTURE-OVERVIEW.md
+cp $PROJECT_ROOT/.analysis/dotnet/stage1-artifacts/architecture-overview.md $PROJECT_ROOT/.analysis/dotnet/final-report/ARCHITECTURE-OVERVIEW.md
 ```
 
 10. **Create FINDINGS-DETAILED.json**: Export all upheld findings with complete structure (must include `example` field with `file`, `line_start`, `line_end`, and `code` for each finding)
@@ -478,7 +478,7 @@ Example format:
 ```
 ## Analysis Complete! 🎯
 
-**Executive Deliverables** (in .analysis/dotnet/final-report/):
+**Executive Deliverables** (in $PROJECT_ROOT/.analysis/dotnet/final-report/):
 - ANALYSIS-REPORT.md - Top 10 with detailed recommendations
 - ARCHITECTURE-OVERVIEW.md - .NET system architecture documentation
 - FINDINGS-DETAILED.json - Complete structured data
@@ -497,7 +497,7 @@ Example format:
 - Async/await pattern issues: [X]
 - Dependency vulnerabilities: [X]
 
-**Next Step**: Review `.analysis/dotnet/final-report/ANALYSIS-REPORT.md` for your prioritized improvements.
+**Next Step**: Review `$PROJECT_ROOT/.analysis/dotnet/final-report/ANALYSIS-REPORT.md` for your prioritized improvements.
 ```
 
 13. Mark Stage 6 as completed

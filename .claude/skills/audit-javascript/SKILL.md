@@ -187,9 +187,16 @@ For dependency installation failures (step 7), prompt user whether to continue w
 
 ### Your Actions
 
-1. Create the directory structure:
+1. Determine project root and create the directory structure:
 ```bash
-mkdir -p .analysis/javascript/stage1-artifacts
+# Find git repository root, or use current directory if not a git repo
+if git rev-parse --show-toplevel >/dev/null 2>&1; then
+  PROJECT_ROOT=$(git rev-parse --show-toplevel)
+else
+  PROJECT_ROOT=$(pwd)
+fi
+
+mkdir -p "$PROJECT_ROOT/.analysis/javascript/stage1-artifacts"
 ```
 
 2. Mark Stage 1 as in_progress (todos already initialized in Stage 0)
@@ -200,9 +207,13 @@ mkdir -p .analysis/javascript/stage1-artifacts
 ```
 You are generating architecture artifacts for this JavaScript/TypeScript codebase.
 
+CRITICAL: Determine the project root directory first:
+- If this is a git repository, use the git root: $(git rev-parse --show-toplevel)
+- Otherwise, use the current working directory
+
 Your task:
 1. Analyze the repository structure comprehensively
-2. Generate ALL required artifacts in .analysis/javascript/stage1-artifacts/:
+2. Generate ALL required artifacts in $PROJECT_ROOT/.analysis/javascript/stage1-artifacts/:
    - architecture-overview.md (system purpose, tech stack, architecture layers)
    - component-dependency.mermaid (module dependency graph)
    - data-flow-diagrams/ directory with flows for authentication, business operations
@@ -213,10 +224,11 @@ Your task:
 
 Follow the complete process outlined in your agent definition (.claude/agents/artifact-generator.md).
 
-Output all files to .analysis/javascript/stage1-artifacts/
+IMPORTANT: All outputs must be written to the PROJECT ROOT .analysis/javascript/ directory, not a subdirectory.
+Output all files to $PROJECT_ROOT/.analysis/javascript/stage1-artifacts/
 ```
 
-4. After the agent completes, read `.analysis/javascript/stage1-artifacts/architecture-overview.md` and present a summary to the user
+4. After the agent completes, read `$PROJECT_ROOT/.analysis/javascript/stage1-artifacts/architecture-overview.md` and present a summary to the user
 
 5. Mark Stage 1 as completed
 
@@ -230,7 +242,7 @@ Output all files to .analysis/javascript/stage1-artifacts/
 
 1. Create directory:
 ```bash
-mkdir -p .analysis/javascript/stage2-parallel-analysis
+mkdir -p "$PROJECT_ROOT/.analysis/javascript/stage2-parallel-analysis"
 ```
 
 2. Mark Stage 2 as in_progress
@@ -243,7 +255,10 @@ mkdir -p .analysis/javascript/stage2-parallel-analysis
 ```
 You are analyzing this JavaScript/TypeScript codebase for architectural issues.
 
-Read Stage 1 artifacts from .analysis/javascript/stage1-artifacts/ for context.
+CRITICAL: Use PROJECT_ROOT for all paths. Determine it with:
+PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+
+Read Stage 1 artifacts from $PROJECT_ROOT/.analysis/javascript/stage1-artifacts/ for context.
 
 Analyze for:
 - System design patterns
@@ -259,7 +274,7 @@ Analyze for:
 
 You have NO ACCESS to other agents' outputs. Operate completely independently.
 
-Output your findings to: .analysis/javascript/stage2-parallel-analysis/architecture-analysis.json
+Output your findings to: $PROJECT_ROOT/.analysis/javascript/stage2-parallel-analysis/architecture-analysis.json
 
 Use the exact JSON schema defined in your agent definition (.claude/agents/architecture-analyzer.md).
 ```
@@ -268,7 +283,10 @@ Use the exact JSON schema defined in your agent definition (.claude/agents/archi
 ```
 You are analyzing this JavaScript/TypeScript codebase for security vulnerabilities.
 
-Read Stage 1 artifacts from .analysis/javascript/stage1-artifacts/ for context.
+CRITICAL: Use PROJECT_ROOT for all paths. Determine it with:
+PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+
+Read Stage 1 artifacts from $PROJECT_ROOT/.analysis/javascript/stage1-artifacts/ for context.
 
 Analyze for:
 - Injection vulnerabilities (SQL, XSS, command injection)
@@ -284,7 +302,7 @@ Analyze for:
 
 You have NO ACCESS to other agents' outputs. Operate completely independently.
 
-Output your findings to: .analysis/javascript/stage2-parallel-analysis/security-analysis.json
+Output your findings to: $PROJECT_ROOT/.analysis/javascript/stage2-parallel-analysis/security-analysis.json
 
 Use the exact JSON schema defined in your agent definition (.claude/agents/security-analyzer.md).
 ```
@@ -293,7 +311,10 @@ Use the exact JSON schema defined in your agent definition (.claude/agents/secur
 ```
 You are analyzing this JavaScript/TypeScript codebase for code quality and technical debt.
 
-Read Stage 1 artifacts from .analysis/javascript/stage1-artifacts/ for context.
+CRITICAL: Use PROJECT_ROOT for all paths. Determine it with:
+PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+
+Read Stage 1 artifacts from $PROJECT_ROOT/.analysis/javascript/stage1-artifacts/ for context.
 
 Analyze for:
 - Code complexity (cyclomatic, cognitive)
@@ -309,7 +330,7 @@ Analyze for:
 
 You have NO ACCESS to other agents' outputs. Operate completely independently.
 
-Output your findings to: .analysis/javascript/stage2-parallel-analysis/maintainability-analysis.json
+Output your findings to: $PROJECT_ROOT/.analysis/javascript/stage2-parallel-analysis/maintainability-analysis.json
 
 Use the exact JSON schema defined in your agent definition (.claude/agents/maintainability-analyzer.md).
 ```
@@ -317,6 +338,9 @@ Use the exact JSON schema defined in your agent definition (.claude/agents/maint
 **Agent 4: dependency-analyzer**
 ```
 You are analyzing this JavaScript/TypeScript codebase for dependency and supply chain issues.
+
+CRITICAL: Use PROJECT_ROOT for all paths. Determine it with:
+PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 
 Read package.json and package-lock.json.
 
@@ -334,7 +358,7 @@ Analyze for:
 
 You have NO ACCESS to other agents' outputs. Operate completely independently.
 
-Output your findings to: .analysis/javascript/stage2-parallel-analysis/dependency-analysis.json
+Output your findings to: $PROJECT_ROOT/.analysis/javascript/stage2-parallel-analysis/dependency-analysis.json
 
 Use the exact JSON schema defined in your agent definition (.claude/agents/dependency-analyzer.md).
 ```
@@ -344,8 +368,8 @@ Use the exact JSON schema defined in your agent definition (.claude/agents/depen
 5. Generate a convergence preview by identifying findings that appear in multiple agent outputs:
    - Group findings by file:line location
    - Count how many agents flagged each location
-   - Write `.analysis/javascript/stage2-parallel-analysis/convergence-preview.md` showing multi-agent findings
-   - Write `.analysis/javascript/stage2-parallel-analysis/metadata.json` with counts
+   - Write `$PROJECT_ROOT/.analysis/javascript/stage2-parallel-analysis/convergence-preview.md` showing multi-agent findings
+   - Write `$PROJECT_ROOT/.analysis/javascript/stage2-parallel-analysis/metadata.json` with counts
 
 6. Present convergence preview to user showing high-confidence findings
 
@@ -361,7 +385,7 @@ Use the exact JSON schema defined in your agent definition (.claude/agents/depen
 
 1. Create directory:
 ```bash
-mkdir -p .analysis/javascript/stage3-static-analysis/raw-outputs
+mkdir -p "$PROJECT_ROOT/$PROJECT_ROOT/.analysis/javascript/stage3-static-analysis/raw-outputs"
 ```
 
 2. Mark Stage 3 as in_progress
@@ -383,41 +407,41 @@ bash .claude/skills/audit-javascript/tools/auto-install-tools.sh
 
 **ESLint** (if configured):
 ```bash
-npx eslint . --format json --output-file .analysis/javascript/stage3-static-analysis/raw-outputs/eslint-report.json 2>&1 || echo "ESLint failed or not configured"
+npx eslint . --format json --output-file $PROJECT_ROOT/.analysis/javascript/stage3-static-analysis/raw-outputs/eslint-report.json 2>&1 || echo "ESLint failed or not configured"
 ```
 
 **npm audit**:
 ```bash
-npm audit --json > .analysis/javascript/stage3-static-analysis/raw-outputs/npm-audit.json 2>&1 || echo "{}" > .analysis/javascript/stage3-static-analysis/raw-outputs/npm-audit.json
+npm audit --json > $PROJECT_ROOT/.analysis/javascript/stage3-static-analysis/raw-outputs/npm-audit.json 2>&1 || echo "{}" > $PROJECT_ROOT/.analysis/javascript/stage3-static-analysis/raw-outputs/npm-audit.json
 ```
 
 **Semgrep** (if available):
 ```bash
 if command -v semgrep >/dev/null 2>&1; then
-  bash .claude/skills/audit-javascript/tools/semgrep-runner.sh . .analysis/javascript/stage3-static-analysis/raw-outputs/semgrep-report.json
+  bash .claude/skills/audit-javascript/tools/semgrep-runner.sh . $PROJECT_ROOT/.analysis/javascript/stage3-static-analysis/raw-outputs/semgrep-report.json
 fi
 ```
 
 **Snyk** (if available and authenticated):
 ```bash
 if command -v snyk >/dev/null 2>&1; then
-  bash .claude/skills/audit-javascript/tools/snyk-runner.sh . .analysis/javascript/stage3-static-analysis/raw-outputs
+  bash .claude/skills/audit-javascript/tools/snyk-runner.sh . $PROJECT_ROOT/.analysis/javascript/stage3-static-analysis/raw-outputs
 fi
 ```
 
 6. Unify results using format-static-results.js:
 ```bash
-node .claude/skills/audit-javascript/tools/format-static-results.js .analysis/javascript/stage3-static-analysis
+node .claude/skills/audit-javascript/tools/format-static-results.js $PROJECT_ROOT/.analysis/javascript/stage3-static-analysis
 ```
 
 This creates:
-- `.analysis/javascript/stage3-static-analysis/unified-results.json` (normalized format)
-- `.analysis/javascript/stage3-static-analysis/tool-comparison.md` (which tools found what)
-- `.analysis/javascript/stage3-static-analysis/overlap-analysis.json` (convergence across tools)
+- `$PROJECT_ROOT/.analysis/javascript/stage3-static-analysis/unified-results.json` (normalized format)
+- `$PROJECT_ROOT/.analysis/javascript/stage3-static-analysis/tool-comparison.md` (which tools found what)
+- `$PROJECT_ROOT/.analysis/javascript/stage3-static-analysis/overlap-analysis.json` (convergence across tools)
 
 7. Read `tool-comparison.md` and present summary to user
 
-8. Write `.analysis/javascript/stage3-static-analysis/metadata.json` with tool execution status
+8. Write `$PROJECT_ROOT/.analysis/javascript/stage3-static-analysis/metadata.json` with tool execution status
 
 9. Mark Stage 3 as completed
 
@@ -431,7 +455,7 @@ This creates:
 
 1. Create directory:
 ```bash
-mkdir -p .analysis/javascript/stage4-reconciliation
+mkdir -p $PROJECT_ROOT/.analysis/javascript/stage4-reconciliation
 ```
 
 2. Mark Stage 4 as in_progress
@@ -447,7 +471,7 @@ You have NEVER analyzed this codebase before. You are coming to this fresh with 
 Your inputs:
 - Stage 1 artifacts: .analysis/javascript/stage1-artifacts/ (architecture context)
 - Stage 2 agent outputs: .analysis/javascript/stage2-parallel-analysis/*.json (4 independent analyses)
-- Stage 3 static analysis: .analysis/javascript/stage3-static-analysis/unified-results.json (tool findings)
+- Stage 3 static analysis: $PROJECT_ROOT/.analysis/javascript/stage3-static-analysis/unified-results.json (tool findings)
 
 Your task:
 1. Read ALL inputs
@@ -457,7 +481,7 @@ Your task:
 5. Identify contradictions (agent vs tool disagreements)
 6. Generate merged longlist with evidence tracking
 
-Output to .analysis/javascript/stage4-reconciliation/:
+Output to $PROJECT_ROOT/.analysis/javascript/stage4-reconciliation/:
 - reconciled-longlist.json (all findings with confidence scores and evidence)
 - convergence-analysis.md (which findings converged across sources)
 - agent-only-findings.md (findings only agents caught)
@@ -487,7 +511,7 @@ Confidence levels:
 
 1. Create directory:
 ```bash
-mkdir -p .analysis/javascript/stage5-adversarial
+mkdir -p $PROJECT_ROOT/.analysis/javascript/stage5-adversarial
 ```
 
 2. Mark Stage 5 as in_progress
@@ -501,7 +525,7 @@ You are challenging reconciled findings to eliminate false positives.
 You have NEVER been involved in this audit before. You are the independent skeptic.
 
 Your input:
-- Reconciled findings: .analysis/javascript/stage4-reconciliation/reconciled-longlist.json
+- Reconciled findings: $PROJECT_ROOT/.analysis/javascript/stage4-reconciliation/reconciled-longlist.json
 
 Your task:
 Attack each finding using the 5-point challenge framework:
@@ -521,7 +545,7 @@ Expected metrics:
 - Downgraded: 10-20%
 - Dismissed: 5-15%
 
-Output to .analysis/javascript/stage5-adversarial/:
+Output to $PROJECT_ROOT/.analysis/javascript/stage5-adversarial/:
 - challenged-findings.json (all findings with verdicts and adjusted severity)
 - false-positives-identified.md (dismissed findings with reasoning)
 - severity-adjustments.md (downgraded findings with justification)
@@ -547,12 +571,12 @@ Be SKEPTICAL. Make findings prove they deserve to be in the top 10.
 
 1. Create directory:
 ```bash
-mkdir -p .analysis/javascript/stage6-final-synthesis
+mkdir -p $PROJECT_ROOT/.analysis/javascript/stage6-final-synthesis
 ```
 
 2. Mark Stage 6 as in_progress
 
-3. Read `.analysis/javascript/stage5-adversarial/challenged-findings.json`
+3. Read `$PROJECT_ROOT/.analysis/javascript/stage5-adversarial/challenged-findings.json`
 
 4. Filter to UPHELD findings only (exclude DISMISSED)
 
@@ -589,17 +613,17 @@ Effort-to-value scores (estimate):
 6. Sort by priority_score descending and select top 10
 
 7. Write Stage 6 outputs:
-   - `.analysis/javascript/stage6-final-synthesis/prioritization-matrix.json` (all findings with scores)
-   - `.analysis/javascript/stage6-final-synthesis/top-10-detailed.json` (top 10 with full details)
-   - `.analysis/javascript/stage6-final-synthesis/honorable-mentions.md` (findings 11-20)
-   - `.analysis/javascript/stage6-final-synthesis/quick-wins.md` (low effort, high impact items)
-   - `.analysis/javascript/stage6-final-synthesis/systemic-patterns.md` (recurring issue patterns)
-   - `.analysis/javascript/stage6-final-synthesis/metadata.json` (statistics)
+   - `$PROJECT_ROOT/.analysis/javascript/stage6-final-synthesis/prioritization-matrix.json` (all findings with scores)
+   - `$PROJECT_ROOT/.analysis/javascript/stage6-final-synthesis/top-10-detailed.json` (top 10 with full details)
+   - `$PROJECT_ROOT/.analysis/javascript/stage6-final-synthesis/honorable-mentions.md` (findings 11-20)
+   - `$PROJECT_ROOT/.analysis/javascript/stage6-final-synthesis/quick-wins.md` (low effort, high impact items)
+   - `$PROJECT_ROOT/.analysis/javascript/stage6-final-synthesis/systemic-patterns.md` (recurring issue patterns)
+   - `$PROJECT_ROOT/.analysis/javascript/stage6-final-synthesis/metadata.json` (statistics)
 
 8. Create the final report directory and generate the 4 executive deliverables:
 
 ```bash
-mkdir -p .analysis/javascript/final-report
+mkdir -p $PROJECT_ROOT/.analysis/javascript/final-report
 ```
 
 **ANALYSIS-REPORT.md**:
@@ -683,8 +707,8 @@ This audit used a 6-stage analytical funnel with independent agents and static a
 ## Next Steps
 
 1. Review this report and prioritize which findings to address first
-2. See `.analysis/javascript/final-report/FINDINGS-DETAILED.json` for complete structured data
-3. See `.analysis/javascript/final-report/CONFIDENCE-MATRIX.md` for evidence transparency matrix
+2. See `$PROJECT_ROOT/.analysis/javascript/final-report/FINDINGS-DETAILED.json` for complete structured data
+3. See `$PROJECT_ROOT/.analysis/javascript/final-report/CONFIDENCE-MATRIX.md` for evidence transparency matrix
 4. See `.analysis/javascript/` directory for complete stage-by-stage outputs
 5. Consider running `/audit-javascript` again after fixes to measure improvement
 
@@ -701,7 +725,7 @@ All stage-by-stage outputs available in `.analysis/javascript/`:
 
 9. **Create ARCHITECTURE-OVERVIEW.md**:
 ```bash
-cp .analysis/javascript/stage1-artifacts/architecture-overview.md .analysis/javascript/final-report/ARCHITECTURE-OVERVIEW.md
+cp .analysis/javascript/stage1-artifacts/architecture-overview.md $PROJECT_ROOT/.analysis/javascript/final-report/ARCHITECTURE-OVERVIEW.md
 ```
 
 10. **Create FINDINGS-DETAILED.json**: Export all upheld findings with complete structure (must include `example` field with `file`, `line_start`, `line_end`, and `code` for each finding)
@@ -722,7 +746,7 @@ Example format:
 ```
 ## Analysis Complete! 🎯
 
-**Executive Deliverables** (in .analysis/javascript/final-report/):
+**Executive Deliverables** (in $PROJECT_ROOT/.analysis/javascript/final-report/):
 - ANALYSIS-REPORT.md - Top 10 with detailed recommendations
 - ARCHITECTURE-OVERVIEW.md - System architecture documentation
 - FINDINGS-DETAILED.json - Complete structured data
@@ -735,7 +759,7 @@ Example format:
 - Average confidence: [High/Medium] ([X]% convergence rate)
 - [X] false positives eliminated
 
-**Next Step**: Review `.analysis/javascript/final-report/ANALYSIS-REPORT.md` for your prioritized improvements.
+**Next Step**: Review `$PROJECT_ROOT/.analysis/javascript/final-report/ANALYSIS-REPORT.md` for your prioritized improvements.
 ```
 
 13. Mark Stage 6 as completed
