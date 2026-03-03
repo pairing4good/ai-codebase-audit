@@ -1,0 +1,40 @@
+# =============================================================================
+# config.yml — Claude Parallel Skill Runner
+# =============================================================================
+#
+# Place this file in your working directory alongside:
+#   CLAUDE.md    — Claude's instructions
+#   .claude/     — shared skills and agents
+#
+# At startup, CLAUDE.md and .claude/ are copied into each configured project
+# directory. Any existing CLAUDE.md or .claude/ in those directories is
+# renamed with an OLD- prefix first.
+#
+# Duplicate skills listed for the same directory are silently ignored —
+# each skill runs exactly once per directory.
+#
+# API KEY
+#   Set ANTHROPIC_API_KEY in your .env file (see .env.example)
+#
+# PERMISSION MODE
+#   Hardcoded to 'bypassPermissions' for autonomous Docker operation.
+#   This cannot be changed via configuration for security and reliability.
+#
+# =============================================================================
+
+runner:
+  model:            claude-sonnet-4-6  # claude-sonnet-4-6 | claude-opus-4-6
+  concurrency:      3                  # max parallel tasks
+  max_turns:        20                 # max agent turns per skill run
+  timeout:          300                # seconds per task
+  max_budget_usd:   10.0               # spending limit per task (USD)
+
+targets:
+  - dir: project-one
+    skills:
+      - /audit-java
+      - /audit-javascript
+
+  - dir: project-two
+    skills:
+      - /audit-dotnet

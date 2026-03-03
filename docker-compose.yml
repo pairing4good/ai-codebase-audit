@@ -1,0 +1,26 @@
+# =============================================================================
+# docker-compose.yml
+# =============================================================================
+# Set WORKDIR in .env to your projects directory.
+# That directory must contain: config.yml, CLAUDE.md, .claude/
+#
+# Usage:
+#   cp .env.example .env      # set WORKDIR once
+#   docker compose build
+#   docker compose run --rm skills
+# =============================================================================
+
+services:
+  skills:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: claude-skill-runner:latest
+    volumes:
+      - ${WORKDIR}:/workdir
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    restart: "no"

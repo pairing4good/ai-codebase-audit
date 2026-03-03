@@ -1,301 +1,186 @@
-# AI Codebase Audit System
+# Claude Parallel Skill Runner
 
-A production-ready, reusable analytical system for auditing JavaScript/TypeScript, Java, and .NET codebases with maximum accuracy using Claude Code.
+Runs `.claude` skills against project directories in parallel inside Docker.
+Skills run directly against project directories — no sandboxes, no copying.
 
-**⚡ Status**: All three stacks fully implemented and ready to use!
+---
 
-## Overview
+## Workdir layout
 
-This system uses a **6-stage analytical funnel** with **independent sub-agents** to provide the most accurate and defensible code quality assessments possible with AI-assisted analysis.
+```
+/your/workdir/
+  config.yml        ← configure api key, model, targets here
+  CLAUDE.md         ← Claude's instructions (copied into each project at startup)
+  .claude/          ← shared skills and agents (copied into each project at startup)
+    settings.json
+    agents/ ...
+    skills/
+      audit-java/SKILL.md + tools/
+      audit-javascript/SKILL.md + tools/
+      audit-dotnet/SKILL.md + tools/
+      audit-python/SKILL.md + tools/
+  project-one/
+    .git/
+    src/
+    pom.xml
+    CLAUDE.md        ← copied from workdir root at startup
+    .claude/         ← copied from workdir root at startup
+    .analysis/java/  ← skill output written here
+  project-two/
+    .git/
+    src/
+    package.json
+    CLAUDE.md
+    .claude/
+    .analysis/javascript/
+  logs/              ← created automatically
+```
 
-### Why This Approach?
+---
 
-- **Independent Analysis**: 4 specialist agents analyze your code in complete isolation, eliminating confirmation bias
-- **Evidence-Based**: Findings that converge across multiple agents AND static analysis tools are statistically high-confidence
-- **Transparent**: Every stage produces reviewable artifacts so you can audit the audit
-- **Actionable**: Final top 10 includes exact locations, code examples, and specific fixes
+## How it works
 
-## Quick Start
+At container startup, `entrypoint.sh`:
+1. Validates `config.yml`, `CLAUDE.md`, and `.claude/` exist at the workdir root
+2. For each configured project directory:
+   - Renames any existing `.claude/`  → `OLD-.claude/`
+   - Renames any existing `CLAUDE.md` → `OLD-CLAUDE.md`
+   - Copies `/workdir/.claude/`       → `<project>/.claude/`
+   - Copies `/workdir/CLAUDE.md`      → `<project>/CLAUDE.md`
 
-### Prerequisites
+`run_skills.py` then runs all skills in parallel directly against the project
+directories. Claude is invoked with `cwd` set to the project directory and
+finds `CLAUDE.md` and `.claude/` immediately at its root.
 
-- [Claude Code](https://code.claude.com) installed
-- For JavaScript/TypeScript: Node.js, npm
-- (Optional) Static analysis tools: ESLint, Semgrep, Snyk, SonarQube
+Skills write output to `.analysis/<language>/` inside each project, keeping
+parallel runs isolated with no risk of conflicts.
 
-### Installation
+Duplicate skills listed for the same directory are skipped — each
+`(directory, skill)` pair runs exactly once.
 
-1. Clone this repository into your workspace
-2. The `.claude/` directory contains all agents and skills
-3. Navigate to the repository you want to audit
-4. Run the appropriate audit command
+---
 
-### Basic Usage
+## Setup
+
+### 1. Copy `.env.example` → `.env` and configure
 
 ```bash
-# Navigate to the JavaScript/TypeScript repository you want to audit
-cd /path/to/your/project
-
-# Run the audit skill
-/audit-javascript
+cp .env.example .env
 ```
 
-The audit will run automatically through all 6 stages and produce comprehensive deliverables.
+Edit `.env` and set:
+- `WORKDIR`: Absolute path to your projects directory
+- `ANTHROPIC_API_KEY`: Your Anthropic API key from https://console.anthropic.com/settings/keys
 
-### What You Get
-
-After the audit completes, you'll find all outputs in the `.analysis/{language}/` directory:
-
-**Start here:** `.analysis/{language}/final-report/`
-1. **ANALYSIS-REPORT.md** - Executive summary with top 10 prioritized improvements
-2. **ARCHITECTURE-OVERVIEW.md** - System architecture documentation with diagrams
-3. **FINDINGS-DETAILED.json** - Complete structured data for all findings
-4. **CONFIDENCE-MATRIX.md** - Evidence transparency showing what converged across sources
-
-**Detailed analysis:** `.analysis/{language}/stage1-artifacts/`, `.analysis/{language}/stage2-parallel-analysis/`, etc.
-
-## The 6-Stage Analytical Funnel
-
-### Stage 1: Artifact Generation
-Creates comprehensive architecture documentation before any analysis:
-- Architecture overview
-- Component dependency diagrams (Mermaid)
-- Data flow diagrams
-- Critical path sequence diagrams
-- Entity relationship overview
-- Tech debt surface map
-
-**Output**: `.analysis/{language}/stage1-artifacts/`
-
-### Stage 2: Parallel Independent Analysis
-Four specialist agents analyze your codebase in complete isolation:
-- **Architecture Analyzer**: Structural and design issues
-- **Security Analyzer**: Vulnerabilities and attack surfaces
-- **Maintainability Analyzer**: Code quality and technical debt
-- **Dependency Analyzer**: Supply chain and versioning risks
-
-Each agent produces an independent longlist with zero knowledge of what the others found.
-
-**Output**: `.analysis/{language}/stage2-parallel-analysis/`
-
-### Stage 3: Static Analysis
-Runs JavaScript/TypeScript static analysis tools in parallel:
-
-**Tools**: ESLint + security plugins, Semgrep (OWASP/CWE/JWT/API rulesets), Snyk Code, Snyk Open Source, SonarQube, npm audit, Trivy, Coverage
-
-The system gracefully handles missing tools - if a tool isn't installed, it continues with available tools.
-
-Results are unified into a standardized JSON format with overlap detection showing which findings converged across multiple tools.
-
-**Output**: `.analysis/{language}/stage3-static-analysis/`
-
-### Stage 4: Reconciliation
-A fresh agent (with no prior analysis) synthesizes all findings:
-- Identifies convergence across independent agents
-- Maps findings to static analysis evidence
-- Assigns confidence scores based on convergence
-- Produces merged longlist with evidence tracking
-
-**Output**: `.analysis/{language}/stage4-reconciliation/`
-
-### Stage 5: Adversarial Challenge
-An independent agent challenges every finding to eliminate false positives:
-- Reviews each finding with fresh eyes
-- Identifies overstatements and false positives
-- Verifies severity classifications
-- Produces verdicts: upheld/downgraded/dismissed
-
-**Output**: `.analysis/{language}/stage5-adversarial/`
-
-### Stage 6: Final Synthesis
-Generates final top 10 prioritized by:
-- **Severity**: Critical > High > Medium > Low
-- **Confidence**: High (converged) > Medium > Low
-- **Effort-to-Value**: Quick wins prioritized
-
-**Output**: `.analysis/{language}/stage6-final-synthesis/` + top-level deliverables
-
-## Understanding Output Confidence Levels
-
-### High Confidence
-Finding identified by **multiple independent agents AND static analysis tools**
-
-Example: SQL injection found by Security Agent + Architecture Agent + SonarQube + ESLint
-
-### Medium Confidence
-Finding identified by **agents OR static tools, but not both**
-
-Example: Architectural issue found by Architecture Agent + Maintainability Agent, but no static tool detected it
-
-### Low Confidence
-Finding from **single source only**
-
-Example: Only one agent or one tool identified it
-
-## Evaluating Stage Outputs
-
-### After Stage 1
-Review `.analysis/{language}/stage1-artifacts/architecture-overview.md` to verify Claude understood your system correctly. If the architecture description is wrong, the rest of the analysis will be compromised.
-
-### After Stage 2
-Review `.analysis/{language}/stage2-parallel-analysis/convergence-preview.md` to see what multiple agents independently flagged. These are your highest-signal findings.
-
-### After Stage 3
-Check `.analysis/{language}/stage3-static-analysis/tool-comparison.md` to see which tools found what. If a tool failed to run, you'll see it here.
-
-### After Stage 4
-Review `.analysis/{language}/stage4-reconciliation/contradictions.md` to see where agents disagreed with static tools. These areas often need human judgment.
-
-### After Stage 5
-Check `.analysis/{language}/stage5-adversarial/false-positives-identified.md` to see what was dismissed. This builds trust in the final recommendations.
-
-### After Stage 6
-The `.analysis/{language}/final-report/ANALYSIS-REPORT.md` contains your final top 10 with complete evidence and recommendations.
-
-## Customization
-
-### Adjusting Prioritization
-Edit the scoring weights in the Stage 6 synthesis:
-```json
-{
-  "severity_weight": 0.4,      // How much to weight severity
-  "confidence_weight": 0.3,    // How much to weight evidence
-  "effort_to_value_weight": 0.3  // How much to prioritize quick wins
-}
-```
-
-### Running Individual Stages
-Currently, the skill runs all 6 stages automatically. Future versions will support:
+Example `.env`:
 ```bash
-# Planned features (not yet implemented):
-/audit-javascript --stages=1      # Just artifacts
-/audit-javascript --stages=1,2,3  # Stop after static analysis
+WORKDIR=/path/to/your/projects
+ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
 ```
 
-### Custom Static Analysis Tools
-Add your own tools by:
-1. Creating a runner script in `.claude/skills/audit-{stack}/tools/`
-2. Ensuring it outputs to the standardized JSON format
-3. Updating `unified-results.json` formatter to include it
+### 2. Edit `config.yml` in your workdir
 
-## Tech Stack Details
+Configure your runner settings and target projects:
 
-### JavaScript/TypeScript Support ✅ (Fully Implemented)
-- **Status**: Production-ready with complete 6-stage pipeline
-- **Frameworks**: React, Vue, Angular, Node.js, Express, Next.js, NestJS
-- **Static Tools**:
-  - ESLint + eslint-plugin-security + eslint-plugin-sonarjs
-  - Semgrep (OWASP Top 10, CWE Top 25, JWT, API Security rulesets)
-  - Snyk Code (dataflow analysis) + Snyk Open Source (CVE detection)
-  - SonarQube
-  - npm audit
-  - Trivy (IaC and container scanning)
-  - Coverage (Istanbul/nyc)
-- **Tool Overlap Detection**: Identifies findings converged across multiple tools with confidence scoring
-- **Focus**: Async patterns, promise handling, dependency vulnerabilities, security misconfigurations
+```yaml
+runner:
+  model: claude-sonnet-4-6
+  concurrency: 3
+  max_turns: 20
+  timeout: 300
+  max_budget_usd: 10.0  # Cost protection per task in USD
 
-### Java Support ✅ (Fully Implemented)
-- **Status**: Production-ready with complete 7-stage pipeline (includes Stage 0 build validation)
-- **Frameworks**: Spring, Spring Boot, Jakarta EE, Hibernate, Micronaut
-- **Static Tools**:
-  - Semgrep (OWASP Top 10, CWE Top 25, JWT/OAuth, Spring Security rulesets)
-  - SpotBugs + Find Security Bugs (OWASP Top 10, bytecode analysis)
-  - PMD (Code quality, complexity detection)
-  - Checkstyle (Code style and consistency)
-  - Snyk Code (SAST) + Snyk Open Source (CVE detection)
-  - OWASP Dependency-Check (CVE scanning)
-  - Trivy (Container/IaC scanning)
-  - SonarQube (Comprehensive analysis)
-- **Tool Overlap Detection**: Identifies findings converged across 8 tools with confidence scoring
-- **Focus**: Spring Security, SQL injection, XXE, deserialization, concurrency, JPA performance
-- **Command**: `/audit-java`
+targets:
+  - dir: project-one
+    skills:
+      - /audit-java
+      - /audit-javascript
 
-### .NET Support ✅ (Fully Implemented)
-- **Status**: Production-ready with complete 7-stage pipeline (includes Stage 0 build validation)
-- **Frameworks**: ASP.NET Core, Entity Framework, Blazor, SignalR
-- **Static Tools**:
-  - Semgrep (OWASP Top 10, CWE Top 25, JWT/OAuth for C#)
-  - Roslyn Analyzers (Built-in code quality, runs during build)
-  - Security Code Scan (OWASP Top 10 for .NET, NuGet analyzer)
-  - Snyk Code (SAST) + Snyk Open Source (CVE detection)
-  - dotnet-outdated (Dependency version checking)
-  - Trivy (Container/IaC scanning)
-  - SonarQube (Comprehensive analysis)
-- **Tool Overlap Detection**: Identifies findings converged across 7 tools with confidence scoring
-- **Focus**: ASP.NET Core Identity, CSRF, XSS in Razor, EF Core SQL injection, async/await patterns
-- **Command**: `/audit-dotnet`
+  - dir: project-two
+    skills:
+      - /audit-dotnet
+```
 
-## Customizing Output Formats
+### 3. Build and run
 
-### Design Philosophy: Embedded Format Examples
+```bash
+docker compose build
+docker compose run --rm skills
+```
 
-This system uses **embedded format examples** in agent and skill files rather than external templates. This follows Claude Code best practices (2025) and provides:
+---
 
-- ✅ **Flexibility**: Claude adapts format to content dynamically
-- ✅ **Simplicity**: No template engine or file I/O overhead
-- ✅ **Maintainability**: Format defined with context in one place
-- ✅ **Speed**: Direct generation from prompts with examples
+## API key
 
-### How to Customize Outputs
+The API key is loaded from the `ANTHROPIC_API_KEY` environment variable.
+Set this in your `.env` file (see `.env.example` for a template).
 
-**Agent Outputs** (Stage 1-5):
-- Edit `.claude/agents/[agent-name].md`
-- Find the "Output Format" section
-- Modify the JSON schema or markdown examples
-- Example: To change architecture analysis format, edit `architecture-analyzer.md` lines 227-329
+Get your API key from: https://console.anthropic.com/settings/keys
 
-**Final Deliverables** (Stage 6):
-- Edit `.claude/skills/audit-javascript/SKILL.md`
-- Find the "Stage 6 Prompt" section (lines 500-540)
-- Modify the ANALYSIS-REPORT.md template
-- Changes apply to all future audits
+---
 
-**Tool Output Formatting**:
-- Edit `.claude/skills/audit-javascript/tools/format-static-results.js`
-- Modify the `createFinding()` function or output schema
-- This controls how static analysis results are unified
+## Language version managers
 
-**Why No Templates Directory?**
+| Language | Manager | Switch version |
+|---|---|---|
+| Java | SDKMAN | `sdk use java 17.0.13-tem` |
+| Node.js | nvm | `nvm use 18` |
+| Python | pyenv | `pyenv global 3.11` |
+| .NET | side-by-side + global.json | `/opt/dotnet-install.sh --channel 7.0 --install-dir /opt/dotnet` |
 
-You may notice there's no `templates/` directory. This is intentional. External template files would:
-- Add complexity (template engine, file I/O)
-- Reduce flexibility (rigid formats vs adaptive generation)
-- Be harder to maintain (format separated from context)
-- Not follow Claude Code conventions
+Pre-installed:
 
-Instead, formats are defined inline where they're used, making the system simpler and more maintainable.
+| Language | Default | Also installed |
+|---|---|---|
+| Java | 21 (Temurin) | 17 (Temurin) |
+| Node.js | 20 LTS | 18 LTS |
+| Python | 3.12 | 3.11 |
+| .NET | 8 | 6 |
 
-## Troubleshooting
+---
 
-### "Static analysis tools not found"
-Install the required tools for your tech stack. See the tech stack section for tool lists.
+## Logs
 
-### "Agent produced empty output"
-Check `.analysis/{language}/stage{N}/metadata.json` for error messages. The agent may have hit context limits or permission issues.
+All in `<workdir>/logs/`:
 
-### "Convergence score is low"
-This is normal for codebases where issues are very specific to one domain. Low convergence doesn't mean findings are wrong, just that they're specialized.
+| File | Contents |
+|---|---|
+| `docker_<ts>.log` | Startup, validation, prep, shutdown |
+| `python_<ts>.log` | Task queue, start, ok, fail |
+| `task_<dir>__<skill>_<ts>.log` | Full per-task output |
+| `result_<dir>__<skill>_<ts>.txt` | Skill's final output |
+| `summary_<ts>.txt` | Pass/fail table |
+| `summary_<ts>.json` | Machine-readable results |
 
-### "Top 10 doesn't match my expectations"
-Review `.analysis/{language}/stage6-final-synthesis/all_candidates_ranked.json` to see the complete prioritization. You can adjust weights and re-run Stage 6.
+---
 
-## Contributing
+## config.yml options
 
-This system is designed to be extended:
+| Key | Default | Description |
+|---|---|---|
+| `runner.model` | `claude-sonnet-4-6` | Model to use (`claude-sonnet-4-6` or `claude-opus-4-6`) |
+| `runner.concurrency` | `3` | Max parallel tasks |
+| `runner.max_turns` | `20` | Max agent turns per task |
+| `runner.timeout` | `300` | Per-task timeout in seconds |
+| `runner.max_budget_usd` | `10.0` | Spending limit per task in USD |
 
-1. **New Tech Stacks**: Copy `.claude/skills/audit-javascript/` and adapt static tools
-2. **New Specialist Agents**: Add new agents to Stage 2 for additional perspectives
-3. **Custom Output Formats**: Modify embedded examples in agent/skill `.md` files (see "Customizing Output Formats" above)
-4. **Additional Static Tools**: Add runners in `tools/` directories with standardized JSON output
+---
 
-## License
+## Permission Mode
 
-[Add your license here]
+This runner uses **`bypassPermissions`** mode, which is **hardcoded** and cannot be changed via configuration.
 
-## Support
+**What this means:**
+- Claude automatically approves all tool executions without prompting
+- Enables fully autonomous operation in headless Docker environments
+- No blocking or waiting for user approval
 
-For issues, questions, or contributions, please see the project repository.
+**Why it's hardcoded:**
+- **Reliability:** Ensures the runner never blocks waiting for approvals in headless environments
+- **Simplicity:** One less configuration option to worry about
+- **Security:** Designed specifically for isolated, ephemeral Docker containers
 
-## Acknowledgments
-
-Built with [Claude Code](https://code.claude.com) using best practices for agent-based code analysis.
+**Security note:** This runner should only be used in isolated Docker containers. The `bypassPermissions` mode is safe for this use case because:
+- Each container is ephemeral (destroyed after completion)
+- Working directory is explicitly defined and isolated
+- Perfect for automated code audits and CI/CD pipelines

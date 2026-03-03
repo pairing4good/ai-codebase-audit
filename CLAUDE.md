@@ -1,212 +1,263 @@
-# AI Codebase Audit System
+# Claude Skill Runner — Environment Guide
 
-This project provides a reusable, production-ready analytical system for auditing JavaScript/TypeScript, Java, .NET, and Python codebases with maximum accuracy.
+You are running inside a Docker container purpose-built for automated code
+analysis and skill execution. This file tells you everything you need to know
+about your environment, how to switch language versions, and how to behave.
 
-**Current Status**: All four stacks fully implemented and production-ready!
+---
 
-## System Overview
+## Your Working Environment
 
-The audit system uses a **7-stage analytical funnel** with **independent sub-agents** to eliminate bias and maximize finding confidence:
+- Your working directory is a project directory containing source code,
+  this CLAUDE.md, and a `.claude/` directory with all skills and agents
+  needed to complete your task.
+- Skills write output to `.analysis/<language>/` inside this directory.
+  This keeps parallel skill runs isolated from each other.
+- Do not navigate above your working directory root.
 
-1. **Stage 0: Build Validation** - Ensures build tools installed and project compiles (**MANDATORY**)
-2. **Stage 1: Artifact Generation** - Creates architecture diagrams and documentation
-3. **Stage 2: Parallel Independent Analysis** - 4 specialist agents analyze in isolation
-4. **Stage 3: Static Analysis** - Stack-specific tools provide objective metrics
-5. **Stage 4: Reconciliation** - Synthesizes findings with convergence analysis
-6. **Stage 5: Adversarial Challenge** - Independent agent challenges findings
-7. **Stage 6: Final Synthesis** - Produces top 10 prioritized improvements
-
-**CRITICAL**: Stage 0 is mandatory. The audit will **STOP** if:
-- Required build tools are not installed (.NET SDK, Java/Maven/Gradle, or Node.js)
-- Project files are missing (no .csproj/.sln, no pom.xml/build.gradle, or no package.json)
-- Project does not compile/build (.NET and Java require successful compilation)
-
-## Project Conventions
-
-### Analysis Framework Principles
-
-1. **Independence First**: Specialist agents must never see each other's outputs until reconciliation
-2. **Evidence-Based Prioritization**: Findings ranked by severity × confidence × effort-to-value
-3. **Transparency Through Stages**: Every stage produces reviewable artifacts in `.analysis/{language}/` directories
-4. **Convergence = Confidence**: Findings that appear across multiple independent agents/tools are high-confidence
-
-### Output Standards
-
-All findings must include:
-- **Location**: Exact file:line reference with clickable links
-- **Evidence**: Which agents AND which static tools identified it
-- **Confidence Level**: High (converged), Medium (single category), Low (single source)
-- **Code Example**: Actual problematic code snippet
-- **Recommendation**: Specific, actionable fix with example code
-- **Effort Estimate**: High/Medium/Low time investment
-- **Impact Estimate**: Critical/High/Medium/Low business impact
-
-### Code Quality Standards
-
-- Use functional programming patterns where possible
-- All analysis logic must be deterministic and reproducible
-- Static analysis tool integrations must handle tool failures gracefully
-- Output JSON schemas must be validated before writing files
-
-### File Structure Conventions
+### Directory Structure
 
 ```
-When auditing a target repository, outputs go to:
-
-target-repo/
-└── .analysis/{language}/                   # All audit outputs under the specific language (java, python, etc.)
-    ├── final-report/            # Executive deliverables (start here!)
-    │   ├── ANALYSIS-REPORT.md           # Top 10 prioritized improvements
-    │   ├── ARCHITECTURE-OVERVIEW.md     # System architecture docs
-    │   ├── FINDINGS-DETAILED.json       # Complete structured data
-    │   └── CONFIDENCE-MATRIX.md         # Evidence transparency matrix
-    ├── stage0-build-validation/ # Build logs and validation (NEW)
-    ├── stage1-artifacts/        # Architecture diagrams and tech debt map
-    ├── stage2-parallel-analysis/  # 4 independent agent analyses
-    ├── stage3-static-analysis/  # Static tool results
-    ├── stage4-reconciliation/   # Convergence analysis
-    ├── stage5-adversarial/      # False positive elimination
-    └── stage6-final-synthesis/  # Prioritization matrix
+/workdir/
+  CLAUDE.md                         ← this file (authoritative for all projects)
+  config.yml
+  .claude/                          ← source, copied into each project at startup
+    settings.json
+    agents/
+      architecture-analyzer.md
+      dependency-analyzer.md
+      maintainability-analyzer.md
+      security-analyzer.md
+      reconciliation-agent.md
+      adversarial-agent.md
+      artifact-generator.md
+    skills/
+      audit-java/
+        SKILL.md
+        tools/
+          auto-install-tools.sh
+          checkstyle-runner.sh
+          dependency-check-runner.sh
+          pmd-runner.sh
+          semgrep-runner.sh
+          snyk-runner.sh
+          sonarqube-runner.sh
+          spotbugs-runner.sh
+          trivy-runner.sh
+          ...
+      audit-javascript/
+        SKILL.md
+        tools/ ...
+      audit-dotnet/
+        SKILL.md
+        tools/ ...
+      audit-python/
+        SKILL.md
+        tools/ ...
+  project-one/                      ← your working directory (cwd)
+    CLAUDE.md                       ← copied from workdir root
+    .claude/                        ← copied from workdir root
+      settings.json
+      agents/ ...
+      skills/ ...
+    .git/
+    src/
+    pom.xml
+    .analysis/                      ← skill output written here
+      java/
+  project-two/
+    CLAUDE.md                       ← copied from workdir root
+    .claude/                        ← copied from workdir root
+      ...
+    .git/
+    src/
+    package.json
+    .analysis/
+      javascript/
+  project-three/
+    ...
+  logs/
 ```
 
-## Agent-Specific Instructions
+---
 
-### Artifact Generator (Stage 1)
-**Objective**: Build comprehensive mental model before analysis
-**Output**: Architecture diagrams, data flows, sequence diagrams, ER models
-**Must Include**: Component dependencies, critical paths, tech debt surface map
-**Permission Mode**: Plan (read-only)
+## Language Runtimes
 
-### Architecture Analyzer (Stage 2)
-**Objective**: Identify structural, design, and architectural issues
-**Focus**: Abstractions, coupling, design patterns, layer violations
-**Isolation**: No access to other agent outputs
-**Permission Mode**: Plan (read-only)
+Four language runtimes are available. Each has a dedicated version manager.
+Use the commands below to check versions, install new ones, and switch between
+them. Changes made with `use` or `global` apply to the current session.
+Changes made with `default` or `alias default` persist across sessions.
 
-### Security Analyzer (Stage 2)
-**Objective**: Identify vulnerabilities, attack surfaces, trust boundaries
-**Focus**: OWASP Top 10, injection flaws, auth issues, data exposure
-**Isolation**: No access to other agent outputs
-**Permission Mode**: Plan (read-only)
+---
 
-### Maintainability Analyzer (Stage 2)
-**Objective**: Identify code quality issues and technical debt
-**Focus**: Complexity, duplication, test coverage, documentation
-**Isolation**: No access to other agent outputs
-**Permission Mode**: Plan (read-only)
-
-### Dependency Analyzer (Stage 2)
-**Objective**: Identify supply chain risks and dependency issues
-**Focus**: Outdated packages, known vulnerabilities, license issues
-**Isolation**: No access to other agent outputs
-**Permission Mode**: Plan (read-only)
-
-### Reconciliation Agent (Stage 4)
-**Objective**: Synthesize findings with no prior analytical bias
-**Input**: All Stage 2 outputs + Stage 3 static results + Stage 1 artifacts
-**Output**: Confidence-weighted merged longlist with convergence analysis
-**Fresh Context**: Must not have performed any prior analysis
-
-### Adversarial Agent (Stage 5)
-**Objective**: Challenge findings to eliminate false positives
-**Input**: Only reconciled findings (no prior reasoning)
-**Output**: Verdicts on each finding (upheld/downgraded/dismissed)
-**Fresh Context**: Must not have performed any prior analysis
-
-## Compact Instructions
-
-When compacting this context, preserve:
-- 7-stage funnel structure and sequencing (including Stage 0 build validation)
-- Stage 0 is MANDATORY - audit stops if build tools missing or project doesn't compile
-- Independence requirement for Stage 2 agents
-- Output format requirements (file:line, evidence sources, confidence levels)
-- Deliverables structure (4 top-level files + .analysis/{language}/ directory)
-- Convergence = high confidence principle
-
-## Tech Stack Support
-
-### JavaScript/TypeScript ✅ (Fully Implemented)
-- **Status**: Production-ready with complete 7-stage pipeline (Stage 0 = dependency validation)
-- **Prerequisites**: Node.js (18+), npm/yarn/pnpm, package.json
-- **Stage 0**: Validates Node.js installed, installs dependencies, attempts build if build script present
-- **Static Tools**: ESLint + security plugins, Semgrep, Snyk, SonarQube, npm audit, Trivy, Coverage
-- **Frameworks**: React, Vue, Angular, Node.js, Express, Next.js
-- **Focus Areas**: Async patterns, promise handling, dependency management
-- **Command**: `/audit-javascript`
-
-### Java ✅ (Fully Implemented)
-- **Status**: Production-ready with complete 7-stage pipeline (Stage 0 = build validation)
-- **Prerequisites**: Java/JDK 11+ (recommend 17+), Maven or Gradle, pom.xml or build.gradle
-- **Stage 0**: Validates Java/JDK installed, validates Maven/Gradle, compiles project (**STOPS if build fails**)
-- **Static Tools**: Semgrep, SpotBugs + Find Security Bugs, PMD, Checkstyle, Snyk, OWASP Dependency-Check, Trivy, SonarQube
-- **Frameworks**: Spring, Spring Boot, Jakarta EE, Hibernate, Micronaut
-- **Focus Areas**: Spring Security, SQL injection, XXE, deserialization, concurrency, JPA performance
-- **Command**: `/audit-java`
-
-### .NET (C#/F#) ✅ (Fully Implemented)
-- **Status**: Production-ready with complete 7-stage pipeline (Stage 0 = build validation)
-- **Prerequisites**: .NET SDK 6.0+, .csproj/.fsproj/.sln files
-- **Stage 0**: Validates .NET SDK installed, compiles project with dotnet build (**STOPS if build fails**)
-- **Static Tools**: Semgrep, Roslyn Analyzers, Security Code Scan, Snyk, dotnet-outdated, Trivy, SonarQube
-- **Frameworks**: ASP.NET Core, Entity Framework, Blazor, SignalR
-- **Focus Areas**: ASP.NET Core Identity, CSRF, XSS in Razor, EF Core SQL injection, async/await patterns
-- **Command**: `/audit-dotnet`
-
-### Python ✅ (Fully Implemented)
-- **Status**: Production-ready with complete 7-stage pipeline (Stage 0 = environment validation)
-- **Prerequisites**: Python 3.8+ (recommend 3.11+), pip/poetry/pipenv, requirements.txt/pyproject.toml/setup.py
-- **Stage 0**: Validates Python installed, creates venv, installs dependencies (**PROMPTS on dependency failures**)
-- **Static Tools**: Semgrep, Bandit, Pylint, mypy, Safety, Radon, Snyk, Trivy, SonarQube
-- **Frameworks**: Django, Flask, FastAPI, general Python applications
-- **Focus Areas**: SQL injection, command injection, insecure deserialization (pickle), Django/Flask security, hardcoded secrets
-- **Command**: `/audit-python`
-
-## Severity Classification
-
-- **Critical**: Security vulnerabilities, data loss risks, system-breaking bugs
-- **High**: Performance issues, significant tech debt, scalability blockers
-- **Medium**: Code quality issues, maintainability concerns, minor bugs
-- **Low**: Style inconsistencies, documentation gaps, nice-to-haves
-
-## Usage Examples
+### Java — managed by SDKMAN
 
 ```bash
-# Run full JavaScript/TypeScript audit
-/audit-javascript
+# Check active version
+java -version
+sdk current java
 
-# Run full Java audit
-/audit-java
+# List installed versions
+sdk list java | grep -E "installed|local"
 
-# Run full .NET audit
-/audit-dotnet
+# List all available versions (Temurin = Eclipse open-source JDK, most common)
+sdk list java
 
-# Run full Python audit
-/audit-python
+# Install a version
+sdk install java 17.0.13-tem
+sdk install java 11.0.25-tem
 
-# All skills automatically execute these 7 stages:
-# 0. Validate build tools and compile/install dependencies (STOPS if missing/fails)
-# 1. Generate architecture artifacts
-# 2. Run 4 parallel independent agent analyses
-# 3. Execute static analysis tools (stack-specific)
-# 4. Reconcile findings with convergence analysis
-# 5. Run adversarial challenge to eliminate false positives
-# 6. Generate top 10 prioritized improvements
+# Switch for this session only
+sdk use java 17.0.13-tem
 
-# Output deliverables:
-# - ANALYSIS-REPORT.md (executive summary with top 10)
-# - ARCHITECTURE-OVERVIEW.md (system documentation)
-# - FINDINGS-DETAILED.json (complete structured data)
-# - CONFIDENCE-MATRIX.md (evidence transparency)
-# - .analysis/{language}/ directory (all stage-by-stage outputs)
+# Switch permanently
+sdk default java 17.0.13-tem
 ```
 
-## Custom Memory Sections
+Version identifier format: `<version>-<vendor>`
+Common vendors: `tem` (Eclipse Temurin), `open` (OpenJDK), `graal` (GraalVM)
 
-### Learned Patterns
-<!-- Claude auto-populates if memory enabled -->
+Pre-installed: `21.0.5-tem` (default), `17.0.13-tem`
 
-### Common Frameworks Encountered
-<!-- Claude tracks across sessions -->
+---
 
-### False Positive Patterns
-<!-- Track what gets dismissed in Stage 5 to improve future runs -->
+### Node.js — managed by nvm
+
+```bash
+# Check active version
+node --version
+npm --version
+
+# List installed versions (* = active)
+nvm list
+
+# List available LTS versions
+nvm ls-remote --lts
+
+# Install a version
+nvm install 18
+nvm install 16
+
+# Switch for this session only
+nvm use 18
+
+# Switch permanently (sets the default alias)
+nvm alias default 18
+```
+
+npm switches automatically when the Node version changes.
+
+Pre-installed: `20` (default), `18`
+
+---
+
+### Python — managed by pyenv
+
+```bash
+# Check active version
+python --version
+which python
+
+# List installed versions (* = active)
+pyenv versions
+
+# List all installable versions
+pyenv install --list | grep -E "^\s+3\."
+
+# Install a version
+pyenv install 3.11
+pyenv install 3.10
+
+# Switch globally (all sessions)
+pyenv global 3.11
+
+# Switch for current directory only (writes .python-version)
+pyenv local 3.11
+```
+
+After switching Python versions, reinstall any required packages:
+```bash
+pip install claude-agent-sdk pyyaml tenacity
+```
+
+Pre-installed: `3.12` (default), `3.11`
+
+---
+
+### .NET — side-by-side SDKs
+
+.NET does not use a version switcher. Multiple SDK versions coexist under
+`/opt/dotnet`. The dotnet CLI selects the version automatically based on
+`global.json` if one is present in the project directory, otherwise it uses
+the latest installed SDK.
+
+```bash
+# Check active version
+dotnet --version
+
+# List all installed SDKs
+dotnet --list-sdks
+
+# List all installed runtimes
+dotnet --list-runtimes
+
+# Install an additional SDK version
+/opt/dotnet-install.sh --channel 7.0 --install-dir /opt/dotnet
+/opt/dotnet-install.sh --channel 9.0 --install-dir /opt/dotnet
+
+# Pin a specific SDK version for this project
+dotnet new globaljson --sdk-version 6.0.428 --roll-forward latestPatch
+
+# Or write global.json manually
+echo '{ "sdk": { "version": "6.0.428", "rollForward": "latestPatch" } }' > global.json
+```
+
+Pre-installed: `8` (default), `6`
+
+---
+
+## Checking All Active Versions at Once
+
+```bash
+echo "Java:    $(java -version 2>&1 | head -1)"
+echo "Node:    $(node --version)"
+echo "Python:  $(python --version)"
+echo "dotnet:  $(dotnet --version)"
+```
+
+---
+
+## Skills
+
+All skills are in `.claude/skills/` at the root of your working directory.
+Always run skills from your working directory root — never from a subdirectory.
+Output is written to `.analysis/<language>/` within your working directory.
+
+When executing a skill:
+1. Read `.claude/skills/<skill-name>/SKILL.md` first
+2. Follow its instructions precisely
+3. Write output to `.analysis/<language>/` as the skill specifies
+4. Report clearly if something cannot be completed and why
+
+---
+
+## Important Constraints
+
+- **Do not navigate above your working directory root.**
+- **Do not install system packages with apt** unless a skill explicitly requires it.
+- **Do not commit or push** any git changes unless a skill explicitly instructs you to.
+- **Do not delete or overwrite source files.** Write output only to `.analysis/`.
+- **Write results clearly.** Be explicit about what was found, changed, and skipped.
+
+---
+
+## If Something Goes Wrong
+
+- If the required language version is not installed, install it using the
+  commands above and continue.
+- If a build fails due to a version mismatch, check `global.json` (.NET),
+  `.nvmrc` (Node), `.python-version` (Python), or `.sdkmanrc` (Java) in the
+  project root and switch to the specified version.
+- If a tool is missing, install it via the language's package manager
+  (`npm install -g`, `pip install`, `sdk install`, etc.) before escalating.
+- Always report what version you ended up using in your final output.
