@@ -504,25 +504,52 @@ With `concurrency=2`, execution order is:
 
 ## Simplification Opportunities
 
-### 💡 **SIMPLIFICATION #1: Combine docker_<ts>.log and python_<ts>.log**
+### ✅ **SIMPLIFICATION #1: Combine docker_<ts>.log and python_<ts>.log** (IMPLEMENTED)
 
-**Current State**: Two separate log files with partial overlap
+**Location**: [run_skills.py:67-87](run_skills.py#L67-L87)
 
-**Recommendation**: Stream `run_skills.py` stdout/stderr directly to `docker_<ts>.log` (already happening via `tee` in [entrypoint.sh:25](entrypoint.sh#L25))
+**Original Problem**: Two separate log files (`docker_{ts}.log` and `python_{ts}.log`) contained overlapping orchestrator output, since stdout was already being captured by docker logs.
 
-**Change**:
+**Solution Applied**: Modified orchestrator logger to stream-only (no separate file):
+
 ```python
-# run_skills.py - remove separate stdout handler for orchestrator
-# Keep file logging, remove StreamHandler
+def orchestrator_logger(log_dir: Path) -> logging.Logger:
+    """
+    Create orchestrator logger that only writes to stdout (not to a separate file).
+
+    Rationale: The orchestrator output is already captured by docker logs via stdout,
+    so creating a separate python_{ts}.log file would be redundant. Task-specific
+    logs are still written to individual task_{name}_{ts}_{uid}.log files.
+    """
+    logger = logging.getLogger("orchestrator")
+    logger.setLevel(logging.DEBUG)
+    logger.propagate = False
+
+    # Only add stdout handler (no file handler)
+    sh = logging.StreamHandler(sys.stdout)
+    sh.setLevel(logging.INFO)
+    sh.setFormatter(logging.Formatter(
+        "[%(asctime)s] [orchestrator] %(message)s", datefmt="%H:%M:%S"
+    ))
+    logger.addHandler(sh)
+
+    return logger
 ```
 
-Or keep both but clarify purpose:
-```python
-# docker_<ts>.log: Container lifecycle (startup, validation, shutdown)
-# python_<ts>.log: Orchestration logic (task queue, results)
-```
+**Benefits**:
+- ✅ **Single Source**: All orchestrator output in docker logs (accessed via `docker logs`)
+- ✅ **No Duplication**: Eliminates redundant `python_{ts}.log` file
+- ✅ **Task Logs Preserved**: Individual task logs (`task_{name}_{ts}_{uid}.log`) still written for detailed debugging
+- ✅ **Simpler Debugging**: One place to look for orchestration output
+- ✅ **Clear Separation**: Docker logs for orchestration, task logs for skill execution details
 
-**Status**: 💡 **OPTIMIZATION OPPORTUNITY**
+**Log Structure After Change**:
+- `logs/docker_{ts}.log`: Container lifecycle + orchestrator output (complete view)
+- `logs/task_{project}__{skill}_{ts}_{uid}.log`: Individual skill execution logs
+- `logs/result_{project}__{skill}_{ts}_{uid}.txt`: Skill results
+- `logs/summary_{ts}.txt`: Final summary
+
+**Status**: ✅ **IMPLEMENTED**
 
 ---
 

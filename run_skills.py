@@ -65,8 +65,26 @@ def _make_logger(name: str, log_file: Path) -> logging.Logger:
 
 
 def orchestrator_logger(log_dir: Path) -> logging.Logger:
-    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-    return _make_logger("orchestrator", log_dir / f"python_{ts}.log")
+    """
+    Create orchestrator logger that only writes to stdout (not to a separate file).
+
+    Rationale: The orchestrator output is already captured by docker logs via stdout,
+    so creating a separate python_{ts}.log file would be redundant. Task-specific
+    logs are still written to individual task_{name}_{ts}_{uid}.log files.
+    """
+    logger = logging.getLogger("orchestrator")
+    logger.setLevel(logging.DEBUG)
+    logger.propagate = False
+
+    # Only add stdout handler (no file handler)
+    sh = logging.StreamHandler(sys.stdout)
+    sh.setLevel(logging.INFO)
+    sh.setFormatter(logging.Formatter(
+        "[%(asctime)s] [orchestrator] %(message)s", datefmt="%H:%M:%S"
+    ))
+    logger.addHandler(sh)
+
+    return logger
 
 
 def task_logger(log_dir: Path, dir_name: str, skill: str) -> logging.Logger:
