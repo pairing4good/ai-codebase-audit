@@ -704,33 +704,62 @@ export PATH="${DOTNET_ROOT}:${PATH}"
 
 ## Documentation Gaps
 
-### 📚 **GAP #1: No Failure Recovery Documentation**
+### ✅ **GAP #1: No Failure Recovery Documentation** (FIXED)
 
-**Question**: What happens if a skill fails mid-run?
+**Location**: [README.md:213-293](README.md#L213-L293)
 
-**Current Behavior** ([run_skills.py:406-407](run_skills.py#L406)):
-```python
-if any(r["status"] != "success" for r in results):
-    sys.exit(1)
+**Original Problem**: No documentation on what happens when skills fail, how to diagnose issues, or how to re-run only failed tasks.
+
+**Solution Applied**: Added comprehensive "Handling Failures" section to README with:
+
+#### 1. What Happens When Skills Fail
+- Partial results preserved in `.analysis/<language>/`
+- Logs retained for debugging
+- Container exits with non-zero code
+- Summary shows which tasks failed
+
+#### 2. Diagnosis Steps
+```bash
+# Step 1: Check summary
+cat logs/summary_<most-recent>.txt
+
+# Step 2: Review task logs
+cat logs/task_<project>__<skill>_<ts>_<uid>.log
+
+# Step 3: Check partial analysis
+ls -la <project-dir>/.analysis/<language>/
 ```
 
-**Missing Info**:
-1. Can user re-run just failed skills?
-2. Are partial results preserved?
-3. How to resume from checkpoint?
+#### 3. Common Failure Scenarios Table
 
-**Recommendation**: Add to [README.md](README.md):
-```markdown
-## Handling Failures
+| Failure Type | Likely Cause | Solution |
+|---|---|---|
+| Timeout | Exceeded 300s limit | Increase timeout or reduce scope |
+| Budget exceeded | Exceeded $10 limit | Increase budget or use smaller model |
+| Out of memory | Exceeded 4GB limit | Reduce concurrency |
+| Config error | Invalid/duplicate skills | Fix config.yml |
+| Disk space | Insufficient space | Free up space |
 
-If a skill fails:
-1. Check `logs/summary_<ts>.txt` for which tasks failed
-2. Review `logs/task_<project>__<skill>_<ts>.log` for error details
-3. Partial analysis in `.analysis/<language>/` is preserved
-4. To re-run just failed tasks: edit config.yml to include only failed skills
+#### 4. Re-running Failed Skills
+Step-by-step instructions for editing config.yml to target only failed tasks and re-running the container.
+
+#### 5. Preserving Previous Results
+```bash
+# Backup before re-running
+cp -r project-one/.analysis project-one/.analysis.backup-2026-03-03
 ```
 
-**Status**: 🔧 **READY TO ADD**
+#### 6. Emergency Cleanup
+Commands to completely reset analysis outputs, logs, and Docker images.
+
+**Benefits**:
+- ✅ **Clear Recovery Path**: Users know exactly what to do when failures occur
+- ✅ **Diagnostic Guide**: Step-by-step troubleshooting process
+- ✅ **Common Scenarios**: Table of typical failures with solutions
+- ✅ **Selective Re-run**: Instructions for running only failed skills
+- ✅ **Data Preservation**: Guidance on backing up partial results
+
+**Status**: ✅ **FIXED**
 
 ---
 

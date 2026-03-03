@@ -210,6 +210,89 @@ All in `<AUDIT_BASE_DIR>/logs/`:
 
 ---
 
+## Handling Failures
+
+### What happens when a skill fails?
+
+If a skill fails during execution:
+
+1. **Partial results are preserved**: Analysis outputs in `.analysis/<language>/` are kept for inspection
+2. **Logs are retained**: Check logs for detailed error information (see Logs section above)
+3. **Container exits with non-zero code**: Final exit code is 1 if any skills failed
+4. **Summary shows failures**: `logs/summary_<ts>.txt` indicates which tasks failed
+
+### How to diagnose failures
+
+**Step 1: Check the summary**
+```bash
+cat logs/summary_<most-recent>.txt
+```
+This shows which projects/skills failed.
+
+**Step 2: Review task logs**
+```bash
+cat logs/task_<project>__<skill>_<ts>_<uid>.log
+```
+Replace `<project>`, `<skill>`, `<ts>`, and `<uid>` with values from the summary.
+
+**Step 3: Check partial analysis**
+```bash
+ls -la <project-dir>/.analysis/<language>/
+```
+Partial results may contain clues about what was analyzed before failure.
+
+### Common failure scenarios
+
+| Failure Type | Likely Cause | Solution |
+|---|---|---|
+| Timeout | Task exceeded `runner.timeout` (default 300s) | Increase timeout in config.yml or reduce codebase scope |
+| Budget exceeded | Task cost > `runner.max_budget_usd` (default $10) | Increase budget or use smaller model |
+| Out of memory | Container exceeded 4GB limit | Analyze fewer projects concurrently or reduce `runner.concurrency` |
+| Config error | Invalid skill path or duplicate skills | Fix config.yml based on error message |
+| Disk space | Insufficient space for analysis outputs | Free up space or increase volume size |
+
+### How to re-run only failed skills
+
+1. **Identify failed skills** from `logs/summary_<ts>.txt`
+2. **Edit config.yml** to include only the failed projects/skills:
+   ```yaml
+   targets:
+     - dir: project-that-failed
+       skills:
+         - /audit-java  # Only the skill that failed
+   ```
+3. **Re-run the container**:
+   ```bash
+   docker compose run --rm skills
+   ```
+
+### Preserving previous results
+
+Analysis outputs in `.analysis/<language>/` are NOT automatically cleaned up between runs. Each run adds to or overwrites previous results. To preserve previous analysis:
+
+```bash
+# Before re-running, backup existing analysis
+cp -r project-one/.analysis project-one/.analysis.backup-2026-03-03
+```
+
+### Emergency cleanup
+
+If you need to start completely fresh:
+
+```bash
+# Remove all analysis outputs
+find . -type d -name ".analysis" -exec rm -rf {} +
+
+# Remove all logs
+rm -rf logs/*
+
+# Remove Docker image to force rebuild
+docker compose down --rmi local
+docker compose build --no-cache
+```
+
+---
+
 ## config.yml options
 
 | Key | Default | Description |
