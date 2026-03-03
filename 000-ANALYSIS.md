@@ -1,7 +1,7 @@
 # Comprehensive Analysis: AI Codebase Audit System
 
 **Analysis Date**: 2026-03-03
-**Status**: ✅ Critical Bug #1 Fixed | ✅ Issue #2 Fixed | Other issues documented below
+**Status**: ✅ Bug #1 Fixed | ✅ Issue #2 Fixed | ✅ Issue #3 Fixed | Other issues documented below
 
 ---
 
@@ -75,18 +75,27 @@ services:
 
 ## Remaining Issues
 
-### ⚠️ **ISSUE #3: API Key in config.yml Comments Could Be Clearer** (PARTIALLY FIXED)
+### ✅ **ISSUE #3: API Key in config.yml Comments Could Be Clearer** (FIXED)
 
-**Location**: [config.yml](config.yml#L21-23)
+**Location**: [config.yml](config.yml#L21-24)
 
-**Current Comment**:
+**Problem**: Original comment wasn't explicit enough about where the API key comes from and why it can't be in config.yml.
+
+**Solution Applied**:
 ```yaml
 # API KEY
-#   Set ANTHROPIC_API_KEY in your .env file (see .env.example).
-#   It CANNOT be configured in this file for security reasons.
+#   The ANTHROPIC_API_KEY environment variable is read from your .env file.
+#   It CANNOT be set in this config.yml file for security reasons.
+#   See .env.example for setup instructions.
 ```
 
-**Status**: ✅ Improved during Issue #2 fix - now explicitly states it cannot be in config.yml
+**Changes**:
+- Clarified that the API key is an "environment variable" (not just "set in .env")
+- Changed "Set" to "read from" to emphasize the source
+- Changed "configured" to "set" for clarity
+- Added explicit reference to setup instructions
+
+**Status**: ✅ **FIXED**
 
 ---
 

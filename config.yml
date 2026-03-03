@@ -19,8 +19,9 @@
 # each skill runs exactly once per directory.
 #
 # API KEY
-#   Set ANTHROPIC_API_KEY in your .env file (see .env.example).
-#   It CANNOT be configured in this file for security reasons.
+#   The ANTHROPIC_API_KEY environment variable is read from your .env file.
+#   It CANNOT be set in this config.yml file for security reasons.
+#   See .env.example for setup instructions.
 #
 # PERMISSION MODE
 #   Hardcoded to 'bypassPermissions' for autonomous Docker operation.
