@@ -118,21 +118,24 @@ for DIR_NAME in ${PROJECT_DIRS}; do
 
     info "  ${DIR_NAME}/"
 
+    # Remove any existing audit configuration files to ensure clean state
+    # This prevents conflicts and ensures the authoritative versions are used
     if [[ -d "${PROJECT_DIR}/.claude" ]]; then
-        mv "${PROJECT_DIR}/.claude" "${PROJECT_DIR}/OLD-.claude"
-        info "    .claude/ → OLD-.claude/"
+        rm -rf "${PROJECT_DIR}/.claude"
+        info "    Removed existing .claude/"
     fi
 
     if [[ -f "${PROJECT_DIR}/CLAUDE.md" ]]; then
-        mv "${PROJECT_DIR}/CLAUDE.md" "${PROJECT_DIR}/OLD-CLAUDE.md"
-        info "    CLAUDE.md → OLD-CLAUDE.md"
+        rm -f "${PROJECT_DIR}/CLAUDE.md"
+        info "    Removed existing CLAUDE.md"
     fi
 
+    # Copy authoritative audit configuration from workspace root
     cp -r "/workdir/.claude" "${PROJECT_DIR}/.claude"
-    info "    .claude/ copied"
+    info "    ✓ .claude/ copied"
 
     cp "/workdir/CLAUDE.md" "${PROJECT_DIR}/CLAUDE.md"
-    info "    CLAUDE.md copied"
+    info "    ✓ CLAUDE.md copied"
 done
 
 ok "Project directories ready."

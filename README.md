@@ -60,10 +60,9 @@ The audit system requires a **parent directory** (AUDIT_BASE_DIR) that contains:
 At container startup, `entrypoint.sh`:
 1. Validates `config.yml`, `CLAUDE.md`, and `.claude/` exist in AUDIT_BASE_DIR
 2. For each configured project directory:
-   - Renames any existing `.claude/`  → `OLD-.claude/`
-   - Renames any existing `CLAUDE.md` → `OLD-CLAUDE.md`
-   - Copies `AUDIT_BASE_DIR/.claude/`       → `<project>/.claude/`
-   - Copies `AUDIT_BASE_DIR/CLAUDE.md`      → `<project>/CLAUDE.md`
+   - Removes any existing `.claude/` and `CLAUDE.md` (ensures clean state)
+   - Copies `AUDIT_BASE_DIR/.claude/`  → `<project>/.claude/`
+   - Copies `AUDIT_BASE_DIR/CLAUDE.md` → `<project>/CLAUDE.md`
 
 `run_skills.py` then runs all skills in parallel directly against the project
 directories. Claude is invoked with `cwd` set to the project directory and

@@ -1,7 +1,7 @@
 # Comprehensive Analysis: AI Codebase Audit System
 
 **Analysis Date**: 2026-03-03
-**Status**: ✅ Bug #1 Fixed | ✅ Issue #2 Fixed | ✅ Issue #3 Fixed | Other issues documented below
+**Status**: ✅ Bug #1 Fixed | ✅ Issue #2 Fixed | ✅ Issue #3 Fixed | ✅ Issue #4 Fixed | Other issues documented below
 
 ---
 
@@ -99,26 +99,33 @@ services:
 
 ---
 
-### ⚠️ **ISSUE #4: Duplicate File Management Rationale**
+### ✅ **ISSUE #4: Duplicate File Management - Made Rock Solid** (FIXED)
 
-**Problem**: The system maintains **two copies** of `CLAUDE.md` and `.claude/`:
+**Original Problem**: The system renamed existing files with `OLD-` prefix, which could:
+- Accumulate multiple `OLD-OLD-...` prefixed files over time
+- Cause confusion about which version is active
+- Not be truly idempotent for headless operation
 
-1. `/workdir/CLAUDE.md` and `/workdir/.claude/` (source copies)
-2. `/workdir/project-one/CLAUDE.md` and `/workdir/project-one/.claude/` (copied into each project)
+**User Requirement**: "It needs to just work rock solid" - headless operation with no confusion
 
-**Current Behavior** ([entrypoint.sh:121-135](entrypoint.sh#L121)):
-- Renames existing files with `OLD-` prefix
-- Copies fresh versions from AUDIT_BASE_DIR root
+**Solution Applied** ([entrypoint.sh:121-138](entrypoint.sh#L121)):
+- **DELETE** existing `.claude/` and `CLAUDE.md` instead of renaming
+- Copy fresh authoritative versions from AUDIT_BASE_DIR
+- Clear logging of what's happening
 
-**Questions**:
-1. Why not mount `.claude/` read-only and reference it directly?
-2. Why is `CLAUDE.md` needed in each project when it's environment documentation?
+**Why This Approach**:
+1. ✅ **Idempotent**: Multiple runs produce identical results
+2. ✅ **Rock solid**: No accumulated cruft, no confusion
+3. ✅ **Headless-friendly**: No human cleanup needed
+4. ✅ **Single source of truth**: AUDIT_BASE_DIR is always authoritative
+5. ✅ **Isolation**: Each project gets independent copy for Claude SDK compatibility
 
-**Recommendation**:
-- **Option A** (Current approach is fine): Keep for isolation, but document WHY (each project gets independent skill context)
-- **Option B** (Simplify): Mount `.claude/` as shared read-only volume, eliminate copying
+**Why Copy Instead of Shared Mount**:
+- Claude SDK expects `.claude/` in project working directory
+- Enables future per-project skill customization if needed
+- Minimal disk cost (.claude/ is mostly text files)
 
-**Status**: 📋 **DOCUMENTED - Decision needed**
+**Status**: ✅ **FIXED - Rock solid for headless operation**
 
 ---
 
