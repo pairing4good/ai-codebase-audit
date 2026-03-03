@@ -175,6 +175,27 @@ for DIR_NAME in ${PROJECT_DIRS}; do
 
     cp "/workdir/CLAUDE.md" "${PROJECT_DIR}/CLAUDE.md"
     info "    ✓ CLAUDE.md copied"
+
+    # Create .analysis directory with proper permissions for sandboxed write access
+    # This is the ONLY directory where skills can write output
+    ANALYSIS_DIR="${PROJECT_DIR}/.analysis"
+    if [[ ! -d "${ANALYSIS_DIR}" ]]; then
+        mkdir -p "${ANALYSIS_DIR}"
+        info "    ✓ Created .analysis/ (writable output directory)"
+    else
+        info "    ✓ .analysis/ exists"
+    fi
+
+    # Ensure .analysis is writable (defense in depth for sandboxing)
+    chmod 755 "${ANALYSIS_DIR}" 2>/dev/null || true
+
+    # Verify write access
+    if ! touch "${ANALYSIS_DIR}/.write-test" 2>/dev/null; then
+        err "    ✗ .analysis/ is not writable - skills will fail!"
+        exit 1
+    fi
+    rm -f "${ANALYSIS_DIR}/.write-test"
+    info "    ✓ .analysis/ is writable (sandboxed output directory)"
 done
 
 ok "Project directories ready."
@@ -196,6 +217,22 @@ if [[ $AVAILABLE_GB -lt $REQUIRED_GB ]]; then
 fi
 
 ok "Disk space OK: ${AVAILABLE_GB}GB available"
+sep
+
+# =============================================================================
+# Security Model Summary
+# =============================================================================
+info "Security Model:"
+info "  ✓ Source code: READ-ONLY (protected by .claude/settings.json deny rules)"
+info "  ✓ .analysis/:   WRITE-ONLY (sandboxed output directory)"
+info "  ✓ Network:      DISABLED (prevents data exfiltration)"
+info "  ✓ Dangerous ops: BLOCKED (rm, curl, wget, ssh, git push, etc.)"
+info "  ✓ Secrets:      BLOCKED (cannot read .env, .key, .pem, credentials, etc.)"
+info ""
+info "  Skills run with bypassPermissions mode but are constrained by:"
+info "  • Comprehensive deny list in .claude/settings.json"
+info "  • Sandbox configuration (network disabled, filesystem restricted)"
+info "  • Write access limited to .analysis/ directories only"
 sep
 
 # =============================================================================

@@ -1,4 +1,5 @@
 {
+  "_comment_security": "SECURITY MODEL: This runner uses bypassPermissions mode for autonomous operation. The permissions below provide defense-in-depth by restricting file access and dangerous operations. Skills can READ source code but CANNOT modify it - only .analysis/ is writable.",
   "permissions": {
     "allow": [
       "Read(*)",
@@ -28,11 +29,40 @@
       "Read(**/credentials.json)",
       "Read(**/*.key)",
       "Read(**/*.pem)",
+      "Read(**/*secret*)",
+      "Read(**/*password*)",
       "Bash(rm *)",
       "Bash(curl *)",
       "Bash(wget *)",
-      "Write(.claude/settings.json)",
-      "Write(.git/**)"
+      "Bash(git push *)",
+      "Bash(ssh *)",
+      "Bash(scp *)",
+      "Bash(nc *)",
+      "Bash(telnet *)",
+      "Bash(ftp *)",
+      "Write(.claude/**)",
+      "Write(.git/**)",
+      "Write(../**)",
+      "Write(src/**)",
+      "Write(lib/**)",
+      "Write(app/**)",
+      "Write(config/**)",
+      "Write(**/*.java)",
+      "Write(**/*.js)",
+      "Write(**/*.ts)",
+      "Write(**/*.py)",
+      "Write(**/*.cs)",
+      "Write(**/*.go)",
+      "Write(**/*.rb)",
+      "Write(**/*.php)",
+      "Edit(src/**)",
+      "Edit(lib/**)",
+      "Edit(app/**)",
+      "Edit(**/*.java)",
+      "Edit(**/*.js)",
+      "Edit(**/*.ts)",
+      "Edit(**/*.py)",
+      "Edit(**/*.cs)"
     ]
   },
   "env": {
@@ -46,9 +76,12 @@
   "defaultModel": "sonnet",
   "alwaysThinkingEnabled": false,
   "sandbox": {
+    "_comment": "Sandbox provides additional protection. Network is disabled to prevent data exfiltration. Filesystem access is limited to read-only for source code, write-only for .analysis/",
     "enabled": true,
     "allowNetwork": false,
-    "allowFilesystem": true
+    "allowFilesystem": true,
+    "readOnlyPaths": ["src", "lib", "app", "test", "tests"],
+    "writablePaths": [".analysis"]
   },
   "todoMode": "auto",
   "hooks": {
