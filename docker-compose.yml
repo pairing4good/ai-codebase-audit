@@ -1,11 +1,11 @@
 # =============================================================================
 # docker-compose.yml
 # =============================================================================
-# Set WORKDIR in .env to your projects directory.
+# Set WORKDIR and ANTHROPIC_API_KEY in .env to your projects directory.
 # That directory must contain: config.yml, CLAUDE.md, .claude/
 #
 # Usage:
-#   cp .env.example .env      # set WORKDIR once
+#   cp .env.example .env      # set WORKDIR and ANTHROPIC_API_KEY
 #   docker compose build
 #   docker compose run --rm skills
 # =============================================================================
@@ -16,6 +16,8 @@ services:
       context: .
       dockerfile: Dockerfile
     image: claude-skill-runner:latest
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     volumes:
       - ${WORKDIR}:/workdir
     logging:
