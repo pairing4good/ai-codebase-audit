@@ -5,35 +5,52 @@ Skills run directly against project directories — no sandboxes, no copying.
 
 ---
 
-## Workdir layout
+## Directory Structure
+
+The audit system requires a **parent directory** (AUDIT_BASE_DIR) that contains:
+1. Configuration files (config.yml, CLAUDE.md, .claude/)
+2. Your project directories to audit
+3. Logs directory (created automatically)
 
 ```
-/your/workdir/
-  config.yml        ← configure api key, model, targets here
-  CLAUDE.md         ← Claude's instructions (copied into each project at startup)
-  .claude/          ← shared skills and agents (copied into each project at startup)
-    settings.json
-    agents/ ...
-    skills/
+/your/audit-base-dir/              ← Set AUDIT_BASE_DIR to this path
+  config.yml                       ← Configure which projects & skills to run
+  CLAUDE.md                        ← Claude agent instructions (provided)
+  .claude/                         ← Shared skills and agents (provided)
+    settings.json                  ← Agent configuration
+    agents/                        ← Specialized analysis agents
+      architecture-analyzer.md
+      security-analyzer.md
+      dependency-analyzer.md
+      maintainability-analyzer.md
+      reconciliation-agent.md
+      adversarial-agent.md
+      artifact-generator.md
+    skills/                        ← Language-specific audit workflows
       audit-java/SKILL.md + tools/
       audit-javascript/SKILL.md + tools/
       audit-dotnet/SKILL.md + tools/
       audit-python/SKILL.md + tools/
-  project-one/
+  project-one/                     ← Your first project to audit
     .git/
     src/
     pom.xml
-    CLAUDE.md        ← copied from workdir root at startup
-    .claude/         ← copied from workdir root at startup
-    .analysis/java/  ← skill output written here
-  project-two/
+    CLAUDE.md                      ← Copied from parent at startup
+    .claude/                       ← Copied from parent at startup
+    .analysis/java/                ← Audit results written here
+  project-two/                     ← Your second project to audit
     .git/
     src/
     package.json
-    CLAUDE.md
-    .claude/
-    .analysis/javascript/
-  logs/              ← created automatically
+    CLAUDE.md                      ← Copied from parent at startup
+    .claude/                       ← Copied from parent at startup
+    .analysis/javascript/          ← Audit results written here
+  logs/                            ← Created automatically
+    docker_<timestamp>.log         ← Container lifecycle logs
+    python_<timestamp>.log         ← Orchestration logs
+    task_<project>__<skill>.log    ← Per-task execution logs
+    result_<project>__<skill>.txt  ← Final skill results
+    summary_<timestamp>.txt        ← Overall pass/fail summary
 ```
 
 ---
@@ -41,12 +58,12 @@ Skills run directly against project directories — no sandboxes, no copying.
 ## How it works
 
 At container startup, `entrypoint.sh`:
-1. Validates `config.yml`, `CLAUDE.md`, and `.claude/` exist at the workdir root
+1. Validates `config.yml`, `CLAUDE.md`, and `.claude/` exist in AUDIT_BASE_DIR
 2. For each configured project directory:
    - Renames any existing `.claude/`  → `OLD-.claude/`
    - Renames any existing `CLAUDE.md` → `OLD-CLAUDE.md`
-   - Copies `/workdir/.claude/`       → `<project>/.claude/`
-   - Copies `/workdir/CLAUDE.md`      → `<project>/CLAUDE.md`
+   - Copies `AUDIT_BASE_DIR/.claude/`       → `<project>/.claude/`
+   - Copies `AUDIT_BASE_DIR/CLAUDE.md`      → `<project>/CLAUDE.md`
 
 `run_skills.py` then runs all skills in parallel directly against the project
 directories. Claude is invoked with `cwd` set to the project directory and
@@ -69,16 +86,18 @@ cp .env.example .env
 ```
 
 Edit `.env` and set:
-- `WORKDIR`: Absolute path to your projects directory
+- `AUDIT_BASE_DIR`: Absolute path to your **parent directory** containing config.yml, CLAUDE.md, .claude/, and project directories
 - `ANTHROPIC_API_KEY`: Your Anthropic API key from https://console.anthropic.com/settings/keys
 
 Example `.env`:
 ```bash
-WORKDIR=/path/to/your/projects
+AUDIT_BASE_DIR=/Users/you/code-audits
 ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
 ```
 
-### 2. Edit `config.yml` in your workdir
+**Important**: `AUDIT_BASE_DIR` should point to the parent directory that contains your projects, NOT to a single project directory. See "Directory Structure" above for details.
+
+### 2. Edit `config.yml` in your AUDIT_BASE_DIR
 
 Configure your runner settings and target projects:
 
@@ -141,7 +160,7 @@ Pre-installed:
 
 ## Logs
 
-All in `<workdir>/logs/`:
+All in `<AUDIT_BASE_DIR>/logs/`:
 
 | File | Contents |
 |---|---|

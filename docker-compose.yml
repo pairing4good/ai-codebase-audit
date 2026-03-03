@@ -1,11 +1,18 @@
 # =============================================================================
 # docker-compose.yml
 # =============================================================================
-# Set WORKDIR and ANTHROPIC_API_KEY in .env to your projects directory.
-# That directory must contain: config.yml, CLAUDE.md, .claude/
+# Set AUDIT_BASE_DIR and ANTHROPIC_API_KEY in .env
+#
+# AUDIT_BASE_DIR must be the PARENT directory containing:
+#   - config.yml (audit configuration)
+#   - CLAUDE.md (agent instructions)
+#   - .claude/ (skills and agents)
+#   - project-one/, project-two/, etc. (your actual projects)
+#
+# See .env.example for detailed directory structure diagram.
 #
 # Usage:
-#   cp .env.example .env      # set WORKDIR and ANTHROPIC_API_KEY
+#   cp .env.example .env      # configure AUDIT_BASE_DIR and ANTHROPIC_API_KEY
 #   docker compose build
 #   docker compose run --rm skills
 # =============================================================================
@@ -19,7 +26,7 @@ services:
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     volumes:
-      - ${WORKDIR}:/workdir
+      - ${AUDIT_BASE_DIR}:/workdir
     logging:
       driver: "json-file"
       options:

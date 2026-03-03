@@ -9,15 +9,21 @@ Run AI-powered security audits on your codebase in 3 steps.
 cp .env.example .env
 
 # Edit .env - set these two values:
-WORKDIR=/absolute/path/to/your/projects
+AUDIT_BASE_DIR=/absolute/path/to/your/audit-parent-directory
 ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
 ```
+
+**Important**: `AUDIT_BASE_DIR` must be the **parent directory** that contains:
+- `config.yml`, `CLAUDE.md`, `.claude/` (configuration files)
+- `project-one/`, `project-two/`, etc. (your actual project directories)
+
+See [.env.example](.env.example) for a detailed directory structure diagram.
 
 Get your API key: https://console.anthropic.com/settings/keys
 
 ## 2. Set targets
 
-Edit `config.yml` in your workdir:
+Edit `config.yml` in your AUDIT_BASE_DIR:
 
 ```yaml
 targets:
@@ -38,7 +44,7 @@ docker compose run --rm skills
 
 ## Results
 
-All output in `<workdir>/logs/`:
+All output in `<AUDIT_BASE_DIR>/logs/`:
 - `summary_<timestamp>.txt` - Pass/fail overview
 - `result_<project>__<skill>_<timestamp>.txt` - Detailed findings
 - `.analysis/<language>/` in each project - Full analysis artifacts

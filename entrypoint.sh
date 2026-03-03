@@ -144,7 +144,7 @@ sep
 info "Launching run_skills.py..."
 sep
 
-python3 /app/run_skills.py --workdir /workdir --config "${CONFIG_FILE}"
+python3 /app/run_skills.py --audit-base-dir /workdir --config "${CONFIG_FILE}"
 EXIT_CODE=$?
 
 sep

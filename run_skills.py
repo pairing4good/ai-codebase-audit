@@ -365,19 +365,20 @@ def write_summary(results: list[dict], log_dir: Path, orch: logging.Logger) -> N
 
 def main():
     p = ArgumentParser()
-    p.add_argument("--workdir", default="/workdir")
+    p.add_argument("--audit-base-dir", default="/workdir",
+                   help="Parent directory containing config.yml, CLAUDE.md, .claude/, and project directories")
     p.add_argument("--config",  default=None)
     args = p.parse_args()
 
-    workdir     = Path(args.workdir)
+    workdir     = Path(args.audit_base_dir)
     config_path = Path(args.config) if args.config else workdir / "config.yml"
     log_dir     = workdir / "logs"
 
     log_dir.mkdir(parents=True, exist_ok=True)
     orch = orchestrator_logger(log_dir)
 
-    orch.info(f"config      = {config_path}")
-    orch.info(f"workdir     = {workdir}")
+    orch.info(f"config          = {config_path}")
+    orch.info(f"audit_base_dir  = {workdir}")
 
     api_key, runner, tasks = load_config(config_path, workdir, orch)
     os.environ["ANTHROPIC_API_KEY"] = api_key
