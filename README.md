@@ -293,6 +293,106 @@ docker compose build --no-cache
 
 ---
 
+## Cost Estimation
+
+### Typical costs per skill
+
+Costs vary based on codebase size, complexity, and model choice. These are **rough estimates** using `claude-sonnet-4` (default):
+
+| Project Size | Lines of Code | Cost Range per Skill |
+|---|---|---|
+| Small | < 10,000 LOC | $0.50 - $2.00 |
+| Medium | 10,000 - 50,000 LOC | $2.00 - $6.00 |
+| Large | 50,000 - 150,000 LOC | $6.00 - $15.00 |
+| Very Large | > 150,000 LOC | $15.00 - $30.00+ |
+
+**Note**: `claude-opus-4` costs approximately **3x more** than Sonnet for the same analysis.
+
+### Factors affecting cost
+
+1. **Codebase size**: More files and lines = more tokens to analyze
+2. **Code complexity**: Complex architectures require more analysis turns
+3. **Model choice**: Opus is more expensive but may provide deeper insights
+4. **Analysis depth**: Security analysis typically costs more than basic structure analysis
+5. **Number of agents**: Each skill runs 4 agents (architecture, security, dependency, maintainability)
+6. **Static tool output**: Large tool outputs (e.g., from Semgrep, SpotBugs) increase cost
+
+### Budget control
+
+Set `max_budget_usd` in config.yml to prevent runaway costs:
+
+```yaml
+runner:
+  max_budget_usd: 10.0  # Per-task spending limit
+```
+
+**What happens when budget is exceeded:**
+- The skill stops gracefully
+- Partial analysis is preserved in `.analysis/<language>/`
+- Task is marked as failed with "budget exceeded" in logs
+- Container continues with remaining tasks
+
+### Estimating total cost
+
+**Formula:**
+```
+Total Cost ≈ (Number of Projects × Skills per Project) × Average Cost per Skill
+```
+
+**Example:**
+```yaml
+# config.yml
+targets:
+  - dir: project-one    # Medium Java project (~30K LOC)
+    skills: [/audit-java]
+  - dir: project-two    # Small Node project (~5K LOC)
+    skills: [/audit-javascript]
+```
+
+**Estimated cost:**
+- Project-one: 1 project × 1 skill × $4.00 = **$4.00**
+- Project-two: 1 project × 1 skill × $1.00 = **$1.00**
+- **Total: ~$5.00**
+
+### Tracking actual costs
+
+After each run, check:
+
+```bash
+# View summary with costs
+cat logs/summary_<ts>.txt
+
+# Machine-readable results with cost data
+cat logs/summary_<ts>.json
+```
+
+The summary shows:
+- Cost per task (if available from Claude API)
+- Total tokens used
+- Whether budget was exceeded
+
+### Cost optimization tips
+
+1. **Start small**: Test with one project first to gauge costs
+2. **Use Sonnet**: Default model is cost-effective for most use cases
+3. **Increase timeout**: Higher timeout may use more tokens but reduces failed runs
+4. **Adjust concurrency**: Lower concurrency = less parallel cost accumulation
+5. **Incremental analysis**: Run skills individually rather than all at once
+
+### Budget recommendations
+
+| Use Case | Recommended Budget |
+|---|---|
+| Single small project (< 10K LOC) | $5.00 |
+| Single medium project (10-50K LOC) | $10.00 |
+| Single large project (> 50K LOC) | $20.00 |
+| Multiple projects (5-10 medium) | $50.00 - $100.00 |
+| Organization-wide audit (20+ projects) | $200.00+ |
+
+**Note**: Set `max_budget_usd` to your per-skill limit, not total budget. The system applies this limit to each individual skill execution.
+
+---
+
 ## config.yml options
 
 | Key | Default | Description |
@@ -301,7 +401,7 @@ docker compose build --no-cache
 | `runner.concurrency` | `3` | Max parallel tasks |
 | `runner.max_turns` | `20` | Max agent turns per task |
 | `runner.timeout` | `300` | Per-task timeout in seconds |
-| `runner.max_budget_usd` | `10.0` | Spending limit per task in USD |
+| `runner.max_budget_usd` | `10.0` | **Per-task** spending limit in USD (see Cost Estimation above) |
 
 ---
 

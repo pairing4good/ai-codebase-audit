@@ -34,7 +34,10 @@ runner:
   concurrency:      3                  # max parallel tasks
   max_turns:        20                 # max agent turns per skill run
   timeout:          300                # seconds per task
-  max_budget_usd:   10.0               # spending limit per task (USD)
+  max_budget_usd:   10.0               # PER-TASK spending limit (USD)
+                                        # Typical: $0.50-$2 (small), $2-$6 (medium), $6-$15 (large)
+                                        # Task stops gracefully if exceeded, partial results preserved
+                                        # See README.md "Cost Estimation" for details
 
 targets:
   - dir: project-one

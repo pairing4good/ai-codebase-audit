@@ -763,35 +763,62 @@ Commands to completely reset analysis outputs, logs, and Docker images.
 
 ---
 
-### 📚 **GAP #2: No Cost Estimation**
+### ✅ **GAP #2: No Cost Estimation** (FIXED)
 
-**Current Feature** ([config.yml:30](config.yml#L30)):
+**Location**: [README.md:296-393](README.md#L296-L393), [config.yml:37-40](config.yml#L37-L40)
+
+**Original Problem**: No guidance on typical costs, cost factors, budget setting, or tracking expenses.
+
+**Solution Applied**: Added comprehensive "Cost Estimation" section to README with:
+
+#### 1. Typical Costs Table
+- Small (< 10K LOC): $0.50 - $2.00
+- Medium (10-50K LOC): $2.00 - $6.00
+- Large (50-150K LOC): $6.00 - $15.00
+- Very Large (> 150K LOC): $15.00 - $30.00+
+- Note: Opus costs ~3x more than Sonnet
+
+#### 2. Six Cost Factors
+Codebase size, complexity, model choice, analysis depth, number of agents, static tool output
+
+#### 3. Budget Control
+- How to set `max_budget_usd`
+- Behavior when exceeded: graceful stop, partial results preserved
+
+#### 4. Cost Estimation Formula
+```
+Total Cost ≈ (Projects × Skills per Project) × Average Cost per Skill
+```
+With concrete calculation example
+
+#### 5. Cost Tracking
+Where to find actual costs in logs (summary files)
+
+#### 6. Optimization Tips
+5 actionable tips: start small, use Sonnet, adjust concurrency, incremental analysis, etc.
+
+#### 7. Budget Recommendations
+Table mapping use cases (single project to org-wide) to recommended budgets ($5 to $200+)
+
+#### 8. Enhanced config.yml
 ```yaml
-max_budget_usd: 10.0  # spending limit per task
+max_budget_usd: 10.0  # PER-TASK spending limit (USD)
+                       # Typical: $0.50-$2 (small), $2-$6 (medium), $6-$15 (large)
+                       # See README.md "Cost Estimation" for details
 ```
 
-**Missing Info**:
-1. What's typical cost per skill?
-2. How is cost calculated?
-3. What happens when budget exceeded?
+**Benefits**:
+- ✅ **Budget Planning**: Users can estimate costs before running
+- ✅ **Cost Transparency**: Clear ranges and factors explained
+- ✅ **Risk Mitigation**: Budget control prevents unexpected charges
+- ✅ **Optimization Guidance**: Tips for reducing costs
+- ✅ **Realistic Expectations**: Per-project budget recommendations
 
-**Recommendation**: Add to [QUICKSTART.md](QUICKSTART.md):
-```markdown
-## Cost Estimation
-
-Typical costs per skill (using claude-sonnet-4-6):
-- Small project (<10K LOC): $0.50 - $2.00
-- Medium project (10K-50K LOC): $2.00 - $6.00
-- Large project (>50K LOC): $6.00 - $10.00
-
-Set `max_budget_usd` to prevent runaway costs. If exceeded, the skill stops gracefully.
-```
-
-**Status**: 🔧 **READY TO ADD**
+**Status**: ✅ **FIXED**
 
 ---
 
-### 📚 **GAP #3: No Skill Customization Guide**
+### 📚 **GAP #3: No Skill Customization Guide** (won't fix)
 
 **Question**: How does a user add a custom skill or modify existing ones?
 
@@ -827,7 +854,7 @@ docker compose run --rm skills
 # Edit config.yml to target only your custom skill
 ```
 
-**Status**: 🔧 **READY TO ADD**
+**Status**: 🔧 **READY TO ADD** (won't fix)
 
 ---
 
