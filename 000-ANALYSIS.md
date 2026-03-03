@@ -1,7 +1,7 @@
 # Comprehensive Analysis: AI Codebase Audit System
 
 **Analysis Date**: 2026-03-03
-**Status**: ✅ Bug #1 Fixed | ✅ Issue #2 Fixed | ✅ Issue #3 Fixed | ✅ Issue #4 Fixed | ✅ Issue #5 Fixed | ✅ Issue #6 Fixed | ✅ Issue #7 Fixed | ✅ Issue #8 Fixed | ✅ Issue #9 Fixed | ✅ Issue #10 Fixed | ✅ Issue #11 Fixed | Other issues documented below
+**Status**: ✅ Bug #1 Fixed | ✅ Issue #2 Fixed | ✅ Issue #3 Fixed | ✅ Issue #4 Fixed | ✅ Issue #5 Fixed | ✅ Issue #6 Fixed | ✅ Issue #7 Fixed | ✅ Issue #8 Fixed | ✅ Issue #9 Fixed | ✅ Issue #10 Fixed | ✅ Issue #11 Fixed | ✅ Issue #12 Fixed | Other issues documented below
 
 ---
 
@@ -446,27 +446,46 @@ ERROR: Duplicate skill '/audit-java' in 'project-one'. Remove duplicate entries 
 
 ---
 
-### ⚠️ **ISSUE #12: Breadth-First Execution Could Be Clearer**
+### ✅ **ISSUE #12: Breadth-First Execution Could Be Clearer** (FIXED)
 
-**Location**: [run_skills.py:147-161](run_skills.py#L147)
+**Location**: [run_skills.py:149-183](run_skills.py#L149-L183)
 
-**Current Behavior**:
-```
-Task ordering: breadth-first (all projects run skill 1, then skill 2, etc.)
-```
+**Original Problem**: The breadth-first execution logic was correct but lacked clear documentation explaining the rationale for this approach.
 
-**Code Logic** (lines 147-161):
+**Solution Applied**: Added comprehensive inline documentation explaining the breadth-first task ordering:
+
 ```python
-# Find maximum skills
-max_skills = max(len(skills) for skills in project_skills.values())
-# For each skill index, iterate all projects
-for skill_index in range(max_skills):
-    for project_dir, skills in sorted_projects:
-        if skill_index < len(skills):
-            tasks.append((project_dir, skills[skill_index]))
+# =========================================================================
+# Breadth-First Task Ordering
+# =========================================================================
+# Rationale: Breadth-first execution ensures fair resource sharing across
+# all projects when running with concurrency > 1.
+#
+# Example with 3 projects and concurrency=3:
+#   Breadth-first (current):
+#     1. proj-A skill-1 | proj-B skill-1 | proj-C skill-1  (all start together)
+#     2. proj-A skill-2 | proj-B skill-2 | proj-C skill-2
+#
+#   Depth-first (alternative):
+#     1. proj-A skill-1 | proj-A skill-2 | proj-A skill-3  (proj-B/C wait)
+#     2. proj-B skill-1 | proj-B skill-2 | proj-C skill-1
+#
+# Benefits:
+# - Better resource utilization when some skills are slower than others
+# - All projects get attention early in the run (better UX)
+# - Prevents one large project from monopolizing all worker slots
+# =========================================================================
 ```
 
-**Example**:
+**Benefits**:
+- ✅ **Clear Rationale**: Explains WHY breadth-first, not just WHAT it does
+- ✅ **Visual Examples**: Side-by-side comparison of breadth-first vs depth-first
+- ✅ **Concrete Benefits**: Lists specific advantages for users and resource utilization
+- ✅ **Maintainability**: Future developers will understand the design decision
+
+**Example Execution**:
+
+Given this config:
 ```yaml
 targets:
   - dir: proj-A
@@ -475,25 +494,11 @@ targets:
     skills: [/audit-java]
 ```
 
-**Execution Order**:
-1. proj-A: /audit-java
-2. proj-B: /audit-java
-3. proj-A: /audit-javascript
+With `concurrency=2`, execution order is:
+1. proj-A: /audit-java ⎮ proj-B: /audit-java (both start simultaneously)
+2. proj-A: /audit-javascript (starts after first skill completes)
 
-**Problem**: This is **correct** but the rationale isn't documented.
-
-**Why Breadth-First?**
-- Likely to prevent one project from monopolizing resources
-- Better interleaving if `concurrency=3` and some skills are slow
-
-**Recommendation**: Document the "why" in code:
-```python
-# Breadth-first execution ensures fair resource sharing across projects.
-# Example: With 3 projects and concurrency=3, all 3 can start skill 1 simultaneously
-# rather than project 1 running all its skills while others wait.
-```
-
-**Status**: 🔧 **READY TO FIX** (add code comment)
+**Status**: ✅ **FIXED**
 
 ---
 

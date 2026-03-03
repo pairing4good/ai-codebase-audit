@@ -146,8 +146,26 @@ def load_config(config_path: Path, workdir: Path,
             print(f"ERROR: {e}", file=sys.stderr)
         sys.exit(1)
 
-    # Reorganize tasks for breadth-first execution:
-    # Run skill 1 for all projects, then skill 2 for all projects, etc.
+    # =========================================================================
+    # Breadth-First Task Ordering
+    # =========================================================================
+    # Rationale: Breadth-first execution ensures fair resource sharing across
+    # all projects when running with concurrency > 1.
+    #
+    # Example with 3 projects and concurrency=3:
+    #   Breadth-first (current):
+    #     1. proj-A skill-1 | proj-B skill-1 | proj-C skill-1  (all start together)
+    #     2. proj-A skill-2 | proj-B skill-2 | proj-C skill-2
+    #
+    #   Depth-first (alternative):
+    #     1. proj-A skill-1 | proj-A skill-2 | proj-A skill-3  (proj-B/C wait)
+    #     2. proj-B skill-1 | proj-B skill-2 | proj-C skill-1
+    #
+    # Benefits:
+    # - Better resource utilization when some skills are slower than others
+    # - All projects get attention early in the run (better UX)
+    # - Prevents one large project from monopolizing all worker slots
+    # =========================================================================
     tasks: list[tuple[Path, str]] = []
 
     # Find the maximum number of skills across all projects
@@ -156,7 +174,7 @@ def load_config(config_path: Path, workdir: Path,
     # Sort projects by name for deterministic, consistent ordering
     sorted_projects = sorted(project_skills.items(), key=lambda x: x[0].name)
 
-    # Iterate skill-by-skill (breadth-first)
+    # Iterate skill-by-skill (breadth-first): all projects run skill 1, then all run skill 2, etc.
     for skill_index in range(max_skills):
         for project_dir, skills in sorted_projects:
             if skill_index < len(skills):
