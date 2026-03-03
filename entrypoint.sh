@@ -8,13 +8,52 @@
 #   3. Log toolchain versions
 #   4. Validate workdir has config.yml, CLAUDE.md, and .claude/
 #   5. For each configured project directory:
-#        - Rename any existing .claude/  → OLD-.claude/
-#        - Rename any existing CLAUDE.md → OLD-CLAUDE.md
+#        - Remove any existing .claude/ and CLAUDE.md (ensures clean state)
 #        - Copy /workdir/.claude/        → <project>/.claude/
 #        - Copy /workdir/CLAUDE.md       → <project>/CLAUDE.md
-#   6. Launch run_skills.py
+#   6. Validate disk space
+#   7. Launch run_skills.py with graceful shutdown handling
 # =============================================================================
 set -euo pipefail
+
+# =============================================================================
+# Signal handling for graceful shutdown
+# =============================================================================
+cleanup() {
+    echo ""
+    echo "============================================================"
+    echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] [WARN ] Caught termination signal"
+    echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] [INFO ] Attempting graceful shutdown..."
+    echo "============================================================"
+
+    # Send SIGTERM to Python orchestrator if it's running
+    if [[ -n "${PYTHON_PID:-}" ]] && kill -0 "${PYTHON_PID}" 2>/dev/null; then
+        echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] [INFO ] Terminating Python orchestrator (PID ${PYTHON_PID})..."
+        kill -TERM "${PYTHON_PID}" 2>/dev/null || true
+
+        # Wait up to 30 seconds for graceful shutdown
+        for i in {1..30}; do
+            if ! kill -0 "${PYTHON_PID}" 2>/dev/null; then
+                echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] [OK   ] Python orchestrator terminated gracefully"
+                break
+            fi
+            sleep 1
+        done
+
+        # Force kill if still running
+        if kill -0 "${PYTHON_PID}" 2>/dev/null; then
+            echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] [WARN ] Forcing termination..."
+            kill -KILL "${PYTHON_PID}" 2>/dev/null || true
+        fi
+    fi
+
+    echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] [INFO ] Shutdown complete"
+    echo "============================================================"
+    exit 143  # 128 + 15 (SIGTERM)
+}
+
+# Register signal handlers
+trap cleanup SIGTERM SIGINT
 
 TIMESTAMP=$(date -u +"%Y%m%d_%H%M%S")
 LOG_DIR="/workdir/logs"
@@ -165,7 +204,12 @@ sep
 info "Launching run_skills.py..."
 sep
 
-python3 /app/run_skills.py --audit-base-dir /workdir --config "${CONFIG_FILE}"
+# Launch Python orchestrator in background to capture PID
+python3 /app/run_skills.py --audit-base-dir /workdir --config "${CONFIG_FILE}" &
+PYTHON_PID=$!
+
+# Wait for Python to complete
+wait ${PYTHON_PID}
 EXIT_CODE=$?
 
 sep

@@ -1,7 +1,7 @@
 # Comprehensive Analysis: AI Codebase Audit System
 
 **Analysis Date**: 2026-03-03
-**Status**: ✅ Bug #1 Fixed | ✅ Issue #2 Fixed | ✅ Issue #3 Fixed | ✅ Issue #4 Fixed | ✅ Issue #5 Fixed | ✅ Issue #6 Fixed | Other issues documented below
+**Status**: ✅ Bug #1 Fixed | ✅ Issue #2 Fixed | ✅ Issue #3 Fixed | ✅ Issue #4 Fixed | ✅ Issue #5 Fixed | ✅ Issue #6 Fixed | ✅ Issue #7 Fixed | Other issues documented below
 
 ---
 
@@ -205,27 +205,76 @@ ok "Disk space OK: ${AVAILABLE_GB}GB available"
 
 ---
 
-### ⚠️ **ISSUE #7: Graceful Shutdown on Container Kill**
+### ✅ **ISSUE #7: Graceful Shutdown on Container Kill** (FIXED)
 
-**Problem**: If user stops container mid-run (`docker compose stop`), partial analysis files remain with no cleanup.
+**Location**: [entrypoint.sh:19-56](entrypoint.sh#L19) and [entrypoint.sh:207-213](entrypoint.sh#L207)
 
-**Current Behavior**:
-- `tini` (PID 1 init) ensures zombie reaping
-- No trap handlers for SIGTERM
+**Original Problem**: If user stops container mid-run (`docker compose stop`), the Python orchestrator would be killed immediately, leaving partial analysis files with no cleanup or summary.
 
-**Impact**: Orphaned files in `.analysis/` directories
+**Solution Applied**:
 
-**Recommendation**: Add cleanup trap to [entrypoint.sh](entrypoint.sh):
+1. **Added signal handler** at start of entrypoint.sh:
 ```bash
 cleanup() {
-    echo "Caught signal - cleaning up..."
-    pkill -TERM python3  # Gracefully terminate Python
-    exit 143
+    echo "[WARN] Caught termination signal"
+    echo "[INFO] Attempting graceful shutdown..."
+
+    # Send SIGTERM to Python orchestrator if it's running
+    if [[ -n "${PYTHON_PID:-}" ]] && kill -0 "${PYTHON_PID}" 2>/dev/null; then
+        echo "[INFO] Terminating Python orchestrator (PID ${PYTHON_PID})..."
+        kill -TERM "${PYTHON_PID}" 2>/dev/null || true
+
+        # Wait up to 30 seconds for graceful shutdown
+        for i in {1..30}; do
+            if ! kill -0 "${PYTHON_PID}" 2>/dev/null; then
+                echo "[OK] Python orchestrator terminated gracefully"
+                break
+            fi
+            sleep 1
+        done
+
+        # Force kill if still running
+        if kill -0 "${PYTHON_PID}" 2>/dev/null; then
+            echo "[WARN] Forcing termination..."
+            kill -KILL "${PYTHON_PID}" 2>/dev/null || true
+        fi
+    fi
+
+    echo "[INFO] Shutdown complete"
+    exit 143  # 128 + 15 (SIGTERM)
 }
+
 trap cleanup SIGTERM SIGINT
 ```
 
-**Status**: 🔧 **READY TO FIX**
+2. **Captured Python PID** when launching orchestrator:
+```bash
+# Launch Python orchestrator in background to capture PID
+python3 /app/run_skills.py --audit-base-dir /workdir --config "${CONFIG_FILE}" &
+PYTHON_PID=$!
+
+# Wait for Python to complete
+wait ${PYTHON_PID}
+EXIT_CODE=$?
+```
+
+**Benefits**:
+- ✅ **Graceful shutdown**: Python gets SIGTERM signal (not SIGKILL)
+- ✅ **Timeout protection**: Waits 30 seconds for graceful shutdown before forcing
+- ✅ **Status logging**: Clear messages about shutdown progress
+- ✅ **Exit code**: Returns 143 (standard for SIGTERM termination)
+- ✅ **Works with tini**: Compatible with PID 1 init already in Dockerfile
+
+**How It Works**:
+1. User runs `docker compose stop` or sends Ctrl+C
+2. Docker sends SIGTERM to tini (PID 1)
+3. tini forwards SIGTERM to entrypoint.sh
+4. Trap handler catches signal, sends SIGTERM to Python
+5. Python orchestrator has 30s to clean up and exit
+6. If Python doesn't exit, force kill after 30s
+7. Container exits with code 143
+
+**Status**: ✅ **FIXED**
 
 ---
 
