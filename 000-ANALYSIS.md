@@ -1,7 +1,7 @@
 # Comprehensive Analysis: AI Codebase Audit System
 
 **Analysis Date**: 2026-03-03
-**Status**: ✅ Bug #1 Fixed | ✅ Issue #2 Fixed | ✅ Issue #3 Fixed | ✅ Issue #4 Fixed | ✅ Issue #5 Fixed | ✅ Issue #6 Fixed | ✅ Issue #7 Fixed | ✅ Issue #8 Fixed | ✅ Issue #9 Fixed | ✅ Issue #10 Fixed | Other issues documented below
+**Status**: ✅ Bug #1 Fixed | ✅ Issue #2 Fixed | ✅ Issue #3 Fixed | ✅ Issue #4 Fixed | ✅ Issue #5 Fixed | ✅ Issue #6 Fixed | ✅ Issue #7 Fixed | ✅ Issue #8 Fixed | ✅ Issue #9 Fixed | ✅ Issue #10 Fixed | ✅ Issue #11 Fixed | Other issues documented below
 
 ---
 
@@ -409,26 +409,40 @@ Security Model:
 
 ---
 
-### ⚠️ **ISSUE #11: Silent Deduplication**
+### ✅ **ISSUE #11: Silent Deduplication** (FIXED)
 
-**Location**: [run_skills.py:133-137](run_skills.py#L133)
+**Location**: [run_skills.py:135-137](run_skills.py#L135-L137)
 
-**Code**:
+**Original Problem**: Duplicates were logged at WARNING level but otherwise silently skipped, potentially allowing misconfigurations to go unnoticed.
+
+**Original Code**:
 ```python
 if skill in seen:
     orch.warning(f"Duplicate skill '{skill}' in '{dir_name}' — skipping")
     continue
 ```
 
-**Problem**: Duplicates are logged at WARNING level but otherwise silently skipped.
+**Solution Applied**: Changed duplicates to be treated as **configuration errors** that halt execution:
 
-**Impact**: User might not notice misconfiguration.
+```python
+if skill in seen:
+    errors.append(f"Duplicate skill '{skill}' in '{dir_name}'. Remove duplicate entries from config.yml.")
+    continue
+```
 
-**Recommendation**: Either:
-- Make it an error (strict mode)
-- Or log at INFO level and note in final summary: "X duplicate skills auto-deduped"
+**Benefits**:
+- ✅ **Fail-Fast**: Container exits immediately with clear error message
+- ✅ **Explicit Feedback**: User is told exactly which skill is duplicated and where
+- ✅ **Actionable**: Error message tells user to fix config.yml
+- ✅ **Prevents Confusion**: No ambiguity about which skills will run
+- ✅ **Consistent**: Treated the same as other config errors (e.g., invalid skill paths)
 
-**Status**: 🔧 **READY TO FIX**
+**Example Error Output**:
+```
+ERROR: Duplicate skill '/audit-java' in 'project-one'. Remove duplicate entries from config.yml.
+```
+
+**Status**: ✅ **FIXED**
 
 ---
 

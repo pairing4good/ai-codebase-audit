@@ -133,7 +133,7 @@ def load_config(config_path: Path, workdir: Path,
                 errors.append(f"Skill '{skill}' in '{dir_name}' must start with '/'.")
                 continue
             if skill in seen:
-                orch.warning(f"Duplicate skill '{skill}' in '{dir_name}' — skipping")
+                errors.append(f"Duplicate skill '{skill}' in '{dir_name}'. Remove duplicate entries from config.yml.")
                 continue
             seen.add(skill)
             validated_skills.append(skill)
