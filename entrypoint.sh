@@ -142,6 +142,24 @@ ok "Project directories ready."
 sep
 
 # =============================================================================
+# Disk space validation
+# =============================================================================
+info "Checking available disk space..."
+
+AVAILABLE_GB=$(df /workdir | tail -1 | awk '{print int($4/1024/1024)}')
+REQUIRED_GB=5
+
+if [[ $AVAILABLE_GB -lt $REQUIRED_GB ]]; then
+    err "Insufficient disk space: ${AVAILABLE_GB}GB available"
+    err "Recommend ${REQUIRED_GB}GB+ for analysis (logs + .analysis directories)"
+    err "Please free up space or expand volume and try again."
+    exit 1
+fi
+
+ok "Disk space OK: ${AVAILABLE_GB}GB available"
+sep
+
+# =============================================================================
 # Launch runner
 # =============================================================================
 info "Launching run_skills.py..."
