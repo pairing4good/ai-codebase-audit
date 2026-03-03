@@ -1,41 +1,74 @@
 # Quick Start
 
-Run AI-powered security audits on your codebase in 3 steps.
+Run AI-powered security audits on your codebase in 4 steps.
 
-## 1. Configure
+## 1. Create your audit workspace
+
+First, create a dedicated directory that will contain everything for your audits:
 
 ```bash
-# Copy environment template
+# Create audit workspace directory
+mkdir -p ~/code-audits
+cd ~/code-audits
+
+# Copy the required configuration files from this repo
+cp /path/to/this/repo/config.yml .
+cp /path/to/this/repo/CLAUDE.md .
+cp -r /path/to/this/repo/.claude .
+
+# Move or symlink your project(s) into this directory
+# Option A: Move existing projects here
+mv /path/to/your/java-project ./my-java-app
+mv /path/to/your/react-app ./my-react-app
+
+# Option B: Create symlinks (recommended if projects are elsewhere)
+ln -s /path/to/your/java-project ./my-java-app
+ln -s /path/to/your/react-app ./my-react-app
+```
+
+Your workspace should now look like:
+```
+~/code-audits/              ← This becomes your AUDIT_BASE_DIR
+  ├── config.yml            ← Copied from repo
+  ├── CLAUDE.md             ← Copied from repo
+  ├── .claude/              ← Copied from repo
+  ├── my-java-app/          ← Your project (moved or symlinked)
+  └── my-react-app/         ← Your project (moved or symlinked)
+```
+
+## 2. Configure environment
+
+```bash
+# From the ai-codebase-audit repo directory
 cp .env.example .env
 
 # Edit .env - set these two values:
-AUDIT_BASE_DIR=/absolute/path/to/your/audit-parent-directory
+AUDIT_BASE_DIR=/Users/you/code-audits  # ← Path to the workspace you just created
 ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
 ```
 
-**Important**: `AUDIT_BASE_DIR` must be the **parent directory** that contains:
-- `config.yml`, `CLAUDE.md`, `.claude/` (configuration files)
-- `project-one/`, `project-two/`, etc. (your actual project directories)
-
-See [.env.example](.env.example) for a detailed directory structure diagram.
+**Important**: `AUDIT_BASE_DIR` points to the workspace directory you created in step 1.
 
 Get your API key: https://console.anthropic.com/settings/keys
 
-## 2. Set targets
+## 3. Set targets
 
-Edit `config.yml` in your AUDIT_BASE_DIR:
+Edit `config.yml` in your AUDIT_BASE_DIR (~/code-audits/config.yml):
 
 ```yaml
 targets:
-  - dir: your-project-name
+  - dir: my-java-app       # ← Must match directory name in step 1
     skills:
-      - /audit-java          # for Java projects
-      - /audit-javascript    # for JS/TS projects
-      - /audit-dotnet        # for C#/F# projects
-      - /audit-python        # for Python projects
+      - /audit-java
+
+  - dir: my-react-app      # ← Must match directory name in step 1
+    skills:
+      - /audit-javascript
 ```
 
-## 3. Run
+**Important**: The `dir:` values must exactly match your project directory names from step 1.
+
+## 4. Run
 
 ```bash
 docker compose build
