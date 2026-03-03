@@ -1,8 +1,40 @@
+# Version control
 .git
+.gitignore
+
+# Python artifacts
 __pycache__
 *.pyc
+*.pyo
+*.pyd
+.Python
+
+# Logs and analysis outputs (generated at runtime, not needed in image)
 *.log
 logs/
+.analysis/
+
+# Environment files (secrets)
 .env
-.env.example
-README.md
+
+# Project directories (mounted at runtime, not copied into image)
+project-*/
+example-*/
+test-*/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation files ARE included in image (removed from ignore list)
+# README.md - needed for documentation
+# .env.example - needed as template
+# QUICKSTART.md - needed for documentation
+# 000-ANALYSIS.md - useful for reference

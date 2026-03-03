@@ -553,39 +553,84 @@ def orchestrator_logger(log_dir: Path) -> logging.Logger:
 
 ---
 
-### 💡 **SIMPLIFICATION #2: Remove `.dockerignore` Contradictions**
+### ✅ **SIMPLIFICATION #2: Remove `.dockerignore` Contradictions** (FIXED)
 
 **Location**: [.dockerignore](.dockerignore)
 
-**Current Content**:
-```
-.git
-__pycache__
-*.pyc
-*.log
-logs/
-.env
-.env.example
-README.md
-```
+**Original Problems**:
+1. `.env.example` was ignored but should be included (it's a template)
+2. `README.md` was ignored but should be included (it's documentation)
+3. Project directories weren't explicitly ignored (could accidentally copy into image)
+4. Missing common IDE and OS files
 
-**Problems**:
-1. **`.env.example` is ignored** but should be included (it's documentation)
-2. **`README.md` is ignored** but should be included (it's documentation)
+**Solution Applied**: Comprehensive `.dockerignore` with clear categories and comments:
 
-**Recommendation**:
 ```dockerignore
+# Version control
 .git
+.gitignore
+
+# Python artifacts
 __pycache__
 *.pyc
+*.pyo
+*.pyd
+.Python
+
+# Logs and analysis outputs (generated at runtime, not needed in image)
 *.log
 logs/
-.env           # Only ignore actual .env, not .env.example
-project-one/   # Don't copy project dirs into image
-project-two/
+.analysis/
+
+# Environment files (secrets)
+.env
+
+# Project directories (mounted at runtime, not copied into image)
+project-*/
+example-*/
+test-*/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation files ARE included in image (removed from ignore list)
+# README.md - needed for documentation
+# .env.example - needed as template
+# QUICKSTART.md - needed for documentation
+# 000-ANALYSIS.md - useful for reference
 ```
 
-**Status**: 🔧 **READY TO FIX**
+**Benefits**:
+- ✅ **Documentation Included**: README.md, .env.example, and other docs now in image
+- ✅ **Projects Excluded**: Wildcards prevent accidental copying of project directories
+- ✅ **Cleaner Images**: IDE files, OS artifacts excluded
+- ✅ **Well Organized**: Clear categories with explanatory comments
+- ✅ **Analysis Excluded**: .analysis/ directories won't bloat image
+- ✅ **Smaller Images**: More comprehensive ignore list reduces image size
+
+**What's Now Included in Image**:
+- Source code (run_skills.py, entrypoint.sh, etc.)
+- Configuration templates (.env.example, config.yml)
+- Documentation (README.md, QUICKSTART.md, etc.)
+- Skills and agents (.claude/ directory structure)
+- Dockerfile and docker-compose.yml
+
+**What's Excluded from Image**:
+- Project source code (mounted at runtime)
+- Analysis outputs (generated at runtime)
+- Secrets (.env files)
+- IDE and OS artifacts
+- Version control metadata
+
+**Status**: ✅ **FIXED**
 
 ---
 
