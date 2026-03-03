@@ -22,6 +22,7 @@ import logging
 import os
 import sys
 import time
+import uuid
 from argparse import ArgumentParser
 from datetime import datetime
 from pathlib import Path
@@ -70,9 +71,10 @@ def orchestrator_logger(log_dir: Path) -> logging.Logger:
 
 def task_logger(log_dir: Path, dir_name: str, skill: str) -> logging.Logger:
     safe = skill.lstrip("/").replace("/", "_")
-    ts   = datetime.utcnow().strftime("%Y%m%d_%H%M%S%f")
+    ts   = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    uid  = uuid.uuid4().hex[:8]  # Short UUID to prevent collisions
     name = f"{dir_name}__{safe}"
-    return _make_logger(name, log_dir / f"task_{name}_{ts}.log")
+    return _make_logger(name, log_dir / f"task_{name}_{ts}_{uid}.log")
 
 
 # ---------------------------------------------------------------------------
@@ -279,7 +281,8 @@ async def run_one(*, project_dir: Path, skill: str, model: str, max_turns: int,
             result_text = await asyncio.wait_for(_run(), timeout=timeout)
 
             ts          = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-            result_file = log_dir / f"result_{dir_name}__{safe_skill}_{ts}.txt"
+            uid         = uuid.uuid4().hex[:8]  # Short UUID to prevent collisions
+            result_file = log_dir / f"result_{dir_name}__{safe_skill}_{ts}_{uid}.txt"
             result_file.write_text(result_text or "(no result text returned)")
             result.update(status="success", result_file=str(result_file))
 

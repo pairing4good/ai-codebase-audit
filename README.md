@@ -203,8 +203,8 @@ All in `<AUDIT_BASE_DIR>/logs/`:
 |---|---|
 | `docker_<ts>.log` | Startup, validation, prep, shutdown |
 | `python_<ts>.log` | Task queue, start, ok, fail |
-| `task_<dir>__<skill>_<ts>.log` | Full per-task output |
-| `result_<dir>__<skill>_<ts>.txt` | Skill's final output |
+| `task_<dir>__<skill>_<ts>_<uid>.log` | Full per-task output (uid prevents collisions) |
+| `result_<dir>__<skill>_<ts>_<uid>.txt` | Skill's final output (uid prevents collisions) |
 | `summary_<ts>.txt` | Pass/fail table |
 | `summary_<ts>.json` | Machine-readable results |
 
