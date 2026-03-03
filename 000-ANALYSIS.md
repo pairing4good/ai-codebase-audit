@@ -634,28 +634,71 @@ Thumbs.db
 
 ---
 
-### 💡 **SIMPLIFICATION #3: Consolidate Version Checking**
+### ✅ **SIMPLIFICATION #3: Consolidate Version Checking** (IMPLEMENTED)
 
-**Current State**: Version managers sourced in 3 places:
+**Location**: [init-env.sh](init-env.sh), [Dockerfile:35-36, 107](Dockerfile#L35), [entrypoint.sh:75](entrypoint.sh#L75)
+
+**Original Problem**: Version manager initialization was duplicated in 3 places:
 1. Dockerfile RUN commands (build time)
-2. `/root/.bashrc` (line 100-114 in [Dockerfile](Dockerfile))
-3. [entrypoint.sh](entrypoint.sh) (lines 34-47)
+2. `/root/.bashrc` (lines 100-114)
+3. entrypoint.sh (lines 75-88)
 
-**Recommendation**: Create `/opt/init-env.sh`:
+**Solution Applied**: Created consolidated `/opt/init-env.sh` script:
+
 ```bash
 #!/bin/bash
+# /opt/init-env.sh - Consolidated initialization for all version managers
+
+# SDKMAN (Java)
 export SDKMAN_DIR="/opt/sdkman"
 [[ -s "${SDKMAN_DIR}/bin/sdkman-init.sh" ]] && source "${SDKMAN_DIR}/bin/sdkman-init.sh"
-# ... etc
+
+# nvm (Node.js)
+export NVM_DIR="/opt/nvm"
+[[ -s "${NVM_DIR}/nvm.sh" ]] && source "${NVM_DIR}/nvm.sh"
+
+# pyenv (Python)
+export PYENV_ROOT="/opt/pyenv"
+export PATH="${PYENV_ROOT}/bin:${PYENV_ROOT}/shims:${PATH}"
+command -v pyenv > /dev/null && eval "$(pyenv init -)"
+
+# .NET (side-by-side SDKs)
+export DOTNET_ROOT="/opt/dotnet"
+export PATH="${DOTNET_ROOT}:${PATH}"
 ```
 
-Then source it everywhere:
-```bash
-# Dockerfile, .bashrc, entrypoint.sh
-source /opt/init-env.sh
-```
+**Updated Files**:
 
-**Status**: 💡 **OPTIMIZATION OPPORTUNITY**
+1. **Dockerfile** ([Dockerfile:35-36](Dockerfile#L35)):
+   ```dockerfile
+   COPY init-env.sh /opt/init-env.sh
+   RUN chmod +x /opt/init-env.sh
+   ```
+
+2. **Dockerfile .bashrc** ([Dockerfile:107](Dockerfile#L107)):
+   ```dockerfile
+   RUN echo 'source /opt/init-env.sh' >> /root/.bashrc
+   ```
+
+3. **entrypoint.sh** ([entrypoint.sh:75](entrypoint.sh#L75)):
+   ```bash
+   source /opt/init-env.sh
+   ```
+
+**Benefits**:
+- ✅ **Single Source of Truth**: Version manager configuration in one file
+- ✅ **DRY Principle**: No code duplication across Dockerfile, .bashrc, and entrypoint.sh
+- ✅ **Easier Maintenance**: Update version manager paths in one place
+- ✅ **Consistent Environment**: Identical setup across interactive shells and container startup
+- ✅ **Clear Documentation**: init-env.sh contains comments explaining each version manager
+- ✅ **Simpler Dockerfile**: Reduced from ~13 lines to 1 line for .bashrc sourcing
+
+**Where Sourced**:
+- Interactive bash shells (via `/root/.bashrc`)
+- Container startup (via `entrypoint.sh`)
+- Any custom scripts that need version managers (via `source /opt/init-env.sh`)
+
+**Status**: ✅ **IMPLEMENTED**
 
 ---
 

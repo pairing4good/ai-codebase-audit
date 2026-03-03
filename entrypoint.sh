@@ -70,20 +70,9 @@ err()  { log "ERROR" "$@"; }
 sep()  { echo "============================================================"; }
 
 # =============================================================================
-# Source version managers
+# Source version managers (consolidated)
 # =============================================================================
-export SDKMAN_DIR="/opt/sdkman"
-[[ -s "${SDKMAN_DIR}/bin/sdkman-init.sh" ]] && source "${SDKMAN_DIR}/bin/sdkman-init.sh"
-
-export NVM_DIR="/opt/nvm"
-[[ -s "${NVM_DIR}/nvm.sh" ]] && source "${NVM_DIR}/nvm.sh"
-
-export PYENV_ROOT="/opt/pyenv"
-export PATH="${PYENV_ROOT}/bin:${PYENV_ROOT}/shims:${PATH}"
-command -v pyenv > /dev/null && eval "$(pyenv init -)"
-
-export DOTNET_ROOT="/opt/dotnet"
-export PATH="${DOTNET_ROOT}:${PATH}"
+source /opt/init-env.sh
 
 # =============================================================================
 # Startup banner + toolchain versions

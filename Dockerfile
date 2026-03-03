@@ -30,6 +30,12 @@ RUN apt-get update -qq \
  && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # =============================================================================
+# 1b. Copy version manager initialization script
+# =============================================================================
+COPY init-env.sh /opt/init-env.sh
+RUN chmod +x /opt/init-env.sh
+
+# =============================================================================
 # 2. SDKMAN + Java
 # =============================================================================
 ENV SDKMAN_DIR=/opt/sdkman
@@ -97,21 +103,8 @@ RUN pip install --no-cache-dir claude-agent-sdk pyyaml tenacity
 # =============================================================================
 # 7. Source version managers in all bash sessions
 # =============================================================================
-RUN cat >> /root/.bashrc << 'BASHRC'
-
-export SDKMAN_DIR="/opt/sdkman"
-[[ -s "${SDKMAN_DIR}/bin/sdkman-init.sh" ]] && source "${SDKMAN_DIR}/bin/sdkman-init.sh"
-
-export NVM_DIR="/opt/nvm"
-[[ -s "${NVM_DIR}/nvm.sh" ]] && source "${NVM_DIR}/nvm.sh"
-
-export PYENV_ROOT="/opt/pyenv"
-export PATH="${PYENV_ROOT}/bin:${PYENV_ROOT}/shims:${PATH}"
-command -v pyenv > /dev/null && eval "$(pyenv init -)"
-
-export DOTNET_ROOT="/opt/dotnet"
-export PATH="${DOTNET_ROOT}:${PATH}"
-BASHRC
+# Source the consolidated initialization script from .bashrc
+RUN echo 'source /opt/init-env.sh' >> /root/.bashrc
 
 # =============================================================================
 # 8. Environment + git config
