@@ -227,7 +227,7 @@ For dependency installation failures (step 7), prompt user whether to continue w
 
 1. Create the directory structure:
 ```bash
-mkdir -p $PROJECT_ROOT/.analysis/python/stage1-artifacts
+mkdir -p "$PROJECT_ROOT/.analysis/python/stage1-artifacts"
 ```
 
 2. Mark Stage 1 as in_progress (todos already initialized in Stage 0)
@@ -290,7 +290,7 @@ Output all files to $PROJECT_ROOT/.analysis/python/stage1-artifacts/
 
 1. Create directory:
 ```bash
-mkdir -p $PROJECT_ROOT/.analysis/python/stage2-parallel-analysis
+mkdir -p "$PROJECT_ROOT/.analysis/python/stage2-parallel-analysis"
 ```
 
 2. Mark Stage 2 as in_progress
@@ -618,7 +618,7 @@ Use the exact JSON schema defined in your agent definition (.claude/agents/depen
 
 1. Create directory:
 ```bash
-mkdir -p $PROJECT_ROOT/.analysis/python/stage3-static-analysis/raw-outputs
+mkdir -p "$PROJECT_ROOT/.analysis/python/stage3-static-analysis/raw-outputs"
 ```
 
 2. Mark Stage 3 as in_progress
@@ -754,7 +754,7 @@ This creates:
 
 1. Create directory:
 ```bash
-mkdir -p $PROJECT_ROOT/.analysis/python/stage4-reconciliation
+mkdir -p "$PROJECT_ROOT/.analysis/python/stage4-reconciliation"
 ```
 
 2. Mark Stage 4 as in_progress
@@ -810,7 +810,7 @@ Confidence levels:
 
 1. Create directory:
 ```bash
-mkdir -p $PROJECT_ROOT/.analysis/python/stage5-adversarial
+mkdir -p "$PROJECT_ROOT/.analysis/python/stage5-adversarial"
 ```
 
 2. Mark Stage 5 as in_progress
@@ -880,7 +880,7 @@ Be SKEPTICAL. Make findings prove they deserve to be in the top 10.
 
 1. Create directory:
 ```bash
-mkdir -p $PROJECT_ROOT/.analysis/python/stage6-final-synthesis
+mkdir -p "$PROJECT_ROOT/.analysis/python/stage6-final-synthesis"
 ```
 
 2. Mark Stage 6 as in_progress
@@ -940,7 +940,7 @@ Python Security Bonus (add +0.5 to priority_score):
 8. Create the final report directory and generate the 4 executive deliverables:
 
 ```bash
-mkdir -p $PROJECT_ROOT/.analysis/python/final-report
+mkdir -p "$PROJECT_ROOT/.analysis/python/final-report"
 ```
 
 **ANALYSIS-REPORT.md**:

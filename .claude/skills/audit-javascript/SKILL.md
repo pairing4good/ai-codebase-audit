@@ -459,7 +459,7 @@ This creates:
 
 1. Create directory:
 ```bash
-mkdir -p $PROJECT_ROOT/.analysis/javascript/stage4-reconciliation
+mkdir -p "$PROJECT_ROOT/.analysis/javascript/stage4-reconciliation"
 ```
 
 2. Mark Stage 4 as in_progress
@@ -515,7 +515,7 @@ Confidence levels:
 
 1. Create directory:
 ```bash
-mkdir -p $PROJECT_ROOT/.analysis/javascript/stage5-adversarial
+mkdir -p "$PROJECT_ROOT/.analysis/javascript/stage5-adversarial"
 ```
 
 2. Mark Stage 5 as in_progress
@@ -575,7 +575,7 @@ Be SKEPTICAL. Make findings prove they deserve to be in the top 10.
 
 1. Create directory:
 ```bash
-mkdir -p $PROJECT_ROOT/.analysis/javascript/stage6-final-synthesis
+mkdir -p "$PROJECT_ROOT/.analysis/javascript/stage6-final-synthesis"
 ```
 
 2. Mark Stage 6 as in_progress
@@ -627,7 +627,7 @@ Effort-to-value scores (estimate):
 8. Create the final report directory and generate the 4 executive deliverables:
 
 ```bash
-mkdir -p $PROJECT_ROOT/.analysis/javascript/final-report
+mkdir -p "$PROJECT_ROOT/.analysis/javascript/final-report"
 ```
 
 **ANALYSIS-REPORT.md**:

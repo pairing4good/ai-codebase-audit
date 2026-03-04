@@ -162,7 +162,7 @@ Output all files to $PROJECT_ROOT/.analysis/dotnet/stage1-artifacts/
 
 1. Create directory:
 ```bash
-mkdir -p $PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs
+mkdir -p "$PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs"
 ```
 
 2. Mark Stage 3 as in_progress
@@ -260,7 +260,7 @@ node .claude/skills/audit-dotnet/tools/format-static-results.js $PROJECT_ROOT/.a
 
 1. Create directory:
 ```bash
-mkdir -p $PROJECT_ROOT/.analysis/dotnet/stage6-final-synthesis
+mkdir -p "$PROJECT_ROOT/.analysis/dotnet/stage6-final-synthesis"
 ```
 
 2. Mark Stage 6 as in_progress
@@ -320,7 +320,7 @@ Effort-to-value scores (estimate):
 8. Create the final report directory and generate the 4 executive deliverables:
 
 ```bash
-mkdir -p $PROJECT_ROOT/.analysis/dotnet/final-report
+mkdir -p "$PROJECT_ROOT/.analysis/dotnet/final-report"
 ```
 
 **ANALYSIS-REPORT.md**:

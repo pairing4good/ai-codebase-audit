@@ -145,15 +145,15 @@ fi
 8. Extract classpath for tools (used by SpotBugs, PMD):
 
 ```bash
-mkdir -p .analysis
+mkdir -p "$PROJECT_ROOT/.analysis/java"
 
 if [ "$BUILD_TOOL" = "maven" ]; then
-  mvn dependency:build-classpath -Dmdep.outputFile=$PROJECT_ROOT/.analysis/java/classpath.txt -q
+  mvn dependency:build-classpath -Dmdep.outputFile="$PROJECT_ROOT/.analysis/java/classpath.txt" -q
 elif [ "$BUILD_TOOL" = "gradle" ]; then
   if [ -f "./gradlew" ]; then
-    ./gradlew dependencies --configuration compileClasspath > $PROJECT_ROOT/.analysis/java/gradle-dependencies.txt
+    ./gradlew dependencies --configuration compileClasspath > "$PROJECT_ROOT/.analysis/java/gradle-dependencies.txt"
   else
-    gradle dependencies --configuration compileClasspath > $PROJECT_ROOT/.analysis/java/gradle-dependencies.txt
+    gradle dependencies --configuration compileClasspath > "$PROJECT_ROOT/.analysis/java/gradle-dependencies.txt"
   fi
 fi
 ```
@@ -274,7 +274,7 @@ Output all files to $PROJECT_ROOT/.analysis/java/stage1-artifacts/
 
 1. Create directory:
 ```bash
-mkdir -p $PROJECT_ROOT/.analysis/java/stage2-parallel-analysis
+mkdir -p "$PROJECT_ROOT/.analysis/java/stage2-parallel-analysis"
 ```
 
 2. Mark Stage 2 as in_progress
@@ -507,7 +507,7 @@ Use the exact JSON schema defined in your agent definition (.claude/agents/depen
 
 1. Create directory:
 ```bash
-mkdir -p $PROJECT_ROOT/.analysis/java/stage3-static-analysis/raw-outputs
+mkdir -p "$PROJECT_ROOT/.analysis/java/stage3-static-analysis/raw-outputs"
 ```
 
 2. Mark Stage 3 as in_progress
@@ -631,7 +631,7 @@ This creates:
 
 1. Create directory:
 ```bash
-mkdir -p $PROJECT_ROOT/.analysis/java/stage4-reconciliation
+mkdir -p "$PROJECT_ROOT/.analysis/java/stage4-reconciliation"
 ```
 
 2. Mark Stage 4 as in_progress
@@ -687,7 +687,7 @@ Confidence levels:
 
 1. Create directory:
 ```bash
-mkdir -p $PROJECT_ROOT/.analysis/java/stage5-adversarial
+mkdir -p "$PROJECT_ROOT/.analysis/java/stage5-adversarial"
 ```
 
 2. Mark Stage 5 as in_progress
@@ -754,7 +754,7 @@ Be SKEPTICAL. Make findings prove they deserve to be in the top 10.
 
 1. Create directory:
 ```bash
-mkdir -p $PROJECT_ROOT/.analysis/java/stage6-final-synthesis
+mkdir -p "$PROJECT_ROOT/.analysis/java/stage6-final-synthesis"
 ```
 
 2. Mark Stage 6 as in_progress
@@ -814,7 +814,7 @@ Java Security Bonus (add +0.5 to priority_score):
 8. Create the final report directory and generate the 4 executive deliverables:
 
 ```bash
-mkdir -p $PROJECT_ROOT/.analysis/java/final-report
+mkdir -p "$PROJECT_ROOT/.analysis/java/final-report"
 ```
 
 **ANALYSIS-REPORT.md**:
