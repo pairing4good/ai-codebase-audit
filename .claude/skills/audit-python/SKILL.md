@@ -623,13 +623,20 @@ mkdir -p $PROJECT_ROOT/.analysis/python/stage3-static-analysis/raw-outputs
 
 2. Mark Stage 3 as in_progress
 
-3. **Auto-install missing tools** (attempts automatic installation where possible):
+3. Verify static analysis tools are available:
 ```bash
-echo "Checking and installing static analysis tools..."
-bash .claude/skills/audit-python/tools/auto-install-tools.sh
+echo "Verifying static analysis tools..."
+echo "✓ Semgrep: $(semgrep --version 2>&1 | head -1)"
+echo "✓ Bandit: $(bandit --version 2>&1)"
+echo "✓ Pylint: $(pylint --version 2>&1 | head -1)"
+echo "✓ Mypy: $(mypy --version 2>&1)"
+echo "✓ Safety: $(safety --version 2>&1)"
+echo "✓ Radon: $(radon --version 2>&1)"
+echo ""
+echo "Note: All tools are pre-installed in the Docker container."
 ```
 
-4. Detect available tools and run them:
+4. Run static analysis tools:
 
 **Tool 1: Semgrep** (OWASP Top 10, CWE/SANS 25 for Python)
 ```bash

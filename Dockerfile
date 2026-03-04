@@ -101,6 +101,54 @@ RUN mkdir -p "${DOTNET_ROOT}" \
 RUN pip install --no-cache-dir claude-agent-sdk pyyaml tenacity
 
 # =============================================================================
+# 6b. Static Analysis Tools (Pre-installed for security)
+# =============================================================================
+# Rationale: Pre-installing tools eliminates the security risk of auto-install
+# scripts executing arbitrary code during skill execution. All tools are
+# installed from verified sources during Docker build with pinned versions.
+
+# Semgrep - SAST tool for security analysis (all languages)
+RUN pip install --no-cache-dir semgrep==1.95.0
+
+# Snyk CLI - Dependency vulnerability scanner (all languages)
+RUN bash -c "source ${NVM_DIR}/nvm.sh && npm install -g snyk@1.1293.1"
+
+# Trivy - Container and dependency scanner (all languages)
+RUN wget -qO- https://github.com/aquasecurity/trivy/releases/download/v0.58.1/trivy_0.58.1_Linux-64bit.tar.gz \
+    | tar -xzf - -C /usr/local/bin trivy \
+ && chmod +x /usr/local/bin/trivy
+
+# Python-specific tools
+RUN pip install --no-cache-dir \
+    bandit==1.7.10 \
+    safety==3.2.11 \
+    pylint==3.3.2 \
+    mypy==1.13.0 \
+    radon==6.0.1
+
+# JavaScript/TypeScript tools
+RUN bash -c "source ${NVM_DIR}/nvm.sh && npm install -g \
+    eslint@9.16.0 \
+    @typescript-eslint/parser@8.18.0 \
+    @typescript-eslint/eslint-plugin@8.18.0"
+
+# .NET tools (installed as global dotnet tools)
+RUN dotnet tool install --global dotnet-outdated-tool --version 4.6.4 \
+ && dotnet tool install --global security-scan --version 5.6.7
+
+# Verify all tools are accessible
+RUN semgrep --version \
+ && snyk --version \
+ && trivy --version \
+ && bandit --version \
+ && safety --version \
+ && pylint --version \
+ && mypy --version \
+ && radon --version \
+ && bash -c "source ${NVM_DIR}/nvm.sh && eslint --version" \
+ && dotnet tool list --global
+
+# =============================================================================
 # 7. Source version managers in all bash sessions
 # =============================================================================
 # Source the consolidated initialization script from .bashrc

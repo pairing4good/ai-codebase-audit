@@ -1,1215 +1,899 @@
 # Comprehensive Analysis: AI Codebase Audit System
 
-**Analysis Date**: 2026-03-03
-**Status**: ✅ Bug #1 Fixed | ✅ Issue #2 Fixed | ✅ Issue #3 Fixed | ✅ Issue #4 Fixed | ✅ Issue #5 Fixed | ✅ Issue #6 Fixed | ✅ Issue #7 Fixed | ✅ Issue #8 Fixed | ✅ Issue #9 Fixed | ✅ Issue #10 Fixed | ✅ Issue #11 Fixed | ✅ Issue #12 Fixed | Other issues documented below
+**Analysis Date:** 2026-03-03
+**System Purpose:** Automated, headless Docker-based code analysis producing top 10 improvement opportunities
+**Codebase Size:** ~3,266 lines (Python, Bash, Markdown configs)
 
 ---
 
 ## Executive Summary
 
-I've completed a thorough analysis of your AI codebase audit system. The architecture is **fundamentally sound and well-designed**, with sophisticated multi-stage analysis pipelines. However, I've identified **1 critical bug** (now fixed) that prevented the system from working, plus several areas for simplification and improvement.
+This system **achieves its core goal** of providing automated, headless code analysis with top 10 opportunities output. The architecture is **fundamentally sound** with good separation of concerns, proper error handling, and comprehensive logging. However, there are **critical security, operational, and design issues** that undermine the stated goal of "simple, elegant solution that just works."
+
+### Overall Assessment
+
+**Strengths:**
+- Clean orchestration architecture with async parallel execution
+- Comprehensive logging to isolated log directory
+- Proper error handling with retry logic for rate limits
+- Good documentation with clear setup instructions
+- Graceful shutdown handling for containers
+
+**Critical Issues:**
+- **SECURITY #1**: Auto-install scripts execute arbitrary code without verification
+- **DESIGN #1**: bypassPermissions + settings.json deny list creates false security
+- **COMPLEXITY #1**: Excessive indirection (7-stage funnels, multiple agents per skill)
+- **RELIABILITY #1**: No verification that "top 10 opportunities" are actually produced
+- **USABILITY #1**: Skills execute outside container, contradicting documentation
 
 ---
 
-## System Architecture Overview
+## Critical Issues Analysis
 
-### Design Pattern
-The system implements a **headless Docker orchestration pattern** for automated code analysis:
+### **SECURITY #1: Tool Auto-Install Scripts Execute Arbitrary Code** ✅ FIXED
 
-1. **Docker Container**: Debian-based with 4 language runtimes (Java, Node.js, Python, .NET)
-2. **Entrypoint Script** ([entrypoint.sh](entrypoint.sh)): Validates environment, copies configs, launches orchestrator
-3. **Python Orchestrator** ([run_skills.py](run_skills.py)): Manages parallel skill execution with Claude Agent SDK
-4. **Skills**: Language-specific audit workflows (Java, JavaScript, .NET, Python)
-5. **Agents**: Specialized analysis agents (security, architecture, dependency, maintainability)
+**Location:** ~~.claude/skills/*/tools/auto-install-tools.sh~~ (REMOVED)
 
-### Data Flow
+**Status:** RESOLVED - Tools are now pre-installed in Dockerfile with pinned versions
+
+**Original Issue:**
+Auto-install scripts fetch and execute code from the internet without verification:
+```bash
+# Line 56-58 from audit-java/tools/auto-install-tools.sh
+brew install semgrep --quiet 2>&1 | tail -3
+pip3 install --user semgrep --quiet 2>&1 | tail -3
+npm install -g snyk --silent 2>&1 | tail -3
 ```
-User configures config.yml → docker compose run → entrypoint.sh validates/prepares →
-run_skills.py orchestrates → Claude invokes skills → Skills run agents + static tools →
-Results written to .analysis/<language>/ → Logs to AUDIT_BASE_DIR/logs/
-```
+
+**Why This Matters:**
+1. Skills run with `bypassPermissions` mode (no approval gates)
+2. These install scripts are invoked by Claude during Stage 0 of skill execution
+3. No checksum validation, no version pinning, no signature verification
+4. Executes as root inside Docker container (can modify entire container filesystem)
+5. **CONTRADICTS** stated security model: "Source code: READ-ONLY (protected)"
+
+**Evidence of Execution Path:**
+- [audit-java/SKILL.md:19-52](/.claude/skills/audit-java/SKILL.md) - Stage 0 explicitly calls auto-install
+- [run_skills.py:246](run_skills.py:246) - `bypassPermissions` mode allows all Bash commands
+- [settings.json:8-17](/.claude/settings.json) - Bash allow list includes build tool commands
+
+**Exploitability:**
+- If Claude misinterprets user request, could invoke wrong skill
+- If skill files are modified (by attacker with repo access), arbitrary code execution
+- If upstream package repositories are compromised, supply chain attack vector
+
+**Original Recommendation:**
+- **PRE-INSTALL ALL TOOLS** during Docker image build (Dockerfile)
+- Remove auto-install scripts entirely
+- Add tool version verification in entrypoint.sh startup validation
+- Document required tools clearly in README
+
+**Fix Implemented (2026-03-03):**
+
+1. **Dockerfile updated** ([Dockerfile:103-149](Dockerfile)) - Added section 6b with pinned tool versions:
+   - Semgrep 1.95.0 (pip)
+   - Snyk 1.1293.1 (npm)
+   - Trivy 0.58.1 (direct binary download)
+   - Python tools: Bandit, Safety, Pylint, Mypy, Radon
+   - JavaScript tools: ESLint, TypeScript ESLint plugins
+   - .NET tools: dotnet-outdated, security-scan
+
+2. **Auto-install scripts removed** - Deleted 4 files:
+   - `.claude/skills/audit-java/tools/auto-install-tools.sh`
+   - `.claude/skills/audit-python/tools/auto-install-tools.sh`
+   - `.claude/skills/audit-javascript/tools/auto-install-tools.sh`
+   - `.claude/skills/audit-dotnet/tools/auto-install-tools.sh`
+
+3. **Skill definitions updated** - All 4 skill files modified to:
+   - Remove auto-install step from Stage 3
+   - Add tool verification step (shows versions, doesn't install)
+   - Updated instructions to note tools are pre-installed
+
+4. **Entrypoint validation added** ([entrypoint.sh:94-161](entrypoint.sh)):
+   - Verifies all tools at startup before running any skills
+   - Fails fast with clear error if tools missing
+   - Instructs user to rebuild Docker image if verification fails
+
+5. **Documentation updated** ([README.md:198-223](README.md)):
+   - New section listing all pre-installed tools with versions
+   - Security note explaining why tools are pre-installed
+   - Removed misleading auto-install references
+
+**Result:** System now has NO arbitrary code execution risk during skill execution. All tools are verified at container startup with pinned versions.
 
 ---
 
-## Issues Fixed
+### **DESIGN #1: bypassPermissions + Deny Lists Creates False Security**
 
-### ✅ **BUG #1: API Key Not Passed to Docker Container** (FIXED)
+**Location:** [run_skills.py:246](run_skills.py:246), [settings.json:26-65](/.claude/settings.json)
 
-**Location**: [docker-compose.yml](docker-compose.yml#L26-27)
+**Issue:**
+The system uses `bypassPermissions` mode (no approval gates) but relies on `settings.json` deny lists for security:
 
-**Problem**: The `ANTHROPIC_API_KEY` environment variable defined in `.env` was **never passed to the container**.
+```python
+# run_skills.py:246
+permission_mode='bypassPermissions',  # Hardcoded for autonomous Docker operation
+```
 
-**Solution Applied**: Added environment variable passing:
+```json
+// settings.json - partial deny list
+"deny": [
+  "Bash(rm *)",
+  "Bash(curl *)",
+  "Bash(wget *)",
+  "Write(src/**)",
+  "Write(**/*.java)"
+]
+```
+
+**Why This Is False Security:**
+
+1. **Deny Lists Are Incomplete By Definition**
+   - Missing: `Bash(rsync *)`, `Bash(dd *)`, `Bash(mv *)`, `Bash(cp * /etc/*)`
+   - Missing: `Write(/etc/**)`, `Write(/opt/**)`, `Write(/app/**)`
+   - Bash wildcards can be bypassed: `rm file` vs `rm *` (only latter is blocked)
+
+2. **Claude Can Invoke Skills That Bypass Restrictions**
+   - Skills have their own `allowed_tools` lists ([run_skills.py:232-245](run_skills.py:232-245))
+   - No enforcement that skill tools respect settings.json deny rules
+   - Auto-install scripts already demonstrate this bypass
+
+3. **Sandbox Config Is Misleading**
+   ```json
+   // settings.json:78-85
+   "sandbox": {
+     "enabled": true,
+     "allowNetwork": false,  // ← NOT ENFORCED by Docker
+     "readOnlyPaths": ["src", "lib"]  // ← NOT ENFORCED (see below)
+   }
+   ```
+   - Docker doesn't enforce these settings automatically
+   - No iptables/network namespace isolation in [docker-compose.yml](docker-compose.yml)
+   - No filesystem read-only mounts in [docker-compose.yml:28-29](docker-compose.yml)
+
+4. **Documentation Claims Contradicted**
+   - README claims: "Source code: READ-ONLY (protected by .claude/settings.json deny rules)"
+   - Reality: Claude can `Write()` to source files if skill instructions request it
+   - README claims: "Network: DISABLED (prevents data exfiltration)"
+   - Reality: Docker compose has no `network_mode: none` ([docker-compose.yml:20-42](docker-compose.yml))
+
+**Evidence of Contradiction:**
+```bash
+# entrypoint.sh:214-225 - Claims protection but doesn't enforce
+info "Security Model:"
+info "  ✓ Source code: READ-ONLY (protected by .claude/settings.json deny rules)"
+info "  ✓ Network:      DISABLED (prevents data exfiltration)"
+```
+
+But [docker-compose.yml](docker-compose.yml) has:
 ```yaml
 services:
   skills:
-    environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     volumes:
-      - ${AUDIT_BASE_DIR}:/workdir
+      - ${AUDIT_BASE_DIR}:/workdir  # ← Full read-write access
+    # No network_mode: none
+    # No read-only volume mounts
 ```
 
-**Status**: ✅ **FIXED**
+**Why This Matters:**
+- Users believe code is protected; it's not
+- "bypassPermissions" means Claude never asks permission
+- Deny lists give false confidence
+- Actual security comes from container isolation, not settings.json
+
+**Recommendation:**
+- **OPTION A (Secure):** Keep bypassPermissions, enforce security at Docker level:
+  - Add `network_mode: none` to docker-compose.yml
+  - Mount source code read-only: `${AUDIT_BASE_DIR}:/workdir:ro`
+  - Mount only `.analysis/` and `logs/` as writable volumes
+  - Remove misleading "sandbox" config from settings.json
+
+- **OPTION B (Transparent):** Use `permission_mode='ask'` for critical operations:
+  - Let Claude auto-approve safe reads
+  - Require approval for Bash commands with side effects
+  - Remove deny lists (they don't work with bypassPermissions anyway)
+
+- **OPTION C (Current, but honest):**
+  - Document that security is container ephemeral lifecycle, not deny lists
+  - Remove "READ-ONLY" and "Network DISABLED" claims from docs
+  - Add warning that malicious skills can modify source code
 
 ---
 
-### ✅ **ISSUE #2: Confusing Working Directory Structure** (FIXED)
+### **COMPLEXITY #1: Excessive Indirection Hides Failure Modes**
 
-**Problem**: The configuration expected 3 levels of structure that was unclear from documentation. Users might think `WORKDIR` points to a single project, not a parent directory containing multiple projects + config.
+**Location:** [.claude/skills/audit-java/SKILL.md](/.claude/skills/audit-java/SKILL.md), Agent definitions
 
-**Solution Applied**:
-- Renamed `WORKDIR` → `AUDIT_BASE_DIR` throughout codebase
-- Added comprehensive directory structure diagrams to all documentation
-- Updated all files:
-  - [.env.example](.env.example) - Added visual tree diagram
-  - [docker-compose.yml](docker-compose.yml) - Updated variable name and comments
-  - [run_skills.py](run_skills.py#L368) - Changed argument to `--audit-base-dir`
-  - [entrypoint.sh](entrypoint.sh#L147) - Updated argument usage
-  - [README.md](README.md#L8-54) - Complete directory structure section
-  - [QUICKSTART.md](QUICKSTART.md) - Clarified setup instructions
-  - [config.yml](config.yml#L5-27) - Updated header comments
+**Issue:**
+Each skill executes a 7-stage funnel, invoking 4+ specialized agents per stage:
 
-**Status**: ✅ **FIXED**
-
----
-
-## Remaining Issues
-
-### ✅ **ISSUE #3: API Key in config.yml Comments Could Be Clearer** (FIXED)
-
-**Location**: [config.yml](config.yml#L21-24)
-
-**Problem**: Original comment wasn't explicit enough about where the API key comes from and why it can't be in config.yml.
-
-**Solution Applied**:
-```yaml
-# API KEY
-#   The ANTHROPIC_API_KEY environment variable is read from your .env file.
-#   It CANNOT be set in this config.yml file for security reasons.
-#   See .env.example for setup instructions.
+```
+Skill Execution Flow (per project):
+  Stage 0: Build Validation (Bash, auto-install tools)
+  Stage 1: Artifact Generation (1 agent: artifact-generator)
+  Stage 2: Independent Analysis (4 agents: architecture, security, dependency, maintainability)
+  Stage 3: Static Tools (10+ tools: Semgrep, SpotBugs, PMD, Checkstyle, Snyk, etc.)
+  Stage 4: Reconciliation (1 agent: reconciliation-agent)
+  Stage 5: Adversarial Review (1 agent: adversarial-agent)
+  Stage 6: Final Top 10 (1 main orchestrator aggregates all findings)
 ```
 
-**Changes**:
-- Clarified that the API key is an "environment variable" (not just "set in .env")
-- Changed "Set" to "read from" to emphasize the source
-- Changed "configured" to "set" for clarity
-- Added explicit reference to setup instructions
+**Why This Is Problematic:**
 
-**Status**: ✅ **FIXED**
+1. **Each Agent Invocation Is a Potential Failure Point**
+   - Agent timeout (default 20 turns, but agents have maxTurns: 40)
+   - Agent budget exhaustion (per-task $10 limit shared across all stages)
+   - Agent context window overflow (4 agents × large codebases)
+   - No partial success handling if Stage 3 succeeds but Stage 4 fails
+
+2. **No Verification That Top 10 Are Produced**
+   - Skills write to `.analysis/<language>/` but format is unspecified
+   - [run_skills.py:268-269](run_skills.py:268-269) - Just captures final assistant message:
+     ```python
+     elif t == "result":
+         result_text = getattr(msg, "result", "")
+     ```
+   - No parsing to verify "Top 10" structure exists
+   - No validation that output contains actionable opportunities
+   - If skill fails at Stage 5, partial results in `.analysis/` but no final report
+
+3. **Excessive Token/Cost Consumption**
+   - Each agent loads full codebase context independently
+   - "Isolation requirement" means duplicated analysis ([architecture-analyzer.md:14-22](/.claude/agents/architecture-analyzer.md))
+   - Static tool outputs can be megabytes (SpotBugs XML, Semgrep JSON)
+   - Reconciliation agent re-reads all agent outputs + tool outputs
+   - Adversarial agent re-reads reconciliation output
+   - **Estimate:** 5-10x more tokens than single-pass analysis
+
+4. **Failure Modes Are Opaque**
+   - If budget exceeded at Stage 3, user sees "partial results preserved"
+   - But which stages completed? Was Top 10 generated?
+   - Logs show agent invocations but not which stage failed
+   - [run_skills.py:330-337](run_skills.py:330-337) - Only captures "timeout" or "error", not stage
+
+**Example Failure Scenario:**
+```
+User runs audit-java on 50K LOC codebase:
+- Stage 0: Success (2 minutes, $0.50)
+- Stage 1: Success (3 minutes, $1.00)
+- Stage 2: 4 agents succeed (15 minutes, $6.00)
+- Stage 3: Static tools generate 500KB of output (5 minutes, $0.50)
+- Stage 4: Reconciliation agent hits $10 budget limit at 18/20 turns
+- RESULT: Task marked "error", no Top 10 produced
+- PARTIAL: .analysis/ contains agent findings but no final synthesis
+- USER CONFUSION: "Did it work? Do I have Top 10 opportunities?"
+```
+
+**Evidence:**
+- [audit-java/SKILL.md:1051](/.claude/skills/audit-java/SKILL.md) lines - Massive skill definition
+- No structured output format requirement
+- No stage checkpoint validation
+
+**Recommendation:**
+- **SIMPLIFY:** Single-pass analysis with structured output
+  - 1 agent reads codebase
+  - Runs static tools in parallel
+  - Synthesizes findings into JSON schema
+  - Validates Top 10 structure before returning
+
+- **OR ADD CHECKPOINTS:** After each stage, validate progress:
+  ```python
+  # After Stage 2
+  if not (analysis_dir / "architecture.json").exists():
+      raise StageFailureError("Stage 2 incomplete: architecture.json missing")
+  ```
+
+- **OR BUDGET PER STAGE:** Allocate budget limits per stage:
+  ```yaml
+  runner:
+    max_budget_usd: 10.0
+    budget_allocation:
+      stage_0: 1.0   # Build validation
+      stage_1: 1.0   # Artifacts
+      stage_2: 4.0   # 4 agents @ $1 each
+      stage_3: 1.0   # Static tools
+      stage_4: 2.0   # Reconciliation
+      stage_5: 1.0   # Adversarial
+  ```
 
 ---
 
-### ✅ **ISSUE #4: Duplicate File Management - Made Rock Solid** (FIXED)
+### **RELIABILITY #1: No Verification of Core Deliverable**
 
-**Original Problem**: The system renamed existing files with `OLD-` prefix, which could:
-- Accumulate multiple `OLD-OLD-...` prefixed files over time
-- Cause confusion about which version is active
-- Not be truly idempotent for headless operation
+**Location:** [run_skills.py:268-277](run_skills.py:268-277), Skill definitions
 
-**User Requirement**: "It needs to just work rock solid" - headless operation with no confusion
+**Issue:**
+System's stated goal is "top 10 highest-priority improvements" but there's **no verification** this is produced:
 
-**Solution Applied** ([entrypoint.sh:121-138](entrypoint.sh#L121)):
-- **DELETE** existing `.claude/` and `CLAUDE.md` instead of renaming
-- Copy fresh authoritative versions from AUDIT_BASE_DIR
-- Clear logging of what's happening
-
-**Why This Approach**:
-1. ✅ **Idempotent**: Multiple runs produce identical results
-2. ✅ **Rock solid**: No accumulated cruft, no confusion
-3. ✅ **Headless-friendly**: No human cleanup needed
-4. ✅ **Single source of truth**: AUDIT_BASE_DIR is always authoritative
-5. ✅ **Isolation**: Each project gets independent copy for Claude SDK compatibility
-
-**Why Copy Instead of Shared Mount**:
-- Claude SDK expects `.claude/` in project working directory
-- Enables future per-project skill customization if needed
-- Minimal disk cost (.claude/ is mostly text files)
-
-**Status**: ✅ **FIXED - Rock solid for headless operation**
-
----
-
-### ✅ **ISSUE #5: Race Condition in Log File Naming** (FIXED)
-
-**Location**: [run_skills.py:72-77](run_skills.py#L72)
-
-**Original Problem**: Using only timestamp (even with microseconds) could theoretically allow two tasks starting simultaneously to overwrite each other's log files.
-
-**Solution Applied**:
 ```python
-import uuid
-
-def task_logger(log_dir: Path, dir_name: str, skill: str) -> logging.Logger:
-    safe = skill.lstrip("/").replace("/", "_")
-    ts   = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-    uid  = uuid.uuid4().hex[:8]  # Short UUID to prevent collisions
-    name = f"{dir_name}__{safe}"
-    return _make_logger(name, log_dir / f"task_{name}_{ts}_{uid}.log")
+# run_skills.py:268-277
+elif t == "result":
+    result_text = getattr(msg, "result", "")
+    logger.info(f"[result] {str(result_text)[:800]}")
 ```
 
-Also updated result file naming at [run_skills.py:283-285](run_skills.py#L283):
-```python
-ts          = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-uid         = uuid.uuid4().hex[:8]  # Short UUID to prevent collisions
-result_file = log_dir / f"result_{dir_name}__{safe_skill}_{ts}_{uid}.txt"
+**Why This Matters:**
+
+1. **No Schema Validation**
+   - `result_text` could be "Analysis failed" or "See .analysis/ folder"
+   - No check for JSON structure
+   - No check for exactly 10 items
+   - No check for required fields (priority, category, description, location)
+
+2. **No Partial Success Definition**
+   - If skill produces 7 opportunities instead of 10, is that success?
+   - If skill produces 10 issues but not prioritized, is that success?
+   - Current code: any non-exception result = "success" ([run_skills.py:323](run_skills.py:323))
+
+3. **File-Based Output Is Not Validated**
+   - Skills write to `.analysis/<language>/` directory
+   - entrypoint.sh creates `.analysis/` ([entrypoint.sh:172](entrypoint.sh:172))
+   - But no validation that final report exists
+   - User must manually check `.analysis/` folder for results
+
+4. **Summary Reporting Is Misleading**
+   ```python
+   # run_skills.py:386-390
+   for r in results:
+       icon  = {"success": "OK", "error": "FAIL", "timeout": "TIMEOUT"}.get(r["status"], "?")
+       extra = f"  → {Path(r['result_file']).name}" if r["result_file"] else ""
+   ```
+   - "OK" means "no exception", not "Top 10 produced"
+   - `result_file` is the assistant's final message, not the Top 10 report
+
+**Evidence of Ambiguity:**
+- [README.md:219-223](README.md) - "Partial results are preserved"
+  - Where? What format? How to interpret?
+- [README.md:395-397](README.md) - summary shows costs but not output validation
+- No JSON schema definition for Top 10 format anywhere in codebase
+
+**Example Confusing Output:**
+```
+# logs/summary_20260303_120000.txt
+============================================================
+  RESULTS   total=2   success=2   failed=0
+============================================================
+  OK       project-one:audit-java  (320.5s)  → result_project-one__audit-java_20260303_120000_a1b2c3d4.txt
+
+# User opens result file:
+$ cat logs/result_project-one__audit-java_20260303_120000_a1b2c3d4.txt
+"Analysis complete. Please review the detailed findings in .analysis/java/ directory."
+
+# User confusion: Where's my Top 10?
+$ ls project-one/.analysis/java/
+architecture-analysis.md  security-findings.json  spotbugs-output.xml  ...
+# No top-10.json, no clear "final report"
 ```
 
-**Benefits**:
-- ✅ Guaranteed unique filenames (UUID collision probability: ~1 in 4 billion with 8 hex chars)
-- ✅ Maintains chronological ordering (timestamp first)
-- ✅ Short UUID (8 chars) keeps filenames readable
-- ✅ No data loss risk in parallel execution
-
-**Status**: ✅ **FIXED**
-
----
-
-### ✅ **ISSUE #6: No Disk Space Checking** (FIXED)
-
-**Location**: [entrypoint.sh:144-160](entrypoint.sh#L144)
-
-**Original Problem**: Skills write extensive analysis to `.analysis/` directories. No validation of available disk space before starting could cause mid-analysis failures on large codebases.
-
-**Solution Applied**:
-```bash
-# Disk space validation
-info "Checking available disk space..."
-
-AVAILABLE_GB=$(df /workdir | tail -1 | awk '{print int($4/1024/1024)}')
-REQUIRED_GB=5
-
-if [[ $AVAILABLE_GB -lt $REQUIRED_GB ]]; then
-    err "Insufficient disk space: ${AVAILABLE_GB}GB available"
-    err "Recommend ${REQUIRED_GB}GB+ for analysis (logs + .analysis directories)"
-    err "Please free up space or expand volume and try again."
-    exit 1
-fi
-
-ok "Disk space OK: ${AVAILABLE_GB}GB available"
-```
-
-**Benefits**:
-- ✅ **Early failure**: Detects insufficient space before analysis starts
-- ✅ **Clear messaging**: Shows available space and requirement
-- ✅ **Actionable**: Tells user to free space or expand volume
-- ✅ **Configurable**: REQUIRED_GB variable easy to adjust if needed
-- ✅ **Logged**: Space check appears in docker logs for debugging
-
-**Why 5GB Threshold**:
-- Typical analysis generates 50-500MB per project
-- Logs can be 10-100MB depending on verbosity
-- 5GB provides comfortable buffer for multiple projects
-- Prevents "No space left on device" mid-analysis
-
-**Status**: ✅ **FIXED**
-
----
-
-### ✅ **ISSUE #7: Graceful Shutdown on Container Kill** (FIXED)
-
-**Location**: [entrypoint.sh:19-56](entrypoint.sh#L19) and [entrypoint.sh:207-213](entrypoint.sh#L207)
-
-**Original Problem**: If user stops container mid-run (`docker compose stop`), the Python orchestrator would be killed immediately, leaving partial analysis files with no cleanup or summary.
-
-**Solution Applied**:
-
-1. **Added signal handler** at start of entrypoint.sh:
-```bash
-cleanup() {
-    echo "[WARN] Caught termination signal"
-    echo "[INFO] Attempting graceful shutdown..."
-
-    # Send SIGTERM to Python orchestrator if it's running
-    if [[ -n "${PYTHON_PID:-}" ]] && kill -0 "${PYTHON_PID}" 2>/dev/null; then
-        echo "[INFO] Terminating Python orchestrator (PID ${PYTHON_PID})..."
-        kill -TERM "${PYTHON_PID}" 2>/dev/null || true
-
-        # Wait up to 30 seconds for graceful shutdown
-        for i in {1..30}; do
-            if ! kill -0 "${PYTHON_PID}" 2>/dev/null; then
-                echo "[OK] Python orchestrator terminated gracefully"
-                break
-            fi
-            sleep 1
-        done
-
-        # Force kill if still running
-        if kill -0 "${PYTHON_PID}" 2>/dev/null; then
-            echo "[WARN] Forcing termination..."
-            kill -KILL "${PYTHON_PID}" 2>/dev/null || true
-        fi
-    fi
-
-    echo "[INFO] Shutdown complete"
-    exit 143  # 128 + 15 (SIGTERM)
-}
-
-trap cleanup SIGTERM SIGINT
-```
-
-2. **Captured Python PID** when launching orchestrator:
-```bash
-# Launch Python orchestrator in background to capture PID
-python3 /app/run_skills.py --audit-base-dir /workdir --config "${CONFIG_FILE}" &
-PYTHON_PID=$!
-
-# Wait for Python to complete
-wait ${PYTHON_PID}
-EXIT_CODE=$?
-```
-
-**Benefits**:
-- ✅ **Graceful shutdown**: Python gets SIGTERM signal (not SIGKILL)
-- ✅ **Timeout protection**: Waits 30 seconds for graceful shutdown before forcing
-- ✅ **Status logging**: Clear messages about shutdown progress
-- ✅ **Exit code**: Returns 143 (standard for SIGTERM termination)
-- ✅ **Works with tini**: Compatible with PID 1 init already in Dockerfile
-
-**How It Works**:
-1. User runs `docker compose stop` or sends Ctrl+C
-2. Docker sends SIGTERM to tini (PID 1)
-3. tini forwards SIGTERM to entrypoint.sh
-4. Trap handler catches signal, sends SIGTERM to Python
-5. Python orchestrator has 30s to clean up and exit
-6. If Python doesn't exit, force kill after 30s
-7. Container exits with code 143
-
-**Status**: ✅ **FIXED**
-
----
-
-### ✅ **ISSUE #8: Memory Limits Not Set** (FIXED)
-
-**Location**: [docker-compose.yml](docker-compose.yml#L30-35)
-
-**Original Problem**: No memory constraints. Large codebases could cause OOM (Out Of Memory) errors during analysis.
-
-**Solution Applied**:
-```yaml
-services:
-  skills:
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-        reservations:
-          memory: 2G
-```
-
-**Benefits**:
-- ✅ **OOM Protection**: Hard limit of 4GB prevents container from consuming all host memory
-- ✅ **Resource Guarantee**: Docker reserves 2GB minimum for the container
-- ✅ **Predictability**: Clear resource boundaries for capacity planning
-- ✅ **Host Stability**: Other services on host remain unaffected by memory spikes
-
-**Why These Values**:
-- 4GB limit: Sufficient for analyzing large codebases (100K+ LOC) with multiple concurrent agents
-- 2GB reservation: Comfortable baseline for typical analysis workloads (10-50K LOC)
-- Can be adjusted in docker-compose.yml if analyzing extremely large monorepos
-
-**Status**: ✅ **FIXED**
-
----
-
-### ✅ **ISSUE #9: Hardcoded `bypassPermissions` Mode** (FIXED - Option B Implemented)
-
-**Location**: [.claude/settings.json](.claude/settings.json), [entrypoint.sh:179-198](entrypoint.sh#L179), [entrypoint.sh:222-236](entrypoint.sh#L222)
-
-**Original Concern**: If a malicious skill is added to `.claude/skills/`, it could:
-- Delete files (via `Bash(rm ...)`)
-- Exfiltrate data (via `Bash(curl ...)`)
-- Modify source code
-
-**Solution Applied**: Implemented **Option B - Stronger Sandboxing** with defense-in-depth:
-
-#### 1. Enhanced Deny List ([.claude/settings.json:25-65](.claude/settings.json#L25))
-Added comprehensive protections against:
-- **Data exfiltration**: `git push`, `ssh`, `scp`, `nc`, `telnet`, `ftp`
-- **Secrets access**: `.env`, credentials, keys, PEM files, `*secret*`, `*password*`
-- **Source code modification**: Blocked `Write()` and `Edit()` for all source directories and file types
-  - Directories: `src/`, `lib/`, `app/`, `config/`, `.claude/`, `.git/`
-  - File types: `*.java`, `*.js`, `*.ts`, `*.py`, `*.cs`, `*.go`, `*.rb`, `*.php`
-- **Dangerous operations**: `rm`, `curl`, `wget`
-
-#### 2. Explicit Sandbox Configuration ([.claude/settings.json:78-85](.claude/settings.json#L78))
-```json
-"sandbox": {
-  "enabled": true,
-  "allowNetwork": false,           // Prevents data exfiltration
-  "allowFilesystem": true,
-  "readOnlyPaths": ["src", "lib", "app", "test", "tests"],
-  "writablePaths": [".analysis"]   // ONLY .analysis is writable
-}
-```
-
-#### 3. Runtime Validation ([entrypoint.sh:179-198](entrypoint.sh#L179))
-```bash
-# Create .analysis directory with proper permissions
-# This is the ONLY directory where skills can write output
-mkdir -p "${PROJECT_DIR}/.analysis"
-chmod 755 "${ANALYSIS_DIR}"
-
-# Verify write access
-touch "${ANALYSIS_DIR}/.write-test" || exit 1
-```
-
-#### 4. Security Model Summary ([entrypoint.sh:222-236](entrypoint.sh#L222))
-Container startup now displays:
-```
-Security Model:
-  ✓ Source code: READ-ONLY (protected by .claude/settings.json deny rules)
-  ✓ .analysis/:   WRITE-ONLY (sandboxed output directory)
-  ✓ Network:      DISABLED (prevents data exfiltration)
-  ✓ Dangerous ops: BLOCKED (rm, curl, wget, ssh, git push, etc.)
-  ✓ Secrets:      BLOCKED (cannot read .env, .key, .pem, credentials, etc.)
-```
-
-**Benefits**:
-- ✅ **Defense in Depth**: Multiple layers of protection (deny list + sandbox + filesystem validation)
-- ✅ **Source Code Protection**: Cannot modify any source files - only read access
-- ✅ **Data Exfiltration Prevention**: Network disabled, external commands blocked
-- ✅ **Secrets Protection**: Cannot read environment variables or credential files
-- ✅ **Transparent Operation**: Security model displayed on every run
-- ✅ **Fail-Safe**: Container exits if .analysis is not writable
-
-**Why Option B Over Option A**:
-- Headless operation requires autonomous execution (`bypassPermissions`)
-- `plan` mode would require human approval, defeating the automation purpose
-- Stronger sandboxing provides security WITHOUT breaking autonomous operation
-- User can still inspect `.analysis/` outputs and skills' behavior post-execution
-
-**Status**: ✅ **FIXED**
-
----
-
-### ✅ **ISSUE #10: Skills Settings vs Runner Settings Conflict** (FIXED)
-
-**Original Confusion**:
-- Two permission systems: Runner-level `bypassPermissions` + Project-level allow/deny lists
-- Unclear if `.claude/settings.json` permissions applied with `bypassPermissions` mode
-
-**Solution Applied**: Added clear documentation in [.claude/settings.json:2](.claude/settings.json#L2):
-```json
-{
-  "_comment_security": "SECURITY MODEL: This runner uses bypassPermissions mode for autonomous operation. The permissions below provide defense-in-depth by restricting file access and dangerous operations. Skills can READ source code but CANNOT modify it - only .analysis/ is writable.",
-  "permissions": {
-    "allow": [...],
-    "deny": [...]
+**Recommendation:**
+- **DEFINE OUTPUT SCHEMA:**
+  ```json
+  {
+    "version": "1.0",
+    "project": "project-one",
+    "skill": "audit-java",
+    "timestamp": "2026-03-03T12:00:00Z",
+    "top_opportunities": [
+      {
+        "rank": 1,
+        "category": "security",
+        "severity": "critical",
+        "title": "SQL Injection in UserRepository",
+        "description": "...",
+        "location": "src/main/java/UserRepository.java:45",
+        "confidence": "high",
+        "effort": "medium",
+        "impact": "high"
+      },
+      // ... 9 more
+    ]
   }
-}
-```
+  ```
 
-**Clarification**:
-- `bypassPermissions` mode is active at runner level for autonomous operation
-- Permissions in `.claude/settings.json` provide **defense-in-depth** protection
-- Claude Agent SDK respects these rules even in bypass mode (SDK-level enforcement)
-- The deny list acts as a safety net against malicious or buggy skills
+- **VALIDATE IN ORCHESTRATOR:**
+  ```python
+  # After skill completes
+  top_10_file = project_dir / ".analysis" / language / "top-10-opportunities.json"
+  if not top_10_file.exists():
+      raise ValueError("Skill did not produce top-10-opportunities.json")
 
-**Status**: ✅ **FIXED** (documentation clarified)
+  top_10 = json.loads(top_10_file.read_text())
+  if len(top_10["top_opportunities"]) != 10:
+      raise ValueError(f"Expected 10 opportunities, got {len(top_10['top_opportunities'])}")
+  ```
 
----
-
-### ✅ **ISSUE #11: Silent Deduplication** (FIXED)
-
-**Location**: [run_skills.py:135-137](run_skills.py#L135-L137)
-
-**Original Problem**: Duplicates were logged at WARNING level but otherwise silently skipped, potentially allowing misconfigurations to go unnoticed.
-
-**Original Code**:
-```python
-if skill in seen:
-    orch.warning(f"Duplicate skill '{skill}' in '{dir_name}' — skipping")
-    continue
-```
-
-**Solution Applied**: Changed duplicates to be treated as **configuration errors** that halt execution:
-
-```python
-if skill in seen:
-    errors.append(f"Duplicate skill '{skill}' in '{dir_name}'. Remove duplicate entries from config.yml.")
-    continue
-```
-
-**Benefits**:
-- ✅ **Fail-Fast**: Container exits immediately with clear error message
-- ✅ **Explicit Feedback**: User is told exactly which skill is duplicated and where
-- ✅ **Actionable**: Error message tells user to fix config.yml
-- ✅ **Prevents Confusion**: No ambiguity about which skills will run
-- ✅ **Consistent**: Treated the same as other config errors (e.g., invalid skill paths)
-
-**Example Error Output**:
-```
-ERROR: Duplicate skill '/audit-java' in 'project-one'. Remove duplicate entries from config.yml.
-```
-
-**Status**: ✅ **FIXED**
+- **UPDATE SKILL INSTRUCTIONS:**
+  - Require skills to write `top-10-opportunities.json` to `.analysis/<language>/`
+  - Fail skill execution if file not produced
+  - Change success criteria from "no exception" to "top-10 file exists and valid"
 
 ---
 
-### ✅ **ISSUE #12: Breadth-First Execution Could Be Clearer** (FIXED)
+### **USABILITY #1: Skills Execute Outside Container (Documentation Misleading)**
 
-**Location**: [run_skills.py:149-183](run_skills.py#L149-L183)
+**Location:** [CLAUDE.md:22-45](CLAUDE.md), [README.md:58-73](README.md)
 
-**Original Problem**: The breadth-first execution logic was correct but lacked clear documentation explaining the rationale for this approach.
+**Issue:**
+Documentation states skills run "inside Docker" but CLAUDE.md is **copied into user's host filesystem** projects:
 
-**Solution Applied**: Added comprehensive inline documentation explaining the breadth-first task ordering:
+```bash
+# entrypoint.sh:162-166
+cp -r "/workdir/.claude" "${PROJECT_DIR}/.claude"
+cp "/workdir/CLAUDE.md" "${PROJECT_DIR}/CLAUDE.md"
+```
 
+**What Actually Happens:**
+
+1. Container starts, mounts `AUDIT_BASE_DIR` as `/workdir`
+2. entrypoint.sh copies `.claude/` and `CLAUDE.md` into each project directory **on the host**
+3. Skills write to `.analysis/` **on the host filesystem**
+4. Container exits, but all files remain on host
+
+**Why This Is Confusing:**
+
+1. **CLAUDE.md Says "You are running inside a Docker container"**
+   - [CLAUDE.md:10-11](CLAUDE.md): "You are running inside a Docker container purpose-built for automated code analysis"
+   - This is TRUE for the orchestrator, but Claude (the agent) sees the project directory AS IF it's native
+   - Skills don't "know" they're in Docker (no `/proc/1/cgroup` checks)
+
+2. **Tool Installation Instructions Are Wrong for Container Context**
+   - [CLAUDE.md:42-48](CLAUDE.md): "Install Maven: brew install maven"
+   - This doesn't work inside container (no brew, no apt without sudo)
+   - Tools must be pre-installed in Dockerfile or use auto-install scripts
+
+3. **Version Manager Instructions May Not Apply**
+   - [CLAUDE.md:56-103](CLAUDE.md): "Switch Java version: sdk use java 17"
+   - This DOES work inside container (SDKMAN is installed)
+   - But the documentation doesn't clarify which instructions are for container vs host
+
+4. **User Confusion: "Am I Running This on My Host?"**
+   - Yes: `.claude/` and `CLAUDE.md` are copied to your host projects
+   - No: Skills execute inside container environment
+   - Maybe: If you run `docker compose run --rm skills bash`, you get container shell
+
+**Evidence:**
+```bash
+# After running the audit, user sees on their HOST machine:
+$ ls project-one/
+src/  pom.xml  .git/  .claude/  CLAUDE.md  .analysis/
+
+# User questions:
+# - Did Claude modify my source code? (No, but .claude/ is there)
+# - Can I delete .claude/ now? (Yes, it's regenerated each run)
+# - Why is CLAUDE.md in my project? (For Claude agent context)
+```
+
+**Recommendation:**
+- **CLARIFY DOCUMENTATION:**
+  - "Skills execute inside Docker but operate on your host filesystem"
+  - "`.claude/` and `CLAUDE.md` are temporary configs, safe to delete after run"
+  - "All output is written to `.analysis/` on your host machine"
+
+- **ADD CLEANUP OPTION:**
+  ```bash
+  # docker-compose.yml: add cleanup service
+  docker compose run --rm cleanup
+  # Removes all .claude/ and CLAUDE.md from projects, keeps .analysis/
+  ```
+
+- **OR USE VOLUME MOUNTS DIFFERENTLY:**
+  ```yaml
+  volumes:
+    - ${AUDIT_BASE_DIR}/.claude:/workdir/.claude:ro
+    - ${AUDIT_BASE_DIR}/CLAUDE.md:/workdir/CLAUDE.md:ro
+    - ${AUDIT_BASE_DIR}/config.yml:/workdir/config.yml:ro
+    - ${AUDIT_BASE_DIR}/project-one:/workdir/project-one
+    # Don't copy .claude into projects, keep in /workdir root
+  ```
+
+---
+
+## Additional Issues (Non-Critical)
+
+### **DESIGN #2: Breadth-First Task Ordering May Not Be Optimal**
+
+**Location:** [run_skills.py:167-201](run_skills.py:167-201)
+
+**Issue:**
+Breadth-first scheduling runs all Project A skill-1, then all Project B skill-1, etc.
+
+**Rationale Provided:**
 ```python
-# =========================================================================
-# Breadth-First Task Ordering
-# =========================================================================
-# Rationale: Breadth-first execution ensures fair resource sharing across
-# all projects when running with concurrency > 1.
-#
-# Example with 3 projects and concurrency=3:
-#   Breadth-first (current):
-#     1. proj-A skill-1 | proj-B skill-1 | proj-C skill-1  (all start together)
-#     2. proj-A skill-2 | proj-B skill-2 | proj-C skill-2
-#
-#   Depth-first (alternative):
-#     1. proj-A skill-1 | proj-A skill-2 | proj-A skill-3  (proj-B/C wait)
-#     2. proj-B skill-1 | proj-B skill-2 | proj-C skill-1
-#
 # Benefits:
 # - Better resource utilization when some skills are slower than others
 # - All projects get attention early in the run (better UX)
 # - Prevents one large project from monopolizing all worker slots
-# =========================================================================
 ```
 
-**Benefits**:
-- ✅ **Clear Rationale**: Explains WHY breadth-first, not just WHAT it does
-- ✅ **Visual Examples**: Side-by-side comparison of breadth-first vs depth-first
-- ✅ **Concrete Benefits**: Lists specific advantages for users and resource utilization
-- ✅ **Maintainability**: Future developers will understand the design decision
+**Counter-Argument:**
+- **If skill-1 is slow** (e.g., Java audit takes 20 minutes), breadth-first means ALL projects wait 20 minutes
+- **Depth-first** would let some projects complete fully while others run
+- **Priority-based** would let users mark "high-priority" projects to run first
 
-**Example Execution**:
+**Example:**
+```
+Breadth-first (current):
+  [0-20min]  proj-A audit-java | proj-B audit-java | proj-C audit-java
+  [20-40min] proj-A audit-js   | proj-B audit-js   | proj-C audit-js
+  Result: All projects complete at 40min
 
-Given this config:
-```yaml
-targets:
-  - dir: proj-A
-    skills: [/audit-java, /audit-javascript]
-  - dir: proj-B
-    skills: [/audit-java]
+Depth-first (alternative):
+  [0-20min]  proj-A audit-java | proj-A audit-js | proj-B audit-java
+  [20-25min] proj-B audit-js   | proj-C audit-java | proj-C audit-js
+  Result: proj-A done at 25min (can start reviewing), all done at 30min
 ```
 
-With `concurrency=2`, execution order is:
-1. proj-A: /audit-java ⎮ proj-B: /audit-java (both start simultaneously)
-2. proj-A: /audit-javascript (starts after first skill completes)
-
-**Status**: ✅ **FIXED**
+**Recommendation:**
+- Add `scheduling_strategy: breadth | depth | priority` to config.yml
+- Default to breadth (current behavior)
+- Document trade-offs in README
 
 ---
 
-## Simplification Opportunities
+### **RELIABILITY #2: No Disk Space Monitoring During Execution**
 
-### ✅ **SIMPLIFICATION #1: Combine docker_<ts>.log and python_<ts>.log** (IMPLEMENTED)
+**Location:** [entrypoint.sh:196-209](entrypoint.sh:196-209)
 
-**Location**: [run_skills.py:67-87](run_skills.py#L67-L87)
+**Issue:**
+Disk space is checked once at startup (5GB minimum) but not monitored during execution.
 
-**Original Problem**: Two separate log files (`docker_{ts}.log` and `python_{ts}.log`) contained overlapping orchestrator output, since stdout was already being captured by docker logs.
+**Why This Matters:**
+- Static tool outputs can be large (SpotBugs: 50MB, Semgrep: 100MB)
+- Multiple projects × multiple skills = cumulative storage
+- If disk fills mid-execution, skill fails with cryptic error
+- No graceful degradation (e.g., skip large tool outputs)
 
-**Solution Applied**: Modified orchestrator logger to stream-only (no separate file):
+**Recommendation:**
+- Add disk space check before each skill execution
+- If space < 1GB, log warning and skip large static tools
+- If space < 500MB, fail fast with clear error
 
+---
+
+### **LOGGING #1: Orchestrator Logs Not Written to File**
+
+**Location:** [run_skills.py:67-87](run_skills.py:67-87)
+
+**Issue:**
+Orchestrator logs only to stdout, rationale:
 ```python
-def orchestrator_logger(log_dir: Path) -> logging.Logger:
-    """
-    Create orchestrator logger that only writes to stdout (not to a separate file).
-
-    Rationale: The orchestrator output is already captured by docker logs via stdout,
-    so creating a separate python_{ts}.log file would be redundant. Task-specific
-    logs are still written to individual task_{name}_{ts}_{uid}.log files.
-    """
-    logger = logging.getLogger("orchestrator")
-    logger.setLevel(logging.DEBUG)
-    logger.propagate = False
-
-    # Only add stdout handler (no file handler)
-    sh = logging.StreamHandler(sys.stdout)
-    sh.setLevel(logging.INFO)
-    sh.setFormatter(logging.Formatter(
-        "[%(asctime)s] [orchestrator] %(message)s", datefmt="%H:%M:%S"
-    ))
-    logger.addHandler(sh)
-
-    return logger
+# Rationale: The orchestrator output is already captured by docker logs via stdout,
+# so creating a separate python_{ts}.log file would be redundant.
 ```
 
-**Benefits**:
-- ✅ **Single Source**: All orchestrator output in docker logs (accessed via `docker logs`)
-- ✅ **No Duplication**: Eliminates redundant `python_{ts}.log` file
-- ✅ **Task Logs Preserved**: Individual task logs (`task_{name}_{ts}_{uid}.log`) still written for detailed debugging
-- ✅ **Simpler Debugging**: One place to look for orchestration output
-- ✅ **Clear Separation**: Docker logs for orchestration, task logs for skill execution details
+**Why This Is Problematic:**
+- `docker logs` are volatile (cleared on container removal with `--rm`)
+- User runs `docker compose run --rm skills` → logs disappear after exit
+- [docker-compose.yml:36-40](docker-compose.yml:36-40) has log rotation (50MB × 5 files)
+- But these are Docker daemon logs, not easily accessible
 
-**Log Structure After Change**:
-- `logs/docker_{ts}.log`: Container lifecycle + orchestrator output (complete view)
-- `logs/task_{project}__{skill}_{ts}_{uid}.log`: Individual skill execution logs
-- `logs/result_{project}__{skill}_{ts}_{uid}.txt`: Skill results
-- `logs/summary_{ts}.txt`: Final summary
-
-**Status**: ✅ **IMPLEMENTED**
+**Recommendation:**
+- Write orchestrator logs to `logs/python_{ts}.log` (redundancy is good)
+- OR document: "Capture stdout to file: `docker compose run --rm skills > logs/run.log 2>&1`"
 
 ---
 
-### ✅ **SIMPLIFICATION #2: Remove `.dockerignore` Contradictions** (FIXED)
+### **ERROR HANDLING #1: Rate Limit Retry Logic May Mask API Issues**
 
-**Location**: [.dockerignore](.dockerignore)
+**Location:** [run_skills.py:306-315](run_skills.py:306-315)
 
-**Original Problems**:
-1. `.env.example` was ignored but should be included (it's a template)
-2. `README.md` was ignored but should be included (it's documentation)
-3. Project directories weren't explicitly ignored (could accidentally copy into image)
-4. Missing common IDE and OS files
-
-**Solution Applied**: Comprehensive `.dockerignore` with clear categories and comments:
-
-```dockerignore
-# Version control
-.git
-.gitignore
-
-# Python artifacts
-__pycache__
-*.pyc
-*.pyo
-*.pyd
-.Python
-
-# Logs and analysis outputs (generated at runtime, not needed in image)
-*.log
-logs/
-.analysis/
-
-# Environment files (secrets)
-.env
-
-# Project directories (mounted at runtime, not copied into image)
-project-*/
-example-*/
-test-*/
-
-# IDE and editor files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Documentation files ARE included in image (removed from ignore list)
-# README.md - needed for documentation
-# .env.example - needed as template
-# QUICKSTART.md - needed for documentation
-# 000-ANALYSIS.md - useful for reference
-```
-
-**Benefits**:
-- ✅ **Documentation Included**: README.md, .env.example, and other docs now in image
-- ✅ **Projects Excluded**: Wildcards prevent accidental copying of project directories
-- ✅ **Cleaner Images**: IDE files, OS artifacts excluded
-- ✅ **Well Organized**: Clear categories with explanatory comments
-- ✅ **Analysis Excluded**: .analysis/ directories won't bloat image
-- ✅ **Smaller Images**: More comprehensive ignore list reduces image size
-
-**What's Now Included in Image**:
-- Source code (run_skills.py, entrypoint.sh, etc.)
-- Configuration templates (.env.example, config.yml)
-- Documentation (README.md, QUICKSTART.md, etc.)
-- Skills and agents (.claude/ directory structure)
-- Dockerfile and docker-compose.yml
-
-**What's Excluded from Image**:
-- Project source code (mounted at runtime)
-- Analysis outputs (generated at runtime)
-- Secrets (.env files)
-- IDE and OS artifacts
-- Version control metadata
-
-**Status**: ✅ **FIXED**
-
----
-
-### ✅ **SIMPLIFICATION #3: Consolidate Version Checking** (IMPLEMENTED)
-
-**Location**: [init-env.sh](init-env.sh), [Dockerfile:35-36, 107](Dockerfile#L35), [entrypoint.sh:75](entrypoint.sh#L75)
-
-**Original Problem**: Version manager initialization was duplicated in 3 places:
-1. Dockerfile RUN commands (build time)
-2. `/root/.bashrc` (lines 100-114)
-3. entrypoint.sh (lines 75-88)
-
-**Solution Applied**: Created consolidated `/opt/init-env.sh` script:
-
-```bash
-#!/bin/bash
-# /opt/init-env.sh - Consolidated initialization for all version managers
-
-# SDKMAN (Java)
-export SDKMAN_DIR="/opt/sdkman"
-[[ -s "${SDKMAN_DIR}/bin/sdkman-init.sh" ]] && source "${SDKMAN_DIR}/bin/sdkman-init.sh"
-
-# nvm (Node.js)
-export NVM_DIR="/opt/nvm"
-[[ -s "${NVM_DIR}/nvm.sh" ]] && source "${NVM_DIR}/nvm.sh"
-
-# pyenv (Python)
-export PYENV_ROOT="/opt/pyenv"
-export PATH="${PYENV_ROOT}/bin:${PYENV_ROOT}/shims:${PATH}"
-command -v pyenv > /dev/null && eval "$(pyenv init -)"
-
-# .NET (side-by-side SDKs)
-export DOTNET_ROOT="/opt/dotnet"
-export PATH="${DOTNET_ROOT}:${PATH}"
-```
-
-**Updated Files**:
-
-1. **Dockerfile** ([Dockerfile:35-36](Dockerfile#L35)):
-   ```dockerfile
-   COPY init-env.sh /opt/init-env.sh
-   RUN chmod +x /opt/init-env.sh
-   ```
-
-2. **Dockerfile .bashrc** ([Dockerfile:107](Dockerfile#L107)):
-   ```dockerfile
-   RUN echo 'source /opt/init-env.sh' >> /root/.bashrc
-   ```
-
-3. **entrypoint.sh** ([entrypoint.sh:75](entrypoint.sh#L75)):
-   ```bash
-   source /opt/init-env.sh
-   ```
-
-**Benefits**:
-- ✅ **Single Source of Truth**: Version manager configuration in one file
-- ✅ **DRY Principle**: No code duplication across Dockerfile, .bashrc, and entrypoint.sh
-- ✅ **Easier Maintenance**: Update version manager paths in one place
-- ✅ **Consistent Environment**: Identical setup across interactive shells and container startup
-- ✅ **Clear Documentation**: init-env.sh contains comments explaining each version manager
-- ✅ **Simpler Dockerfile**: Reduced from ~13 lines to 1 line for .bashrc sourcing
-
-**Where Sourced**:
-- Interactive bash shells (via `/root/.bashrc`)
-- Container startup (via `entrypoint.sh`)
-- Any custom scripts that need version managers (via `source /opt/init-env.sh`)
-
-**Status**: ✅ **IMPLEMENTED**
-
----
-
-## Documentation Gaps
-
-### ✅ **GAP #1: No Failure Recovery Documentation** (FIXED)
-
-**Location**: [README.md:213-293](README.md#L213-L293)
-
-**Original Problem**: No documentation on what happens when skills fail, how to diagnose issues, or how to re-run only failed tasks.
-
-**Solution Applied**: Added comprehensive "Handling Failures" section to README with:
-
-#### 1. What Happens When Skills Fail
-- Partial results preserved in `.analysis/<language>/`
-- Logs retained for debugging
-- Container exits with non-zero code
-- Summary shows which tasks failed
-
-#### 2. Diagnosis Steps
-```bash
-# Step 1: Check summary
-cat logs/summary_<most-recent>.txt
-
-# Step 2: Review task logs
-cat logs/task_<project>__<skill>_<ts>_<uid>.log
-
-# Step 3: Check partial analysis
-ls -la <project-dir>/.analysis/<language>/
-```
-
-#### 3. Common Failure Scenarios Table
-
-| Failure Type | Likely Cause | Solution |
-|---|---|---|
-| Timeout | Exceeded 300s limit | Increase timeout or reduce scope |
-| Budget exceeded | Exceeded $10 limit | Increase budget or use smaller model |
-| Out of memory | Exceeded 4GB limit | Reduce concurrency |
-| Config error | Invalid/duplicate skills | Fix config.yml |
-| Disk space | Insufficient space | Free up space |
-
-#### 4. Re-running Failed Skills
-Step-by-step instructions for editing config.yml to target only failed tasks and re-running the container.
-
-#### 5. Preserving Previous Results
-```bash
-# Backup before re-running
-cp -r project-one/.analysis project-one/.analysis.backup-2026-03-03
-```
-
-#### 6. Emergency Cleanup
-Commands to completely reset analysis outputs, logs, and Docker images.
-
-**Benefits**:
-- ✅ **Clear Recovery Path**: Users know exactly what to do when failures occur
-- ✅ **Diagnostic Guide**: Step-by-step troubleshooting process
-- ✅ **Common Scenarios**: Table of typical failures with solutions
-- ✅ **Selective Re-run**: Instructions for running only failed skills
-- ✅ **Data Preservation**: Guidance on backing up partial results
-
-**Status**: ✅ **FIXED**
-
----
-
-### ✅ **GAP #2: No Cost Estimation** (FIXED)
-
-**Location**: [README.md:296-393](README.md#L296-L393), [config.yml:37-40](config.yml#L37-L40)
-
-**Original Problem**: No guidance on typical costs, cost factors, budget setting, or tracking expenses.
-
-**Solution Applied**: Added comprehensive "Cost Estimation" section to README with:
-
-#### 1. Typical Costs Table
-- Small (< 10K LOC): $0.50 - $2.00
-- Medium (10-50K LOC): $2.00 - $6.00
-- Large (50-150K LOC): $6.00 - $15.00
-- Very Large (> 150K LOC): $15.00 - $30.00+
-- Note: Opus costs ~3x more than Sonnet
-
-#### 2. Six Cost Factors
-Codebase size, complexity, model choice, analysis depth, number of agents, static tool output
-
-#### 3. Budget Control
-- How to set `max_budget_usd`
-- Behavior when exceeded: graceful stop, partial results preserved
-
-#### 4. Cost Estimation Formula
-```
-Total Cost ≈ (Projects × Skills per Project) × Average Cost per Skill
-```
-With concrete calculation example
-
-#### 5. Cost Tracking
-Where to find actual costs in logs (summary files)
-
-#### 6. Optimization Tips
-5 actionable tips: start small, use Sonnet, adjust concurrency, incremental analysis, etc.
-
-#### 7. Budget Recommendations
-Table mapping use cases (single project to org-wide) to recommended budgets ($5 to $200+)
-
-#### 8. Enhanced config.yml
-```yaml
-max_budget_usd: 10.0  # PER-TASK spending limit (USD)
-                       # Typical: $0.50-$2 (small), $2-$6 (medium), $6-$15 (large)
-                       # See README.md "Cost Estimation" for details
-```
-
-**Benefits**:
-- ✅ **Budget Planning**: Users can estimate costs before running
-- ✅ **Cost Transparency**: Clear ranges and factors explained
-- ✅ **Risk Mitigation**: Budget control prevents unexpected charges
-- ✅ **Optimization Guidance**: Tips for reducing costs
-- ✅ **Realistic Expectations**: Per-project budget recommendations
-
-**Status**: ✅ **FIXED**
-
----
-
-### 📚 **GAP #3: No Skill Customization Guide** (won't fix)
-
-**Question**: How does a user add a custom skill or modify existing ones?
-
-**Missing**: Documentation on skill structure, required fields, testing
-
-**Recommendation**: Create `docs/CUSTOM-SKILLS.md`:
-```markdown
-# Creating Custom Skills
-
-## Skill File Structure
-Skills are in `.claude/skills/<skill-name>/SKILL.md`:
-
-```yaml
----
-name: audit-custom
-description: "Your description"
-user-invocable: true
----
-
-# Skill content (markdown)
-Your instructions to Claude...
-```
-
-## Required Sections
-1. Stage 0: Validation
-2. Stages 1-6: Analysis pipeline
-3. Output to `.analysis/<language>/`
-
-## Testing
-```bash
-# Run single skill
-docker compose run --rm skills
-# Edit config.yml to target only your custom skill
-```
-
-**Status**: 🔧 **READY TO ADD** (won't fix)
-
----
-
-## Security Concerns
-
-### 🔒 **SECURITY #1: Tool Auto-Install Scripts Execute Arbitrary Code**
-
-**Location**: `.claude/skills/*/tools/auto-install-tools.sh`
-
-**Risk**: These scripts run package managers (`brew`, `pip3`, `npm install -g`) with elevated privileges.
-
-**Example** ([.claude/skills/audit-java/tools/auto-install-tools.sh:56-57](.claude/skills/audit-java/tools/auto-install-tools.sh#L56)):
-```bash
-brew install semgrep --quiet 2>&1 | tail -3 && INSTALLED+=("Semgrep (brew)") || FAILED+=("Semgrep")
-```
-
-**Concern**: If a malicious actor modifies `.claude/skills/`, they could:
-1. Install backdoored versions of tools
-2. Execute arbitrary commands during installation
-
-**Mitigations Already in Place**:
-- Docker container is ephemeral
-- No persistence across runs
-- User controls `.claude/` directory content
-
-**Recommendation**:
-1. Pre-install tools in Dockerfile instead of runtime installation
-2. Or add checksum verification:
-   ```bash
-   curl -L -o semgrep.tar.gz https://...
-   echo "expected-sha256  semgrep.tar.gz" | sha256sum -c
-   ```
-
-**Status**: 🔒 **SECURITY CONSIDERATION**
-
----
-
-### ✅ **SECURITY #2: Settings Deny List is Incomplete** (FIXED)
-
-**Location**: [.claude/settings.json:25-65](.claude/settings.json#L25)
-
-**Original Deny List** (incomplete):
-```json
-"deny": [
-  "Read(.env)",
-  "Bash(rm *)",
-  "Bash(curl *)",
-  "Bash(wget *)",
-  "Write(.git/**)"
-]
-```
-
-**Enhanced Deny List** (comprehensive):
-```json
-"deny": [
-  "Read(.env)",
-  "Read(**/.env*)",
-  "Read(**/credentials.json)",
-  "Read(**/*.key)",
-  "Read(**/*.pem)",
-  "Read(**/*secret*)",
-  "Read(**/*password*)",
-  "Bash(rm *)",
-  "Bash(curl *)",
-  "Bash(wget *)",
-  "Bash(git push *)",         // ✅ Added
-  "Bash(ssh *)",              // ✅ Added
-  "Bash(scp *)",              // ✅ Added
-  "Bash(nc *)",               // ✅ Added
-  "Bash(telnet *)",           // ✅ Added
-  "Bash(ftp *)",              // ✅ Added
-  "Write(.claude/**)",        // ✅ Added
-  "Write(.git/**)",
-  "Write(../**)",             // ✅ Added
-  "Write(src/**)",            // ✅ Added
-  "Write(lib/**)",            // ✅ Added
-  "Write(app/**)",            // ✅ Added
-  "Write(config/**)",         // ✅ Added
-  "Write(**/*.java)",         // ✅ Added (all source file types)
-  "Write(**/*.js)",
-  "Write(**/*.ts)",
-  "Write(**/*.py)",
-  "Write(**/*.cs)",
-  "Write(**/*.go)",
-  "Write(**/*.rb)",
-  "Write(**/*.php)",
-  "Edit(src/**)",             // ✅ Added
-  "Edit(lib/**)",
-  "Edit(app/**)",
-  "Edit(**/*.java)",
-  "Edit(**/*.js)",
-  "Edit(**/*.ts)",
-  "Edit(**/*.py)",
-  "Edit(**/*.cs)"
-]
-```
-
-**Improvements**:
-- ✅ All previously missing commands now blocked
-- ✅ Comprehensive source code write protection
-- ✅ Additional secret patterns blocked
-- ✅ Both `Write()` and `Edit()` operations restricted
-
-**Status**: ✅ **FIXED** (addressed in Issue #9 implementation)
-
----
-
-## Performance Concerns
-
-### ⚡ **PERFORMANCE #1: Sequential Agent Invocation Within Skills**
-
-**Location**: All SKILL.md files (e.g., [.claude/skills/audit-java/SKILL.md](.claude/skills/audit-java/SKILL.md))
-
-**Current Pattern**:
-```markdown
-## Stage 2: Run Agents Sequentially
-1. Launch architecture-analyzer agent
-2. Wait for completion
-3. Launch security-analyzer agent
-4. Wait for completion
-...
-```
-
-**Problem**: Stages 2-5 (the 4 specialized agents) run sequentially within each skill, but the instructions say to use parallel execution ([.claude/settings.json:44](.claude/settings.json#L44)):
-```json
-"PARALLEL_AGENT_EXECUTION": "true"
-```
-
-**Recommendation**: Update SKILL.md to actually invoke agents in parallel:
-```markdown
-## Stage 2: Run Agents in Parallel
-
-Launch all 4 agents simultaneously using the Task tool:
-
-1. In a single message, invoke all 4 Task tools:
-   - Task(subagent_type="architecture-analyzer", ...)
-   - Task(subagent_type="security-analyzer", ...)
-   - Task(subagent_type="dependency-analyzer", ...)
-   - Task(subagent_type="maintainability-analyzer", ...)
-
-2. Wait for all to complete
-3. Collect results from each
-```
-
-**Status**: ⚡ **PERFORMANCE OPPORTUNITY**
-
----
-
-### ⚡ **PERFORMANCE #2: Static Tool Results Not Cached**
-
-**Problem**: If a user re-runs the same skill, static analysis tools (Semgrep, SpotBugs, etc.) re-run from scratch.
-
-**Impact**: Wasted time and API costs
-
-**Recommendation**: Check if static tool outputs exist before re-running:
-```bash
-if [[ -f "$PROJECT_ROOT/.analysis/java/stage3-static-analysis/raw-outputs/semgrep-report.json" ]]; then
-    echo "Using cached Semgrep results (delete to re-run)"
-else
-    bash .claude/skills/audit-java/tools/semgrep-runner.sh ...
-fi
-```
-
-**Status**: ⚡ **PERFORMANCE OPPORTUNITY**
-
----
-
-## Missing Features
-
-### 🎯 **FEATURE #1: Progress Indicators for Long-Running Tasks**
-
-**Problem**: User has no visibility into progress during long audits (5-10 min per skill)
-
-**Recommendation**: Add periodic heartbeats to [run_skills.py](run_skills.py):
+**Issue:**
+Exponential backoff retry for rate limits:
 ```python
-# In stream_skill(), emit progress every 30s
-last_heartbeat = time.time()
-async for msg in query(...):
-    if time.time() - last_heartbeat > 30:
-        logger.info(f"[heartbeat] Still running... ({int(time.time() - start)}s elapsed)")
-        last_heartbeat = time.time()
+@retry(
+    retry=retry_if_exception_type(RateLimitError),
+    wait=wait_exponential(multiplier=2, min=10, max=120),
+    stop=stop_after_attempt(6),
+)
 ```
 
-**Status**: 🎯 **FEATURE REQUEST**
+**Why This Is Subtle:**
+- 6 attempts with exponential backoff: 10s, 20s, 40s, 80s, 120s, 120s = **390 seconds** = 6.5 minutes
+- If rate limit persists (e.g., account quota exceeded), skill appears "hung" for 6.5 min
+- No user feedback during retry (logs show retries but not ETA)
+- After 6 attempts, skill fails with "RateLimitError" (not "quota exceeded")
+
+**Recommendation:**
+- Reduce retry attempts to 3 (still 70 seconds total backoff)
+- Add structured error messages: "Rate limit exceeded, retrying in 20s (attempt 2/3)"
+- Distinguish between temporary rate limits (429) vs quota exhausted (need better API error parsing)
 
 ---
 
-### 🎯 **FEATURE #2: Diff-Based Analysis for Git Repos**
+### **MEMORY #1: No Explicit Memory Limits for Claude Agent SDK**
 
-**Current State**: Analyzes entire codebase every time
+**Location:** [docker-compose.yml:31-35](docker-compose.yml:31-35)
 
-**Improvement**: For git repos, offer incremental analysis:
+**Issue:**
+Container memory limit is 4GB:
 ```yaml
-runner:
-  mode: full  # or 'incremental' to analyze only changed files since last commit
+deploy:
+  resources:
+    limits:
+      memory: 4G
 ```
 
-**Implementation**:
-- In Stage 0, check `git diff --name-only HEAD~1`
-- Pass file list to agents as focus areas
+But no per-skill or per-agent memory limit in [run_skills.py](run_skills.py).
 
-**Status**: 🎯 **FEATURE REQUEST**
+**Why This Matters:**
+- 4 parallel agents × large codebase = high memory usage
+- If one skill consumes 3GB, other skills may OOM
+- No memory profiling or leak detection
+
+**Recommendation:**
+- Add memory monitoring: log `psutil.virtual_memory()` before/after each skill
+- If memory usage > 3GB after skill, log warning about potential leak
+- Consider per-skill memory limit (if SDK supports it)
 
 ---
 
-### 🎯 **FEATURE #3: Summary Dashboard**
+### **TESTING #1: No Automated Tests for Core Orchestration**
 
-**Current State**: Results scattered across multiple files
+**Location:** Entire codebase (no `test_*.py` files found)
 
-**Recommendation**: Generate consolidated HTML report:
-```bash
-# At end of run_skills.py
-python3 .claude/tools/generate-dashboard.py <AUDIT_BASE_DIR>/logs/ > <AUDIT_BASE_DIR>/audit-dashboard.html
+**Issue:**
+No unit tests, integration tests, or smoke tests for:
+- Config parsing ([run_skills.py:102-203](run_skills.py:102-203))
+- Task ordering logic (breadth-first scheduling)
+- Error handling (timeout, rate limit, budget exceeded)
+- Summary generation ([run_skills.py:378-398](run_skills.py:378-398))
+
+**Why This Matters:**
+- Refactoring is risky (no regression detection)
+- Edge cases not documented (e.g., empty config, missing dirs, duplicate skills)
+- Changes to async logic may introduce race conditions
+
+**Recommendation:**
+- Add `tests/` directory with pytest
+- Minimum tests:
+  - `test_config_parsing()` - valid, invalid, missing configs
+  - `test_task_ordering()` - breadth-first vs depth-first
+  - `test_duplicate_skill_detection()` - same skill twice for same project
+  - `test_graceful_shutdown()` - SIGTERM handling
+  - `test_summary_generation()` - success/failure/timeout results
+
+---
+
+## Simplicity & Elegance Evaluation
+
+### What Works Well
+
+1. **Single Entry Point:** `docker compose run --rm skills` - one command to run everything
+2. **Clear Separation:** entrypoint.sh (setup) → run_skills.py (orchestration) → skills (analysis)
+3. **Parallel Execution:** `asyncio.gather()` with semaphore for controlled concurrency
+4. **Comprehensive Logging:** Separate logs for Docker, orchestrator, and each task
+5. **Config-Driven:** All settings in `config.yml` (except API key in `.env`)
+6. **Reproducible:** Docker ensures consistent environment across machines
+
+### What Undermines Simplicity
+
+1. **7-Stage Skill Funnel:** Each skill is 1000+ lines with nested agent invocations
+   - **Simpler:** Single-pass analysis with structured output
+
+2. **Multiple Config Files:** `config.yml`, `.env`, `settings.json`, `settings.local.json`, `CLAUDE.md`
+   - **Simpler:** Consolidate into `config.yml` + `.env`
+
+3. **Auto-Install Scripts:** Tools should be pre-installed in Dockerfile
+   - **Simpler:** Fail fast at startup if tools missing, with clear error
+
+4. **Unclear Output Format:** "Top 10" could be JSON, Markdown, or assistant message
+   - **Simpler:** Enforce JSON schema, validate in orchestrator
+
+5. **False Security Model:** Deny lists + bypassPermissions + misleading docs
+   - **Simpler:** Either enforce at Docker level OR remove security claims
+
+---
+
+## Architecture Diagram (As-Built)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Host Machine                                                 │
+│                                                              │
+│  AUDIT_BASE_DIR/                                            │
+│  ├── config.yml          ← User configures projects/skills  │
+│  ├── .env                ← API key                          │
+│  ├── CLAUDE.md           ← Copied into each project         │
+│  ├── .claude/            ← Copied into each project         │
+│  │   ├── settings.json   ← Deny lists (not enforced)       │
+│  │   ├── agents/         ← 7 agent definitions             │
+│  │   └── skills/         ← 4 language skills + tools       │
+│  ├── project-one/        ← User's code (read-write mount)  │
+│  │   ├── src/                                               │
+│  │   ├── pom.xml                                            │
+│  │   ├── .claude/        ← COPIED at startup               │
+│  │   ├── CLAUDE.md       ← COPIED at startup               │
+│  │   └── .analysis/      ← Output written here             │
+│  └── logs/               ← All logs written here           │
+│      ├── docker_{ts}.log                                    │
+│      ├── task_*.log                                         │
+│      ├── result_*.txt                                       │
+│      └── summary_{ts}.txt                                   │
+│                                                              │
+└──────────────────┬──────────────────────────────────────────┘
+                   │ docker compose run --rm skills
+                   │ Volume mount: AUDIT_BASE_DIR:/workdir
+                   ▼
+┌─────────────────────────────────────────────────────────────┐
+│ Docker Container (ephemeral)                                │
+│                                                              │
+│  /workdir/  ← Mounted from host                             │
+│                                                              │
+│  entrypoint.sh (startup)                                    │
+│  ├── Validate config.yml, CLAUDE.md, .claude/              │
+│  ├── FOR EACH project IN config.yml:                       │
+│  │   ├── rm -rf project/.claude project/CLAUDE.md          │
+│  │   ├── cp .claude/ → project/.claude/                    │
+│  │   └── cp CLAUDE.md → project/CLAUDE.md                  │
+│  └── Launch run_skills.py                                   │
+│                                                              │
+│  run_skills.py (orchestrator)                               │
+│  ├── Parse config.yml → list of (project, skill) tasks     │
+│  ├── Order tasks breadth-first                             │
+│  ├── FOR EACH task IN PARALLEL (concurrency=3):            │
+│  │   ├── stream_skill(skill, project_dir, model, ...)      │
+│  │   │   └── Claude Agent SDK query(prompt="/audit-java")  │
+│  │   │       ├── Loads .claude/skills/audit-java/SKILL.md  │
+│  │   │       ├── Executes 7-stage funnel                   │
+│  │   │       ├── Invokes 4 agents (architecture, ...)      │
+│  │   │       ├── Runs 10+ static tools (Semgrep, ...)      │
+│  │   │       └── Writes to .analysis/java/ (on host!)      │
+│  │   └── Capture result text, log to task_*.log            │
+│  └── Generate summary_{ts}.txt                              │
+│                                                              │
+│  Languages: Java, Node.js, Python, .NET (pre-installed)    │
+│  Tools: Some pre-installed, some auto-installed by skills  │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+                   │
+                   │ Container exits
+                   │ All output persists on host in:
+                   │   - project-one/.analysis/
+                   │   - logs/
+                   │
+                   ▼
+            User reviews results
 ```
 
-Contents:
-- Pass/fail matrix
-- Top 10 findings across all projects
-- Cost breakdown
-- Timeline visualization
+---
 
-**Status**: 🎯 **FEATURE REQUEST**
+## Recommendations by Priority
+
+### **P0 (Critical - Security & Reliability)**
+
+1. **Pre-install all tools in Dockerfile**
+   - Remove auto-install scripts from skills
+   - Add tool version verification in entrypoint.sh
+   - **Impact:** Eliminates arbitrary code execution vector
+
+2. **Enforce security at Docker level, not deny lists**
+   - Add `network_mode: none` to docker-compose.yml (or document why network is needed)
+   - Mount source code read-only OR remove "READ-ONLY" claims from docs
+   - **Impact:** Honest security model, no false confidence
+
+3. **Validate Top 10 output in orchestrator**
+   - Define JSON schema for top-10-opportunities.json
+   - Fail skill if output not produced
+   - Change "success" definition from "no exception" to "valid output"
+   - **Impact:** System actually delivers on stated goal
+
+### **P1 (High - Usability & Debugging)**
+
+4. **Simplify skill execution flow**
+   - Reduce 7 stages to 3: (1) Analyze, (2) Run Tools, (3) Synthesize Top 10
+   - OR add stage checkpoints with validation
+   - **Impact:** Fewer failure points, faster execution, lower cost
+
+5. **Add structured logging for skill stages**
+   - Log "Stage 2/7: Independent Analysis starting" before each stage
+   - Log stage completion with duration and token count
+   - **Impact:** Easier debugging, clearer progress indication
+
+6. **Write orchestrator logs to file**
+   - Duplicate stdout to `logs/python_{ts}.log`
+   - **Impact:** Logs persist after container removal
+
+### **P2 (Medium - Operational Excellence)**
+
+7. **Add disk space monitoring**
+   - Check before each skill, fail fast if < 500MB
+   - **Impact:** Clearer error messages, prevents cryptic failures
+
+8. **Reduce rate limit retry attempts**
+   - 6 attempts → 3 attempts
+   - Add structured retry messages with ETA
+   - **Impact:** Faster failure for quota issues, better UX
+
+9. **Add basic test coverage**
+   - Config parsing, task ordering, summary generation
+   - **Impact:** Safer refactoring, documented edge cases
+
+10. **Clarify documentation about container vs host**
+    - "Skills execute in Docker but operate on host filesystem"
+    - Document cleanup of `.claude/` and `CLAUDE.md` from projects
+    - **Impact:** Less user confusion
+
+### **P3 (Low - Nice to Have)**
+
+11. **Add scheduling strategy option**
+    - `scheduling_strategy: breadth | depth | priority` in config.yml
+    - **Impact:** Flexibility for different use cases
+
+12. **Add memory profiling**
+    - Log memory usage before/after each skill
+    - Warn if usage > 3GB (approaching 4GB container limit)
+    - **Impact:** Early detection of memory leaks
 
 ---
 
-## Testing Gaps
+## Does It Achieve The Goal?
 
-### 🧪 **TESTING #1: No Unit Tests**
+### Goal: "Provide top 10 opportunities for one or more directories without human interaction"
 
-**Coverage**: 0%
+**Answer: PARTIALLY**
 
-**Recommendation**: Add pytest tests for:
-- Config parsing ([run_skills.py:82-165](run_skills.py#L82))
-- Task deduplication logic
-- Log file path generation
-- Error handling
+✅ **What Works:**
+- Runs fully headless in Docker
+- Processes multiple projects in parallel
+- No human interaction required during execution
+- Comprehensive logging for post-mortem analysis
 
-**Example**:
-```python
-# tests/test_config.py
-def test_duplicate_skills_are_skipped():
-    config = {
-        "targets": [{
-            "dir": "proj",
-            "skills": ["/audit-java", "/audit-java"]
-        }]
-    }
-    tasks = load_config(config, ...)
-    assert len(tasks) == 1  # Only one java audit task
-```
+❌ **What Doesn't:**
+- **No verification** that "top 10" are actually produced
+- **No structured output format** - could be anything
+- **Complex execution** (7 stages, 4+ agents) hides failure modes
+- **False security claims** undermine trust in system
 
-**Status**: 🧪 **TESTING GAP**
+### Simplicity & Elegance Assessment
 
----
+**Simplicity Score: 4/10**
+- Entry point is simple (1 command)
+- Internal execution is complex (7-stage funnel, agent indirection)
+- Multiple overlapping config files
+- Security model is confusing
 
-### 🧪 **TESTING #2: No Integration Tests**
+**Elegance Score: 5/10**
+- Good separation of concerns (entrypoint → orchestrator → skills)
+- Clean async/await patterns with proper error handling
+- BUT: Excessive indirection, no output validation, misleading docs
 
-**Missing**: End-to-end test with sample project
+### "Just Works" Assessment
 
-**Recommendation**: Create `tests/fixtures/sample-java-project/` with:
-- Known vulnerabilities
-- Expected analysis outputs
-- Run full pipeline and assert findings match
+**Score: 6/10**
+- **It works** if:
+  - All tools are available (or auto-install succeeds)
+  - Budget is sufficient for 7-stage funnel
+  - Skills actually produce output (not validated)
+  - User knows where to find results (not obvious)
 
-**Status**: 🧪 **TESTING GAP**
-
----
-
-### 🧪 **TESTING #3: No Docker Smoke Test**
-
-**Recommendation**: Add health check:
-```yaml
-# docker-compose.yml
-services:
-  skills:
-    healthcheck:
-      test: ["CMD", "python3", "--version"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-```
-
-**Status**: 🧪 **TESTING GAP**
+- **It doesn't work** if:
+  - Auto-install fails (network issues, missing installers)
+  - Budget exceeded at Stage 5 (partial results, no Top 10)
+  - Disk fills during execution (cryptic error)
+  - User expects clear "Top 10" file (format undefined)
 
 ---
 
-## Priority Recommendations
+## Final Recommendation
 
-### Priority 1 (Must Fix Before First Run) ✅
-1. ✅ **Fix docker-compose.yml to pass ANTHROPIC_API_KEY** (FIXED)
-2. ✅ **Clarify AUDIT_BASE_DIR vs project directory structure** (FIXED)
-3. ✅ **Add disk space check** (FIXED)
+This system demonstrates **good engineering practices** (async orchestration, logging, error handling) but is **over-engineered for its stated goal**.
 
-### Priority 2 (Improve User Experience)
-4. 📚 **Document failure recovery** (Ready to add)
-5. 📚 **Add cost estimation guide** (Ready to add)
-6. 📚 **Create custom skills documentation** (Ready to add)
+To become a "simple, elegant solution that just works":
 
-### Priority 3 (Production Hardening) ✅
-7. ✅ **Add memory limits to docker-compose** (FIXED)
-8. ✅ **Implement graceful shutdown** (FIXED)
-9. ✅ **Implement stronger sandboxing** (FIXED - Issue #9)
-10. 🔒 **Pre-install static tools in Dockerfile** (Security + speed)
+1. **Simplify execution:** 3 stages instead of 7
+2. **Validate output:** Require structured Top 10 JSON
+3. **Pre-install tools:** Remove auto-install scripts
+4. **Honest security:** Enforce at Docker level OR remove claims
+5. **Clear documentation:** Clarify container vs host operations
 
-### Priority 4 (Nice to Have)
-11. ⚡ **Parallel agent execution within skills** (Performance)
-12. ⚡ **Static tool result caching** (Performance)
-13. 🎯 **HTML dashboard generation** (User experience)
+**Estimated effort to implement P0/P1 recommendations:** 2-3 days
+
+**Impact:** System would actually reliably deliver "Top 10 opportunities" as promised, with clear success/failure criteria and no security confusion.
 
 ---
 
-## Final Assessment
+## Conclusion
 
-**Overall Assessment**: The system is **architecturally excellent** with sophisticated multi-stage analysis, proper separation of concerns, and robust error handling. The critical bugs have been fixed.
+The codebase **achieves 70% of its goal** but has critical gaps in reliability (no output validation), security (false protection model), and usability (complex execution flow). With focused refactoring on the P0/P1 recommendations above, this could become a genuinely **simple, elegant, reliable** solution.
 
-**Simplicity Score**: 8/10 (was 7/10)
-- **Good**: Clear separation (Docker → entrypoint → orchestrator → skills)
-- **Good**: Language-agnostic design with version managers
-- **Improved**: Directory structure now clear with AUDIT_BASE_DIR
-- **Complex**: Manual file copying instead of shared mounts (documented rationale needed)
-
-**Correctness Score**: 10/10 (was 6/10)
-- **Excellent**: Critical API key bug fixed
-- **Excellent**: Directory structure clarified
-- **Excellent**: Comprehensive error handling, logging, timeout protection
-- **Excellent**: All edge cases addressed (disk space, memory limits, race conditions, graceful shutdown)
-
-**Elegance Score**: 8/10
-- **Excellent**: Breadth-first task ordering
-- **Excellent**: Retry logic with exponential backoff
-- **Excellent**: Language-specific `.analysis/<lang>/` namespacing
-- **Good**: Use of asyncio for parallel execution
-
-**Production Readiness**: 8/10 (was 5/10)
-- **Excellent**: Critical bugs fixed, resource limits set, graceful shutdown implemented
-- **Excellent**: Security hardening with comprehensive sandboxing and deny lists
-- **Excellent**: Documentation enhanced with clear structure and setup guides
-- **Excellent**: Defense-in-depth protection (source code read-only, .analysis write-only)
-- **Missing**: Tests, monitoring, metrics
-- **Missing**: Cost tracking per skill
-- **Missing**: Incremental analysis support
-- **Missing**: Centralized error dashboard
-
----
-
-## Next Steps
-
-To request implementation of any issue, reference it by number (e.g., "Please implement ISSUE #6").
-
-**Quick Reference**:
-- 🔧 = Ready to implement with concrete solution
-- 📚 = Documentation to add
-- 💡 = Optimization opportunity
-- 🔒 = Security consideration
-- ⚡ = Performance improvement
-- 🎯 = Feature enhancement
-- 🧪 = Testing gap
-- 📋 = Architectural decision needed
+The core orchestration architecture (run_skills.py) is **solid**. The problems are in the skill execution model (too complex), output validation (missing), and security documentation (misleading). These are all fixable without major architectural changes.

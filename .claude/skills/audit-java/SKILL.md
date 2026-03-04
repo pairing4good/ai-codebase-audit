@@ -1,7 +1,7 @@
 ---
 name: audit-java
 description: "Performs comprehensive 6-stage audit of Java codebases with maximum accuracy using independent agents and static analysis (OWASP Top 10, CWE/SANS 25, Spring Security)"
-user-invocable: true
+user-invokable: true
 ---
 
 # Java Codebase Audit - Executable Orchestration
@@ -512,13 +512,18 @@ mkdir -p $PROJECT_ROOT/.analysis/java/stage3-static-analysis/raw-outputs
 
 2. Mark Stage 3 as in_progress
 
-3. **Auto-install missing tools** (attempts automatic installation where possible):
+3. Verify static analysis tools are available:
 ```bash
-echo "Checking and installing static analysis tools..."
-bash .claude/skills/audit-java/tools/auto-install-tools.sh
+echo "Verifying static analysis tools..."
+echo "✓ Semgrep: $(semgrep --version 2>&1 | head -1)"
+echo "✓ Snyk: $(snyk --version 2>&1)"
+echo "✓ Trivy: $(trivy --version 2>&1 | head -1)"
+echo ""
+echo "Note: All tools are pre-installed in the Docker container."
+echo "If running outside Docker, ensure tools are installed manually."
 ```
 
-4. Detect available tools and run them:
+4. Run static analysis tools:
 
 **Tool 1: Semgrep** (OWASP Top 10, CWE/SANS 25, JWT/OAuth)
 ```bash

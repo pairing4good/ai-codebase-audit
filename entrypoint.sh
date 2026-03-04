@@ -92,6 +92,75 @@ info "  SDK     : $(python -c 'import claude_agent_sdk; print(getattr(claude_age
 sep
 
 # =============================================================================
+# Verify Static Analysis Tools (Security: Pre-installed, not auto-installed)
+# =============================================================================
+info "Verifying static analysis tools..."
+TOOL_ERRORS=0
+
+# Core tools (all languages)
+if ! command -v semgrep &> /dev/null; then
+    err "  ✗ Semgrep not found"
+    TOOL_ERRORS=1
+else
+    info "  ✓ Semgrep  : $(semgrep --version 2>&1 | head -1)"
+fi
+
+if ! command -v snyk &> /dev/null; then
+    err "  ✗ Snyk not found"
+    TOOL_ERRORS=1
+else
+    info "  ✓ Snyk     : $(snyk --version 2>&1)"
+fi
+
+if ! command -v trivy &> /dev/null; then
+    err "  ✗ Trivy not found"
+    TOOL_ERRORS=1
+else
+    info "  ✓ Trivy    : $(trivy --version 2>&1 | head -1)"
+fi
+
+# Python tools
+if ! command -v bandit &> /dev/null; then
+    err "  ✗ Bandit not found (Python analysis will be limited)"
+    TOOL_ERRORS=1
+else
+    info "  ✓ Bandit   : $(bandit --version 2>&1 | head -1)"
+fi
+
+if ! command -v pylint &> /dev/null; then
+    err "  ✗ Pylint not found (Python analysis will be limited)"
+    TOOL_ERRORS=1
+else
+    info "  ✓ Pylint   : $(pylint --version 2>&1 | head -1)"
+fi
+
+# JavaScript tools
+if ! npx eslint --version &> /dev/null; then
+    err "  ✗ ESLint not found (JavaScript analysis will be limited)"
+    TOOL_ERRORS=1
+else
+    info "  ✓ ESLint   : $(npx eslint --version 2>&1)"
+fi
+
+# .NET tools
+if ! dotnet tool list --global | grep -q dotnet-outdated; then
+    err "  ✗ dotnet-outdated not found (.NET analysis will be limited)"
+    TOOL_ERRORS=1
+else
+    info "  ✓ dotnet-outdated : installed"
+fi
+
+if [[ "${TOOL_ERRORS}" -ne 0 ]]; then
+    err "Some static analysis tools are missing!"
+    err "This should not happen - tools are pre-installed in Dockerfile."
+    err "Please rebuild the Docker image: docker compose build --no-cache"
+    exit 1
+fi
+
+ok "All static analysis tools verified"
+sep
+
+# =============================================================================
 # Validate workdir
 # =============================================================================
 info "Validating workdir..."

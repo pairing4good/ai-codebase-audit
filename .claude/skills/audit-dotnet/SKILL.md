@@ -167,13 +167,17 @@ mkdir -p $PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs
 
 2. Mark Stage 3 as in_progress
 
-3. **Auto-install missing tools** (attempts automatic installation where possible):
+3. Verify static analysis tools are available:
 ```bash
-echo "Checking and installing static analysis tools..."
-bash .claude/skills/audit-dotnet/tools/auto-install-tools.sh
+echo "Verifying static analysis tools..."
+echo "✓ Semgrep: $(semgrep --version 2>&1 | head -1)"
+echo "✓ dotnet-outdated: $(dotnet tool list --global | grep dotnet-outdated)"
+echo "✓ security-scan: $(dotnet tool list --global | grep security-scan)"
+echo ""
+echo "Note: All tools are pre-installed in the Docker container."
 ```
 
-4. Run available .NET tools:
+4. Run .NET static analysis tools:
 
 **Tool 1: Semgrep** (OWASP/CWE for C#)
 ```bash

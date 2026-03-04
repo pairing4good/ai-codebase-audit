@@ -195,6 +195,35 @@ Pre-installed:
 
 ---
 
+## Pre-installed Static Analysis Tools
+
+**Security Note:** All static analysis tools are pre-installed in the Docker image with pinned versions. This eliminates the security risk of auto-install scripts executing arbitrary code during analysis.
+
+### Core Tools (All Languages)
+- **Semgrep** v1.95.0 - SAST for OWASP Top 10, CWE/SANS 25
+- **Snyk** v1.1293.1 - Dependency vulnerability scanning
+- **Trivy** v0.58.1 - Container and dependency scanning
+
+### Python Tools
+- **Bandit** v1.7.10 - Python security issues
+- **Safety** v3.2.11 - Python dependency vulnerabilities
+- **Pylint** v3.3.2 - Code quality and PEP 8
+- **Mypy** v1.13.0 - Static type checking
+- **Radon** v6.0.1 - Code complexity metrics
+
+### JavaScript/TypeScript Tools
+- **ESLint** v9.16.0 - Linting and code quality
+- **@typescript-eslint/parser** v8.18.0 - TypeScript support
+- **@typescript-eslint/eslint-plugin** v8.18.0 - TypeScript rules
+
+### .NET Tools
+- **dotnet-outdated-tool** v4.6.4 - Dependency version checking
+- **security-scan** v5.6.7 - Security analysis for .NET
+
+All tool versions are verified at container startup. If any tools are missing, the container will fail fast with a clear error message prompting you to rebuild the image.
+
+---
+
 ## Logs
 
 All in `<AUDIT_BASE_DIR>/logs/`:
