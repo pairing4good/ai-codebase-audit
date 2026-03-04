@@ -434,21 +434,69 @@ The summary shows:
 
 ---
 
-## Permission Mode
+## Security Model
 
-This runner uses **`bypassPermissions`** mode, which is **hardcoded** and cannot be changed via configuration.
+This runner uses **`bypassPermissions`** mode for autonomous operation. Security is enforced at the **Docker level**, not by permission deny lists.
 
-**What this means:**
+### Hardcoded Settings
+
+**`bypassPermissions` mode:**
 - Claude automatically approves all tool executions without prompting
-- Enables fully autonomous operation in headless Docker environments
-- No blocking or waiting for user approval
+- Enables fully autonomous operation in headless environments
+- Cannot be changed via configuration (hardcoded for reliability)
 
-**Why it's hardcoded:**
-- **Reliability:** Ensures the runner never blocks waiting for approvals in headless environments
-- **Simplicity:** One less configuration option to worry about
-- **Security:** Designed specifically for isolated, ephemeral Docker containers
+**Why `bypassPermissions` is safe here:**
+- Skills run in **isolated, ephemeral Docker containers**
+- Security enforced by container isolation, not permission rules
+- Deny lists in `.claude/settings.json` are **documentation only**
 
-**Security note:** This runner should only be used in isolated Docker containers. The `bypassPermissions` mode is safe for this use case because:
-- Each container is ephemeral (destroyed after completion)
-- Working directory is explicitly defined and isolated
-- Perfect for automated code audits and CI/CD pipelines
+### Three Layers of Security
+
+**Layer 1: Network Isolation**
+- `network_mode: none` in docker-compose.yml
+- No internet access during analysis (prevents data exfiltration)
+- Cannot download packages, make API calls, or phone home
+- Tools are pre-installed with pinned versions (see "Pre-installed Static Analysis Tools")
+
+**Layer 2: Container Isolation**
+- Containers are ephemeral (destroyed after each run)
+- Limited blast radius (only affects mounted directories)
+- No access to host system outside mounted volumes
+
+**Layer 3: Filesystem Restrictions**
+- Config files (config.yml, CLAUDE.md, .claude/) mounted read-only
+- Source code currently mounted read-write (needed for `.claude/` file copying)
+- Only `.analysis/` and `logs/` directories receive output
+- See docker-compose.yml for volume mount configuration
+
+### What `.claude/settings.json` Actually Does
+
+**Common misconception:** The `permissions.deny` list blocks dangerous operations.
+
+**Reality with `bypassPermissions` mode:**
+- Deny lists are **documentation only** - they don't block anything
+- Claude Agent SDK doesn't enforce these rules in `bypassPermissions` mode
+- They serve as documentation of intended tool usage patterns
+- Real security comes from Docker isolation (network, filesystem, ephemeral containers)
+
+**Why this is safe:**
+- Even if skills malfunction and try to run `rm -rf /`, they only affect the container
+- Container network is disabled, so no data can be exfiltrated
+- Container is destroyed after run, so no persistent changes
+- Pre-installed tools prevent arbitrary code execution during runtime
+
+### Security Best Practices
+
+1. **Never disable network isolation** - Keep `network_mode: none` in docker-compose.yml
+2. **Review skill definitions** - Understand what each skill does before running
+3. **Use ephemeral containers** - Always use `--rm` flag: `docker compose run --rm skills`
+4. **Backup before running** - Take snapshots of projects before first audit
+5. **Review `.analysis/` output** - Check what was written to analysis directories
+
+### For CI/CD Pipelines
+
+This security model makes the runner **perfect for automated pipelines**:
+- No human approval needed (fully autonomous)
+- Isolated execution (won't affect other jobs)
+- Deterministic results (pre-installed tool versions)
+- Safe for untrusted code analysis (container isolation)

@@ -278,19 +278,32 @@ ok "Disk space OK: ${AVAILABLE_GB}GB available"
 sep
 
 # =============================================================================
-# Security Model Summary
+# Security Model Summary (Honest Assessment)
 # =============================================================================
-info "Security Model:"
-info "  ✓ Source code: READ-ONLY (protected by .claude/settings.json deny rules)"
-info "  ✓ .analysis/:   WRITE-ONLY (sandboxed output directory)"
-info "  ✓ Network:      DISABLED (prevents data exfiltration)"
-info "  ✓ Dangerous ops: BLOCKED (rm, curl, wget, ssh, git push, etc.)"
-info "  ✓ Secrets:      BLOCKED (cannot read .env, .key, .pem, credentials, etc.)"
+info "Security Model (enforced at Docker level, not deny lists):"
 info ""
-info "  Skills run with bypassPermissions mode but are constrained by:"
-info "  • Comprehensive deny list in .claude/settings.json"
-info "  • Sandbox configuration (network disabled, filesystem restricted)"
-info "  • Write access limited to .analysis/ directories only"
+info "  Layer 1: Network Isolation"
+info "    ✓ Network: DISABLED (docker-compose.yml: network_mode: none)"
+info "    ✓ No curl, wget, ssh, scp, or any network access"
+info "    ✓ Prevents data exfiltration and supply chain attacks"
+info ""
+info "  Layer 2: Container Isolation"
+info "    ✓ Ephemeral containers (destroyed after each run)"
+info "    ✓ Pre-installed tools with pinned versions (no runtime installs)"
+info "    ✓ Limited blast radius (only affects mounted directories)"
+info ""
+info "  Layer 3: Filesystem Restrictions"
+info "    ✓ Config files: READ-ONLY mounts (config.yml, CLAUDE.md, .claude/)"
+info "    ✓ Source code: Currently READ-WRITE (TODO: make read-only)"
+info "    ✓ Output: .analysis/ and logs/ are writable"
+info ""
+info "  bypassPermissions Mode:"
+info "    ⚠️  Skills run with autonomous mode (no approval gates)"
+info "    ⚠️  settings.json deny lists are DOCUMENTATION ONLY"
+info "    ⚠️  Security is enforced by Docker, not permission rules"
+info "    ✓  Safe because containers are isolated and ephemeral"
+info ""
+info "  Note: See .claude/settings.json and docker-compose.yml for details"
 sep
 
 # =============================================================================

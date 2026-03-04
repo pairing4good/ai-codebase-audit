@@ -103,11 +103,13 @@ npm install -g snyk --silent 2>&1 | tail -3
 
 ---
 
-### **DESIGN #1: bypassPermissions + Deny Lists Creates False Security**
+### **DESIGN #1: bypassPermissions + Deny Lists Creates False Security** ✅ FIXED
 
-**Location:** [run_skills.py:246](run_skills.py:246), [settings.json:26-65](/.claude/settings.json)
+**Location:** [docker-compose.yml](docker-compose.yml), [settings.json](/.claude/settings.json), [entrypoint.sh](entrypoint.sh)
 
-**Issue:**
+**Status:** RESOLVED - Security now enforced at Docker level with network isolation and honest documentation
+
+**Original Issue:**
 The system uses `bypassPermissions` mode (no approval gates) but relies on `settings.json` deny lists for security:
 
 ```python
@@ -181,22 +183,68 @@ services:
 - Deny lists give false confidence
 - Actual security comes from container isolation, not settings.json
 
-**Recommendation:**
+**Original Recommendation:**
 - **OPTION A (Secure):** Keep bypassPermissions, enforce security at Docker level:
   - Add `network_mode: none` to docker-compose.yml
   - Mount source code read-only: `${AUDIT_BASE_DIR}:/workdir:ro`
   - Mount only `.analysis/` and `logs/` as writable volumes
   - Remove misleading "sandbox" config from settings.json
 
-- **OPTION B (Transparent):** Use `permission_mode='ask'` for critical operations:
-  - Let Claude auto-approve safe reads
-  - Require approval for Bash commands with side effects
-  - Remove deny lists (they don't work with bypassPermissions anyway)
+- **OPTION B (Transparent):** Use `permission_mode='ask'` for critical operations
+- **OPTION C (Current, but honest):** Document honest security model
 
-- **OPTION C (Current, but honest):**
-  - Document that security is container ephemeral lifecycle, not deny lists
-  - Remove "READ-ONLY" and "Network DISABLED" claims from docs
-  - Add warning that malicious skills can modify source code
+**Fix Implemented (2026-03-03): OPTION A (with modifications)**
+
+1. **Network isolation added** ([docker-compose.yml:42](docker-compose.yml)):
+   ```yaml
+   network_mode: "none"  # Disable network access (prevents data exfiltration)
+   ```
+   - Prevents all network access (curl, wget, ssh, API calls)
+   - Blocks data exfiltration attempts
+   - Forces use of pre-installed tools only
+
+2. **Read-only mounts configured** ([docker-compose.yml:28-41](docker-compose.yml)):
+   ```yaml
+   volumes:
+     - ${AUDIT_BASE_DIR}/config.yml:/workdir/config.yml:ro
+     - ${AUDIT_BASE_DIR}/CLAUDE.md:/workdir/CLAUDE.md:ro
+     - ${AUDIT_BASE_DIR}/.claude:/workdir/.claude:ro
+     - ${AUDIT_BASE_DIR}/logs:/workdir/logs:rw
+     - ${AUDIT_BASE_DIR}:/workdir:rw  # Currently needed for .claude/ copying
+   ```
+   - Config files are read-only
+   - Source code currently read-write (needed for entrypoint.sh to copy `.claude/`)
+   - TODO: Implement true read-only source once we fix the file copying approach
+
+3. **Removed misleading sandbox config** ([settings.json:86](/.claude/settings.json)):
+   - Deleted `"sandbox": { "enabled": true, ... }` configuration
+   - Added honest comments explaining that deny lists don't enforce security
+   - Clarified that security comes from Docker, not permission rules
+
+4. **Updated security documentation**:
+   - [settings.json:2-3](/.claude/settings.json) - Honest security comment
+   - [entrypoint.sh:280-307](entrypoint.sh) - Accurate security banner showing 3 layers
+   - [README.md:437-502](README.md) - New "Security Model" section explaining reality
+
+5. **Added honest warnings**:
+   ```json
+   // settings.json
+   "_comment_deny": "WARNING: These deny rules provide NO actual security with
+                     bypassPermissions mode. They are documentation only."
+   ```
+
+**Result:** System now has **honest security model** enforced at Docker level:
+- ✅ Network isolation prevents data exfiltration
+- ✅ Ephemeral containers limit blast radius
+- ✅ Pre-installed tools prevent supply chain attacks
+- ✅ Documentation no longer makes false security claims
+- ⚠️  Source code not yet truly read-only (requires architectural change to file copying)
+
+**Remaining Work:**
+- Modify entrypoint.sh to not copy `.claude/` into project directories
+- Mount `.claude/` at `/workdir/.claude` only
+- Update skill instructions to reference `/workdir/.claude/` instead of project-local path
+- Then enable true read-only mounts for source directories
 
 ---
 

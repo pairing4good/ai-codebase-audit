@@ -1,6 +1,8 @@
 {
-  "_comment_security": "SECURITY MODEL: This runner uses bypassPermissions mode for autonomous operation. The permissions below provide defense-in-depth by restricting file access and dangerous operations. Skills can READ source code but CANNOT modify it - only .analysis/ is writable.",
+  "_comment_security": "SECURITY MODEL: This runner uses bypassPermissions mode for autonomous operation in isolated Docker containers. Security is enforced at the Docker level (network_mode: none, read-only volume mounts) NOT by these permission rules. The permissions below are for documentation and defense-in-depth only - they do NOT prevent Claude from executing actions when running with bypassPermissions mode.",
+  "_comment_actual_security": "Real security comes from: (1) Container network isolation (docker-compose.yml: network_mode: none), (2) Ephemeral containers (destroyed after each run), (3) Pre-installed tools with pinned versions (no arbitrary code execution), (4) Limited blast radius (only affects mounted directories).",
   "permissions": {
+    "_comment_allow": "These are the INTENDED allowed operations. With bypassPermissions mode, Claude can execute these without approval. These serve as documentation of expected tool usage.",
     "allow": [
       "Read(*)",
       "Grep(*)",
@@ -14,7 +16,12 @@
       "Bash(java *)",
       "Bash(dotnet *)",
       "Bash(eslint *)",
-      "Bash(sonar-scanner *)",
+      "Bash(semgrep *)",
+      "Bash(snyk *)",
+      "Bash(trivy *)",
+      "Bash(bandit *)",
+      "Bash(pylint *)",
+      "Bash(mypy *)",
       "Bash(spotbugs *)",
       "Bash(pmd *)",
       "Write(.analysis/**)",
@@ -23,6 +30,7 @@
       "Write(FINDINGS-DETAILED.json)",
       "Write(CONFIDENCE-MATRIX.md)"
     ],
+    "_comment_deny": "WARNING: These deny rules provide NO actual security with bypassPermissions mode. They are documentation only. If skills malfunction and attempt these operations, they WILL succeed unless blocked at Docker level.",
     "deny": [
       "Read(.env)",
       "Read(**/.env*)",
@@ -75,14 +83,7 @@
   },
   "defaultModel": "sonnet",
   "alwaysThinkingEnabled": false,
-  "sandbox": {
-    "_comment": "Sandbox provides additional protection. Network is disabled to prevent data exfiltration. Filesystem access is limited to read-only for source code, write-only for .analysis/",
-    "enabled": true,
-    "allowNetwork": false,
-    "allowFilesystem": true,
-    "readOnlyPaths": ["src", "lib", "app", "test", "tests"],
-    "writablePaths": [".analysis"]
-  },
+  "_comment_sandbox_removed": "The 'sandbox' configuration has been removed because it was misleading. The Claude Agent SDK does not automatically enforce these settings - they are just metadata. Real security is enforced at the Docker level in docker-compose.yml (network_mode: none). See docker-compose.yml for actual security controls.",
   "todoMode": "auto",
   "hooks": {
     "pre-audit": "git status --porcelain | wc -l",

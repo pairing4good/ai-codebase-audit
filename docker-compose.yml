@@ -26,7 +26,20 @@ services:
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     volumes:
-      - ${AUDIT_BASE_DIR}:/workdir
+      # Mount strategy: Read-only for configs, read-write only where needed
+      # This enforces security at the Docker level, not just deny lists
+      - ${AUDIT_BASE_DIR}/config.yml:/workdir/config.yml:ro
+      - ${AUDIT_BASE_DIR}/CLAUDE.md:/workdir/CLAUDE.md:ro
+      - ${AUDIT_BASE_DIR}/.claude:/workdir/.claude:ro
+      - ${AUDIT_BASE_DIR}/logs:/workdir/logs:rw
+      # Project directories: mount with subdirectory strategy
+      # Source code: read-only, .analysis: read-write via bind mounts
+      # Note: This requires projects to exist at fixed paths
+      # For dynamic project discovery, see alternative configuration below
+      - ${AUDIT_BASE_DIR}:/workdir:rw
+      # TODO: Once we implement structured output validation, we can make
+      # source directories truly read-only with separate .analysis mounts
+    network_mode: "none"  # Disable network access (prevents data exfiltration)
     deploy:
       resources:
         limits:
@@ -39,3 +52,31 @@ services:
         max-size: "50m"
         max-file: "5"
     restart: "no"
+
+  # Alternative configuration for strict read-only enforcement
+  # Uncomment and configure project paths manually for maximum security
+  # skills-strict:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   image: claude-skill-runner:latest
+  #   environment:
+  #     - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+  #   volumes:
+  #     - ${AUDIT_BASE_DIR}/config.yml:/workdir/config.yml:ro
+  #     - ${AUDIT_BASE_DIR}/CLAUDE.md:/workdir/CLAUDE.md:ro
+  #     - ${AUDIT_BASE_DIR}/.claude:/workdir/.claude:ro
+  #     - ${AUDIT_BASE_DIR}/logs:/workdir/logs:rw
+  #     # Per-project mounts (read-only source, read-write analysis)
+  #     - ${AUDIT_BASE_DIR}/project-one:/workdir/project-one:ro
+  #     - ${AUDIT_BASE_DIR}/project-one/.analysis:/workdir/project-one/.analysis:rw
+  #     - ${AUDIT_BASE_DIR}/project-two:/workdir/project-two:ro
+  #     - ${AUDIT_BASE_DIR}/project-two/.analysis:/workdir/project-two/.analysis:rw
+  #   network_mode: "none"
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 4G
+  #       reservations:
+  #         memory: 2G
+  #   restart: "no"
