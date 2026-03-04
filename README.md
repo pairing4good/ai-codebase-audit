@@ -7,16 +7,89 @@ Skills run directly against project directories — no sandboxes, no copying.
 
 ## Directory Structure
 
-The audit system requires a **parent directory** (AUDIT_BASE_DIR) that contains:
-1. Configuration files (config.yml, CLAUDE.md, .claude/)
+This tool uses **two separate directories**:
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│ 1. ai-codebase-audit repo (where you cloned the GitHub repo)        │
+│    /path/to/ai-codebase-audit/                                       │
+│    ├── docker-compose.yml      ← Run docker compose here            │
+│    ├── Dockerfile                                                    │
+│    ├── .env                    ← Create and configure this          │
+│    ├── .env.example                                                  │
+│    ├── entrypoint.sh                                                 │
+│    ├── run_skills.py                                                 │
+│    ├── config.yml              ← Template to copy to workspace      │
+│    ├── CLAUDE.md               ← Template to copy to workspace      │
+│    └── .claude/                ← Template to copy to workspace      │
+└──────────────────────────────────────────────────────────────────────┘
+                                  ↓ Docker mounts ↓
+┌──────────────────────────────────────────────────────────────────────┐
+│ 2. Audit workspace (separate directory you create)                  │
+│    ~/code-audits/              ← Set as AUDIT_BASE_DIR              │
+│    ├── config.yml              ← Copied from repo, edit here        │
+│    ├── CLAUDE.md               ← Copied from repo                   │
+│    ├── .claude/                ← Copied from repo                   │
+│    ├── my-java-app/            ← Your project #1                    │
+│    │   ├── src/                                                      │
+│    │   ├── pom.xml                                                   │
+│    │   ├── CLAUDE.md           ← Auto-copied at container startup   │
+│    │   ├── .claude/            ← Auto-copied at container startup   │
+│    │   └── .analysis/java/     ← Results written here               │
+│    ├── my-react-app/           ← Your project #2                    │
+│    │   ├── src/                                                      │
+│    │   ├── package.json                                              │
+│    │   ├── CLAUDE.md           ← Auto-copied at container startup   │
+│    │   ├── .claude/            ← Auto-copied at container startup   │
+│    │   └── .analysis/javascript/ ← Results written here             │
+│    └── logs/                   ← Logs written here                  │
+│        ├── docker_<ts>.log                                           │
+│        ├── python_<ts>.log                                           │
+│        ├── summary_<ts>.txt                                          │
+│        └── result_*.txt                                              │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+**Key points**:
+- **Run commands from**: ai-codebase-audit repo (where `docker-compose.yml` lives)
+- **Edit config.yml in**: Audit workspace (`~/code-audits/config.yml`)
+- **Results written to**: Audit workspace (`~/code-audits/logs/`, `.analysis/`)
+
+---
+
+### 1. ai-codebase-audit Repository (where you run commands)
+```
+/path/to/ai-codebase-audit/        ← Where you cloned this GitHub repo
+  ├── docker-compose.yml           ← Docker configuration
+  ├── Dockerfile                   ← Container build instructions
+  ├── .env                         ← Environment config (you create this)
+  ├── .env.example                 ← Template for .env
+  ├── entrypoint.sh                ← Container startup script
+  ├── run_skills.py                ← Python orchestrator
+  ├── config.yml                   ← Template (copy to workspace)
+  ├── CLAUDE.md                    ← Template (copy to workspace)
+  └── .claude/                     ← Template (copy to workspace)
+      ├── settings.json
+      ├── agents/                  ← Analysis agents
+      └── skills/                  ← Audit workflows
+```
+
+**This is where you**:
+- Create and edit the `.env` file
+- Run `docker compose build` and `docker compose run --rm skills`
+
+### 2. Audit Workspace (where projects and results live)
+
+The audit system requires a **separate workspace directory** (AUDIT_BASE_DIR) that contains:
+1. Configuration files (config.yml, CLAUDE.md, .claude/) - copied from repo
 2. Your project directories to audit
 3. Logs directory (created automatically)
 
 ```
-/your/audit-base-dir/              ← Set AUDIT_BASE_DIR to this path
-  config.yml                       ← Configure which projects & skills to run
-  CLAUDE.md                        ← Claude agent instructions (provided)
-  .claude/                         ← Shared skills and agents (provided)
+/your/audit-workspace/             ← Set AUDIT_BASE_DIR to this path
+  config.yml                       ← Copied from repo, edit to configure audits
+  CLAUDE.md                        ← Copied from repo (agent instructions)
+  .claude/                         ← Copied from repo (skills and agents)
     settings.json                  ← Agent configuration
     agents/                        ← Specialized analysis agents
       architecture-analyzer.md
@@ -35,15 +108,15 @@ The audit system requires a **parent directory** (AUDIT_BASE_DIR) that contains:
     .git/
     src/
     pom.xml
-    CLAUDE.md                      ← Copied from parent at startup
-    .claude/                       ← Copied from parent at startup
+    CLAUDE.md                      ← Copied from parent at container startup
+    .claude/                       ← Copied from parent at container startup
     .analysis/java/                ← Audit results written here
   project-two/                     ← Your second project to audit
     .git/
     src/
     package.json
-    CLAUDE.md                      ← Copied from parent at startup
-    .claude/                       ← Copied from parent at startup
+    CLAUDE.md                      ← Copied from parent at container startup
+    .claude/                       ← Copied from parent at container startup
     .analysis/javascript/          ← Audit results written here
   logs/                            ← Created automatically
     docker_<timestamp>.log         ← Container lifecycle logs
@@ -52,6 +125,11 @@ The audit system requires a **parent directory** (AUDIT_BASE_DIR) that contains:
     result_<project>__<skill>.txt  ← Final skill results
     summary_<timestamp>.txt        ← Overall pass/fail summary
 ```
+
+**This is where**:
+- Your projects live (or symlinked)
+- You edit `config.yml` to configure which projects to audit
+- All results are written (logs/ and .analysis/ directories)
 
 ---
 
@@ -80,19 +158,20 @@ Duplicate skills listed for the same directory are skipped — each
 
 ### Step 0: Prepare Your Audit Workspace
 
-Before configuring the tool, you need to create a workspace directory that will contain both the audit configuration files and your project directories.
+Before configuring the tool, you need to create a **separate workspace directory** that will contain both the audit configuration files and your project directories.
 
 ```bash
-# 1. Create a dedicated audit workspace directory
+# 1. Create a dedicated audit workspace directory (separate from ai-codebase-audit repo)
 mkdir -p ~/code-audits
 cd ~/code-audits
 
-# 2. Copy required configuration files from this repository
+# 2. Copy required configuration files FROM the ai-codebase-audit repository TO your workspace
+#    Replace /path/to/ai-codebase-audit with where you cloned the GitHub repo
 cp /path/to/ai-codebase-audit/config.yml .
 cp /path/to/ai-codebase-audit/CLAUDE.md .
 cp -r /path/to/ai-codebase-audit/.claude .
 
-# 3. Add your project(s) to this directory
+# 3. Add your project(s) to this workspace directory
 #    Option A: Move projects here
 mv /path/to/your/java-project ./my-java-app
 mv /path/to/your/react-app ./my-react-app
@@ -114,26 +193,38 @@ Your workspace should now look like:
 
 ### Step 1: Configure Environment Variables
 
+**Navigate to the ai-codebase-audit repository** (NOT your workspace):
+
 ```bash
-# From the ai-codebase-audit repository directory
+# Go to the ai-codebase-audit repository directory
+cd /path/to/ai-codebase-audit
+
+# Copy the environment template
 cp .env.example .env
 ```
 
 Edit `.env` and set:
-- `AUDIT_BASE_DIR`: Absolute path to the workspace directory you created in Step 0
+- `AUDIT_BASE_DIR`: **Absolute path** to the workspace directory you created in Step 0
 - `ANTHROPIC_API_KEY`: Your Anthropic API key from https://console.anthropic.com/settings/keys
 
-Example `.env`:
+Example `.env` (in the ai-codebase-audit repo):
 ```bash
-AUDIT_BASE_DIR=/Users/you/code-audits    # ← Path to workspace from Step 0
+AUDIT_BASE_DIR=/Users/you/code-audits    # ← Absolute path to workspace from Step 0
 ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
 ```
 
-**Important**: `AUDIT_BASE_DIR` must point to the workspace directory you created in Step 0 (the directory containing config.yml, CLAUDE.md, .claude/, AND your projects).
+**Important**:
+- The `.env` file lives in the **ai-codebase-audit repo**, NOT your workspace
+- `AUDIT_BASE_DIR` must be an **absolute path** to your workspace
 
 ### Step 2: Configure Audit Targets
 
-Edit `config.yml` in your AUDIT_BASE_DIR workspace (`~/code-audits/config.yml`)
+Edit `config.yml` **in your audit workspace** (`~/code-audits/config.yml`), NOT in the ai-codebase-audit repo:
+
+```bash
+# Edit the config.yml in your workspace
+nano ~/code-audits/config.yml
+```
 
 Configure your runner settings and target projects:
 
@@ -159,10 +250,23 @@ targets:
 
 ### Step 3: Build and Run
 
+**Navigate to the ai-codebase-audit repository** and run docker compose:
+
 ```bash
+# Go to the ai-codebase-audit repository directory (where docker-compose.yml lives)
+cd /path/to/ai-codebase-audit
+
+# Build the Docker image
 docker compose build
+
+# Run the audits
 docker compose run --rm skills
 ```
+
+**Key points**:
+- Run `docker compose` commands from the **ai-codebase-audit repo** directory
+- Docker will automatically mount your **audit workspace** (specified in `.env`) into the container
+- Results are written to your workspace directory (`~/code-audits/logs/` and `.analysis/`)
 
 ---
 

@@ -1,107 +1,96 @@
 # Quick Start
 
-Run AI-powered security audits on your codebase in 4 steps.
+Run AI-powered security audits in 3 steps. Get your API key: https://console.anthropic.com/settings/keys
 
-## 1. Create your audit workspace
+---
 
-First, create a dedicated directory that will contain everything for your audits:
+## Setup
+
+### 1. Create workspace and add projects
 
 ```bash
-# Create audit workspace directory
-mkdir -p ~/code-audits
-cd ~/code-audits
+# Create workspace (separate from this repo)
+mkdir -p ~/code-audits && cd ~/code-audits
 
-# Copy the required configuration files from this repo
-cp /path/to/this/repo/config.yml .
-cp /path/to/this/repo/CLAUDE.md .
-cp -r /path/to/this/repo/.claude .
+# Copy config files from ai-codebase-audit repo
+cp /path/to/ai-codebase-audit/{config.yml,CLAUDE.md} .
+cp -r /path/to/ai-codebase-audit/.claude .
 
-# Move or symlink your project(s) into this directory
-# Option A: Move existing projects here
-mv /path/to/your/java-project ./my-java-app
-mv /path/to/your/react-app ./my-react-app
-
-# Option B: Create symlinks (recommended if projects are elsewhere)
+# Add your projects (symlink recommended)
 ln -s /path/to/your/java-project ./my-java-app
 ln -s /path/to/your/react-app ./my-react-app
 ```
 
-Your workspace should now look like:
-```
-~/code-audits/              ← This becomes your AUDIT_BASE_DIR
-  ├── config.yml            ← Copied from repo
-  ├── CLAUDE.md             ← Copied from repo
-  ├── .claude/              ← Copied from repo
-  ├── my-java-app/          ← Your project (moved or symlinked)
-  └── my-react-app/         ← Your project (moved or symlinked)
-```
+### 2. Configure
 
-## 2. Configure environment
-
+**In the ai-codebase-audit repo** (NOT workspace), create `.env`:
 ```bash
-# From the ai-codebase-audit repo directory
+cd /path/to/ai-codebase-audit
 cp .env.example .env
-
-# Edit .env - set these two values:
-AUDIT_BASE_DIR=/Users/you/code-audits  # ← Path to the workspace you just created
-ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
 ```
 
-**Important**: `AUDIT_BASE_DIR` points to the workspace directory you created in step 1.
+Edit `.env`:
+```bash
+AUDIT_BASE_DIR=/Users/you/code-audits  # Absolute path to workspace
+ANTHROPIC_API_KEY=sk-ant-api03-...
+```
 
-Get your API key: https://console.anthropic.com/settings/keys
+**In your workspace**, edit `config.yml`:
+```bash
+nano ~/code-audits/config.yml
+```
 
-## 3. Set targets
-
-Edit `config.yml` in your AUDIT_BASE_DIR (~/code-audits/config.yml):
-
+Set targets:
 ```yaml
 targets:
-  - dir: my-java-app       # ← Must match directory name in step 1
-    skills:
-      - /audit-java
-
-  - dir: my-react-app      # ← Must match directory name in step 1
-    skills:
-      - /audit-javascript
+  - dir: my-java-app        # Must match directory name
+    skills: [/audit-java]
+  - dir: my-react-app
+    skills: [/audit-javascript]
 ```
 
-**Important**: The `dir:` values must exactly match your project directory names from step 1.
+### 3. Run
 
-## 4. Run
-
+**From the ai-codebase-audit repo** (where `docker-compose.yml` lives):
 ```bash
+cd /path/to/ai-codebase-audit
 docker compose build
 docker compose run --rm skills
 ```
 
+---
+
 ## Results
 
-All output in `<AUDIT_BASE_DIR>/logs/`:
-- `summary_<timestamp>.txt` - Pass/fail overview
-- `result_<project>__<skill>_<timestamp>.txt` - Detailed findings
-- `.analysis/<language>/` in each project - Full analysis artifacts
+Outputs written to your **workspace** (`~/code-audits/`):
+- `logs/summary_<timestamp>.txt` - Pass/fail overview
+- `logs/result_<project>__<skill>_<timestamp>.txt` - Detailed findings
+- `<project>/.analysis/<language>/` - Full analysis artifacts
+
+---
 
 ## What it does
 
-Each audit skill:
-1. Analyzes architecture, security, dependencies, maintainability
-2. Runs language-specific static analysis tools (Semgrep, Snyk, etc.)
-3. Reconciles findings with independent agents
-4. Generates final security report with confidence ratings
+Each audit runs 4 independent agents analyzing:
+- Architecture & design patterns
+- Security vulnerabilities (OWASP Top 10, CWE/SANS 25)
+- Dependencies & supply chain risks
+- Code quality & maintainability
 
-## Config options
+Then reconciles findings with static analysis tools (Semgrep, Snyk, etc.) and generates a final report.
 
+---
+
+## Advanced
+
+Available skills: `/audit-java`, `/audit-javascript`, `/audit-python`, `/audit-dotnet`
+
+Config options (in workspace `config.yml`):
 ```yaml
 runner:
-  model: claude-sonnet-4-6   # or claude-opus-4-6
+  model: claude-sonnet-4-6   # or claude-opus-4-6 (3x cost)
   concurrency: 3             # parallel tasks
-  max_turns: 20              # agent conversation limit
-  timeout: 300               # seconds per task
   max_budget_usd: 10.0       # cost limit per task
 ```
 
-## Need help?
-
-- See [README.md](README.md) for full documentation
-- Check [CLAUDE.md](CLAUDE.md) for Docker environment details
+See [README.md](README.md) for cost estimates, troubleshooting, and security details.
