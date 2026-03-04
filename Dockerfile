@@ -64,8 +64,8 @@ RUN mkdir -p "${NVM_DIR}" \
 
 RUN bash -c "source ${NVM_DIR}/nvm.sh \
     && nvm install 20 \
-    && nvm alias default 20" \
- && node --version && npm --version
+    && nvm alias default 20 \
+    && node --version && npm --version"
 
 RUN bash -c "source ${NVM_DIR}/nvm.sh && nvm install 18"
 
@@ -96,9 +96,10 @@ RUN mkdir -p "${DOTNET_ROOT}" \
  && dotnet --version
 
 # =============================================================================
-# 6. Python runner packages
+# 6. Python runner packages & setuptools (required for pkg_resources)
 # =============================================================================
-RUN pip install --no-cache-dir claude-agent-sdk pyyaml tenacity
+# Pin setuptools<70 because pkg_resources was removed in setuptools 70+
+RUN pip install --no-cache-dir 'setuptools<70' wheel claude-agent-sdk pyyaml tenacity
 
 # =============================================================================
 # 6b. Static Analysis Tools (Pre-installed for security)
@@ -108,19 +109,31 @@ RUN pip install --no-cache-dir claude-agent-sdk pyyaml tenacity
 # installed from verified sources during Docker build with pinned versions.
 
 # Semgrep - SAST tool for security analysis (all languages)
-RUN pip install --no-cache-dir semgrep==1.95.0
+# Note: Verify setuptools, then install semgrep
+RUN python -c "import pkg_resources; print('pkg_resources found')" && \
+    pip install --no-cache-dir semgrep==1.100.0 && \
+    python -c "import pkg_resources; print('pkg_resources still available after semgrep install')"
 
 # Snyk CLI - Dependency vulnerability scanner (all languages)
 RUN bash -c "source ${NVM_DIR}/nvm.sh && npm install -g snyk@1.1293.1"
 
 # Trivy - Container and dependency scanner (all languages)
-RUN wget -qO- https://github.com/aquasecurity/trivy/releases/download/v0.58.1/trivy_0.58.1_Linux-64bit.tar.gz \
-    | tar -xzf - -C /usr/local/bin trivy \
- && chmod +x /usr/local/bin/trivy
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then \
+        TRIVY_ARCH="ARM64"; \
+    else \
+        TRIVY_ARCH="64bit"; \
+    fi && \
+    TRIVY_VERSION="0.69.3" && \
+    wget -O /tmp/trivy.tar.gz https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-${TRIVY_ARCH}.tar.gz && \
+    tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy && \
+    rm /tmp/trivy.tar.gz && \
+    chmod +x /usr/local/bin/trivy
 
 # Python-specific tools
 RUN pip install --no-cache-dir \
     bandit==1.7.10 \
+    'typer<0.15' \
     safety==3.2.11 \
     pylint==3.3.2 \
     mypy==1.13.0 \
@@ -138,7 +151,7 @@ RUN dotnet tool install --global dotnet-outdated-tool --version 4.6.4 \
 
 # Verify all tools are accessible
 RUN semgrep --version \
- && snyk --version \
+ && bash -c "source ${NVM_DIR}/nvm.sh && snyk --version" \
  && trivy --version \
  && bandit --version \
  && safety --version \

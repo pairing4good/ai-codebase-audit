@@ -16,13 +16,21 @@
 #   .NET    → dotnet (no version switcher, side-by-side SDKs)
 # =============================================================================
 
-# SDKMAN (Java)
+# SDKMAN (Java) - disable strict mode temporarily for sourcing
 export SDKMAN_DIR="/opt/sdkman"
-[[ -s "${SDKMAN_DIR}/bin/sdkman-init.sh" ]] && source "${SDKMAN_DIR}/bin/sdkman-init.sh"
+if [[ -s "${SDKMAN_DIR}/bin/sdkman-init.sh" ]]; then
+    set +u  # Temporarily disable unbound variable errors
+    source "${SDKMAN_DIR}/bin/sdkman-init.sh"
+    set -u  # Re-enable if it was set
+fi
 
 # nvm (Node.js)
 export NVM_DIR="/opt/nvm"
-[[ -s "${NVM_DIR}/nvm.sh" ]] && source "${NVM_DIR}/nvm.sh"
+if [[ -s "${NVM_DIR}/nvm.sh" ]]; then
+    set +u  # Temporarily disable unbound variable errors
+    source "${NVM_DIR}/nvm.sh"
+    set -u  # Re-enable if it was set
+fi
 
 # pyenv (Python)
 export PYENV_ROOT="/opt/pyenv"
@@ -32,3 +40,6 @@ command -v pyenv > /dev/null && eval "$(pyenv init -)"
 # .NET (side-by-side SDKs)
 export DOTNET_ROOT="/opt/dotnet"
 export PATH="${DOTNET_ROOT}:${PATH}"
+
+# .NET tools (installed globally)
+export PATH="${PATH}:/root/.dotnet/tools"
