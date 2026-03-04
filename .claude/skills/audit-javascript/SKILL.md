@@ -385,7 +385,7 @@ Use the exact JSON schema defined in your agent definition (.claude/agents/depen
 
 1. Create directory:
 ```bash
-mkdir -p "$PROJECT_ROOT/$PROJECT_ROOT/.analysis/javascript/stage3-static-analysis/raw-outputs"
+mkdir -p "$PROJECT_ROOT/.analysis/javascript/stage3-static-analysis/raw-outputs"
 ```
 
 2. Mark Stage 3 as in_progress
