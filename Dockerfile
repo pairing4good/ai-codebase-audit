@@ -145,11 +145,7 @@ RUN bash -c "source ${NVM_DIR}/nvm.sh && npm install -g \
     @typescript-eslint/parser@8.18.0 \
     @typescript-eslint/eslint-plugin@8.18.0"
 
-# .NET tools (installed as global dotnet tools)
-RUN dotnet tool install --global dotnet-outdated-tool --version 4.6.4 \
- && dotnet tool install --global security-scan --version 5.6.7
-
-# Verify all tools are accessible
+# Verify all tools are accessible (except .NET tools, which need to be installed per-user)
 RUN semgrep --version \
  && bash -c "source ${NVM_DIR}/nvm.sh && snyk --version" \
  && trivy --version \
@@ -158,14 +154,12 @@ RUN semgrep --version \
  && pylint --version \
  && mypy --version \
  && radon --version \
- && bash -c "source ${NVM_DIR}/nvm.sh && eslint --version" \
- && dotnet tool list --global
+ && bash -c "source ${NVM_DIR}/nvm.sh && eslint --version"
 
 # =============================================================================
 # 7. Source version managers in all bash sessions
 # =============================================================================
-# Source the consolidated initialization script from .bashrc
-RUN echo 'source /opt/init-env.sh' >> /root/.bashrc
+# (Will be configured for claude user in step 10)
 
 # =============================================================================
 # 8. Environment + git config
@@ -184,6 +178,25 @@ RUN mkdir -p /app
 COPY entrypoint.sh /app/entrypoint.sh
 COPY run_skills.py /app/run_skills.py
 RUN chmod +x /app/entrypoint.sh
+
+# =============================================================================
+# 10. Create non-root user (required for bypassPermissions mode)
+# =============================================================================
+# Claude Agent SDK refuses to run --dangerously-skip-permissions as root
+RUN useradd -m -u 1000 -s /bin/bash claude \
+ && mkdir -p /workdir \
+ && chown -R claude:claude /workdir /app \
+ && chown -R claude:claude ${SDKMAN_DIR} ${NVM_DIR} ${PYENV_ROOT} ${DOTNET_ROOT} \
+ && echo 'source /opt/init-env.sh' >> /home/claude/.bashrc
+
+USER claude
+
+# .NET global tools must be installed as the user that will run them
+RUN dotnet tool install --global dotnet-outdated-tool --version 4.6.4 \
+ && dotnet tool install --global security-scan --version 5.6.7
+
+# Add .NET tools to PATH for claude user
+ENV PATH="/home/claude/.dotnet/tools:${PATH}"
 
 WORKDIR /workdir
 
