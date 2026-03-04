@@ -642,7 +642,7 @@ echo "Note: All tools are pre-installed in the Docker container."
 ```bash
 if command -v semgrep >/dev/null 2>&1; then
   echo "Running Semgrep with Python OWASP/CWE rulesets..."
-  bash .claude/skills/audit-python/tools/semgrep-runner.sh . $PROJECT_ROOT/.analysis/python/stage3-static-analysis/raw-outputs/semgrep-report.json
+  bash .claude/skills/audit-python/tools/semgrep-runner.sh . "$PROJECT_ROOT/.analysis/python/stage3-static-analysis/raw-outputs/semgrep-report.json"
 else
   echo "⚠️ Semgrep not installed (optional but recommended)"
 fi
@@ -652,7 +652,7 @@ fi
 ```bash
 if command -v bandit >/dev/null 2>&1 || $PIP_CMD list | grep -q bandit; then
   echo "Running Bandit for Python security analysis..."
-  bash .claude/skills/audit-python/tools/bandit-runner.sh . $PROJECT_ROOT/.analysis/python/stage3-static-analysis/raw-outputs/bandit-report.json
+  bash .claude/skills/audit-python/tools/bandit-runner.sh . "$PROJECT_ROOT/.analysis/python/stage3-static-analysis/raw-outputs/bandit-report.json"
 else
   echo "⚠️ Bandit not installed (will attempt to install)"
 fi
@@ -662,7 +662,7 @@ fi
 ```bash
 if command -v pylint >/dev/null 2>&1 || $PIP_CMD list | grep -q pylint; then
   echo "Running Pylint for code quality analysis..."
-  bash .claude/skills/audit-python/tools/pylint-runner.sh . $PROJECT_ROOT/.analysis/python/stage3-static-analysis/raw-outputs/pylint-report.json
+  bash .claude/skills/audit-python/tools/pylint-runner.sh . "$PROJECT_ROOT/.analysis/python/stage3-static-analysis/raw-outputs/pylint-report.json"
 else
   echo "⚠️ Pylint not installed (will attempt to install)"
 fi
@@ -672,7 +672,7 @@ fi
 ```bash
 if command -v mypy >/dev/null 2>&1 || $PIP_CMD list | grep -q mypy; then
   echo "Running mypy for static type checking..."
-  bash .claude/skills/audit-python/tools/mypy-runner.sh . $PROJECT_ROOT/.analysis/python/stage3-static-analysis/raw-outputs/mypy-report.json
+  bash .claude/skills/audit-python/tools/mypy-runner.sh . "$PROJECT_ROOT/.analysis/python/stage3-static-analysis/raw-outputs/mypy-report.json"
 else
   echo "⚠️ mypy not installed (optional)"
 fi
@@ -682,7 +682,7 @@ fi
 ```bash
 if command -v safety >/dev/null 2>&1 || $PIP_CMD list | grep -q safety; then
   echo "Running Safety for dependency vulnerability scanning..."
-  bash .claude/skills/audit-python/tools/safety-runner.sh . $PROJECT_ROOT/.analysis/python/stage3-static-analysis/raw-outputs/safety-report.json
+  bash .claude/skills/audit-python/tools/safety-runner.sh . "$PROJECT_ROOT/.analysis/python/stage3-static-analysis/raw-outputs/safety-report.json"
 else
   echo "⚠️ Safety not installed (will attempt to install)"
 fi
@@ -692,7 +692,7 @@ fi
 ```bash
 if command -v snyk >/dev/null 2>&1; then
   echo "Running Snyk Code and Open Source analysis..."
-  bash .claude/skills/audit-python/tools/snyk-runner.sh . $PROJECT_ROOT/.analysis/python/stage3-static-analysis/raw-outputs
+  bash .claude/skills/audit-python/tools/snyk-runner.sh . "$PROJECT_ROOT/.analysis/python/stage3-static-analysis/raw-outputs"
 else
   echo "⚠️ Snyk not installed (optional but recommended for CVE detection)"
 fi
@@ -702,7 +702,7 @@ fi
 ```bash
 if command -v trivy >/dev/null 2>&1; then
   echo "Running Trivy for container and dependency scanning..."
-  bash .claude/skills/audit-python/tools/trivy-runner.sh . $PROJECT_ROOT/.analysis/python/stage3-static-analysis/raw-outputs/trivy-report.json
+  bash .claude/skills/audit-python/tools/trivy-runner.sh . "$PROJECT_ROOT/.analysis/python/stage3-static-analysis/raw-outputs/trivy-report.json"
 else
   echo "⚠️ Trivy not installed (optional)"
 fi
@@ -712,7 +712,7 @@ fi
 ```bash
 if command -v radon >/dev/null 2>&1 || $PIP_CMD list | grep -q radon; then
   echo "Running Radon for complexity analysis..."
-  bash .claude/skills/audit-python/tools/radon-runner.sh . $PROJECT_ROOT/.analysis/python/stage3-static-analysis/raw-outputs/radon-report.json
+  bash .claude/skills/audit-python/tools/radon-runner.sh . "$PROJECT_ROOT/.analysis/python/stage3-static-analysis/raw-outputs/radon-report.json"
 else
   echo "⚠️ Radon not installed (optional)"
 fi
@@ -722,7 +722,7 @@ fi
 ```bash
 if [ -f "sonar-project.properties" ] && command -v sonar-scanner >/dev/null 2>&1; then
   echo "Running SonarQube Scanner..."
-  bash .claude/skills/audit-python/tools/sonarqube-runner.sh . $PROJECT_ROOT/.analysis/python/stage3-static-analysis/raw-outputs/sonarqube-report.json
+  bash .claude/skills/audit-python/tools/sonarqube-runner.sh . "$PROJECT_ROOT/.analysis/python/stage3-static-analysis/raw-outputs/sonarqube-report.json"
 else
   echo "⚠️ SonarQube not configured (optional)"
 fi

@@ -121,7 +121,7 @@ fi
 7. Check build status (STOP IF FAILED):
 
 ```bash
-if [ $BUILD_STATUS -ne 0 ]; then
+if [ "$BUILD_STATUS" -ne 0 ]; then
   echo ""
   echo "❌ ERROR: Project does not compile!"
   echo ""
@@ -530,7 +530,7 @@ echo "If running outside Docker, ensure tools are installed manually."
 ```bash
 if command -v semgrep >/dev/null 2>&1; then
   echo "Running Semgrep with Java OWASP/CWE/JWT rulesets..."
-  bash .claude/skills/audit-java/tools/semgrep-runner.sh . $PROJECT_ROOT/.analysis/java/stage3-static-analysis/raw-outputs/semgrep-report.json
+  bash .claude/skills/audit-java/tools/semgrep-runner.sh . "$PROJECT_ROOT/.analysis/java/stage3-static-analysis/raw-outputs/semgrep-report.json"
 else
   echo "⚠️ Semgrep not installed (optional but recommended)"
 fi
@@ -540,7 +540,7 @@ fi
 ```bash
 if command -v mvn >/dev/null 2>&1 || command -v gradle >/dev/null 2>&1; then
   echo "Running SpotBugs with Find Security Bugs plugin..."
-  bash .claude/skills/audit-java/tools/spotbugs-runner.sh . $PROJECT_ROOT/.analysis/java/stage3-static-analysis/raw-outputs/spotbugs-report.xml
+  bash .claude/skills/audit-java/tools/spotbugs-runner.sh . "$PROJECT_ROOT/.analysis/java/stage3-static-analysis/raw-outputs/spotbugs-report.xml"
 else
   echo "⚠️ Maven or Gradle not found for SpotBugs"
 fi
@@ -550,7 +550,7 @@ fi
 ```bash
 if command -v mvn >/dev/null 2>&1 || command -v gradle >/dev/null 2>&1; then
   echo "Running PMD for code quality analysis..."
-  bash .claude/skills/audit-java/tools/pmd-runner.sh . $PROJECT_ROOT/.analysis/java/stage3-static-analysis/raw-outputs/pmd-report.xml
+  bash .claude/skills/audit-java/tools/pmd-runner.sh . "$PROJECT_ROOT/.analysis/java/stage3-static-analysis/raw-outputs/pmd-report.xml"
 else
   echo "⚠️ Maven or Gradle not found for PMD"
 fi
@@ -560,7 +560,7 @@ fi
 ```bash
 if command -v mvn >/dev/null 2>&1 || command -v gradle >/dev/null 2>&1; then
   echo "Running Checkstyle..."
-  bash .claude/skills/audit-java/tools/checkstyle-runner.sh . $PROJECT_ROOT/.analysis/java/stage3-static-analysis/raw-outputs/checkstyle-report.xml
+  bash .claude/skills/audit-java/tools/checkstyle-runner.sh . "$PROJECT_ROOT/.analysis/java/stage3-static-analysis/raw-outputs/checkstyle-report.xml"
 else
   echo "⚠️ Maven or Gradle not found for Checkstyle"
 fi
@@ -570,7 +570,7 @@ fi
 ```bash
 if command -v snyk >/dev/null 2>&1; then
   echo "Running Snyk Code and Open Source analysis..."
-  bash .claude/skills/audit-java/tools/snyk-runner.sh . $PROJECT_ROOT/.analysis/java/stage3-static-analysis/raw-outputs
+  bash .claude/skills/audit-java/tools/snyk-runner.sh . "$PROJECT_ROOT/.analysis/java/stage3-static-analysis/raw-outputs"
 else
   echo "⚠️ Snyk not installed (optional but recommended for CVE detection)"
 fi
@@ -580,7 +580,7 @@ fi
 ```bash
 if command -v dependency-check >/dev/null 2>&1; then
   echo "Running OWASP Dependency-Check..."
-  bash .claude/skills/audit-java/tools/dependency-check-runner.sh . $PROJECT_ROOT/.analysis/java/stage3-static-analysis/raw-outputs/dependency-check-report.json
+  bash .claude/skills/audit-java/tools/dependency-check-runner.sh . "$PROJECT_ROOT/.analysis/java/stage3-static-analysis/raw-outputs/dependency-check-report.json"
 else
   echo "⚠️ OWASP Dependency-Check not installed (optional)"
 fi
@@ -590,7 +590,7 @@ fi
 ```bash
 if command -v trivy >/dev/null 2>&1; then
   echo "Running Trivy for container and IaC scanning..."
-  bash .claude/skills/audit-java/tools/trivy-runner.sh . $PROJECT_ROOT/.analysis/java/stage3-static-analysis/raw-outputs/trivy-report.json
+  bash .claude/skills/audit-java/tools/trivy-runner.sh . "$PROJECT_ROOT/.analysis/java/stage3-static-analysis/raw-outputs/trivy-report.json"
 else
   echo "⚠️ Trivy not installed (optional)"
 fi
@@ -600,7 +600,7 @@ fi
 ```bash
 if [ -f "sonar-project.properties" ] && command -v sonar-scanner >/dev/null 2>&1; then
   echo "Running SonarQube Scanner..."
-  bash .claude/skills/audit-java/tools/sonarqube-runner.sh . $PROJECT_ROOT/.analysis/java/stage3-static-analysis/raw-outputs/sonarqube-report.json
+  bash .claude/skills/audit-java/tools/sonarqube-runner.sh . "$PROJECT_ROOT/.analysis/java/stage3-static-analysis/raw-outputs/sonarqube-report.json"
 else
   echo "⚠️ SonarQube not configured (optional)"
 fi
@@ -608,7 +608,7 @@ fi
 
 5. Unify results using format-static-results.js:
 ```bash
-node .claude/skills/audit-java/tools/format-static-results.js $PROJECT_ROOT/.analysis/java/stage3-static-analysis
+node .claude/skills/audit-java/tools/format-static-results.js "$PROJECT_ROOT/.analysis/java/stage3-static-analysis"
 ```
 
 This creates:

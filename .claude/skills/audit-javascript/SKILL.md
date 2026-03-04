@@ -422,14 +422,14 @@ npm audit --json > $PROJECT_ROOT/.analysis/javascript/stage3-static-analysis/raw
 **Semgrep** (if available):
 ```bash
 if command -v semgrep >/dev/null 2>&1; then
-  bash .claude/skills/audit-javascript/tools/semgrep-runner.sh . $PROJECT_ROOT/.analysis/javascript/stage3-static-analysis/raw-outputs/semgrep-report.json
+  bash .claude/skills/audit-javascript/tools/semgrep-runner.sh . "$PROJECT_ROOT/.analysis/javascript/stage3-static-analysis/raw-outputs/semgrep-report.json"
 fi
 ```
 
 **Snyk** (if available and authenticated):
 ```bash
 if command -v snyk >/dev/null 2>&1; then
-  bash .claude/skills/audit-javascript/tools/snyk-runner.sh . $PROJECT_ROOT/.analysis/javascript/stage3-static-analysis/raw-outputs
+  bash .claude/skills/audit-javascript/tools/snyk-runner.sh . "$PROJECT_ROOT/.analysis/javascript/stage3-static-analysis/raw-outputs"
 fi
 ```
 

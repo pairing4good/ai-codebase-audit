@@ -182,43 +182,43 @@ echo "Note: All tools are pre-installed in the Docker container."
 **Tool 1: Semgrep** (OWASP/CWE for C#)
 ```bash
 if command -v semgrep >/dev/null 2>&1; then
-  bash .claude/skills/audit-dotnet/tools/semgrep-runner.sh . $PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs/semgrep-report.json
+  bash .claude/skills/audit-dotnet/tools/semgrep-runner.sh . "$PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs/semgrep-report.json"
 fi
 ```
 
 **Tool 2: Roslyn Analyzers** (built into dotnet build)
 ```bash
-bash .claude/skills/audit-dotnet/tools/roslyn-analyzer-runner.sh . $PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs/roslyn-report.json
+bash .claude/skills/audit-dotnet/tools/roslyn-analyzer-runner.sh . "$PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs/roslyn-report.json"
 ```
 
 **Tool 3: Security Code Scan** (NuGet analyzer)
 ```bash
-bash .claude/skills/audit-dotnet/tools/security-code-scan-runner.sh . $PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs/security-code-scan-report.json
+bash .claude/skills/audit-dotnet/tools/security-code-scan-runner.sh . "$PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs/security-code-scan-report.json"
 ```
 
 **Tool 4: Snyk** (SAST + Dependencies)
 ```bash
 if command -v snyk >/dev/null 2>&1; then
-  bash .claude/skills/audit-dotnet/tools/snyk-runner.sh . $PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs
+  bash .claude/skills/audit-dotnet/tools/snyk-runner.sh . "$PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs"
 fi
 ```
 
 **Tool 5: dotnet-outdated** (Dependency versions)
 ```bash
-bash .claude/skills/audit-dotnet/tools/dotnet-outdated-runner.sh . $PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs/dotnet-outdated-report.json
+bash .claude/skills/audit-dotnet/tools/dotnet-outdated-runner.sh . "$PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs/dotnet-outdated-report.json"
 ```
 
 **Tool 6: Trivy** (Container/IaC)
 ```bash
 if command -v trivy >/dev/null 2>&1; then
-  bash .claude/skills/audit-dotnet/tools/trivy-runner.sh . $PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs/trivy-report.json
+  bash .claude/skills/audit-dotnet/tools/trivy-runner.sh . "$PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs/trivy-report.json"
 fi
 ```
 
 **Tool 7: SonarQube** (if configured)
 ```bash
 if command -v sonar-scanner >/dev/null 2>&1; then
-  bash .claude/skills/audit-dotnet/tools/sonarqube-runner.sh . $PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs/sonarqube-report.json
+  bash .claude/skills/audit-dotnet/tools/sonarqube-runner.sh . "$PROJECT_ROOT/.analysis/dotnet/stage3-static-analysis/raw-outputs/sonarqube-report.json"
 fi
 ```
 
