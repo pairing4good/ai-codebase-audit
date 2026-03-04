@@ -946,7 +946,7 @@ All stage-by-stage outputs available in `$PROJECT_ROOT/.analysis/java/`:
 
 9. **Create ARCHITECTURE-OVERVIEW.md**:
 ```bash
-cp $PROJECT_ROOT/.analysis/java/stage1-artifacts/architecture-overview.md $PROJECT_ROOT/.analysis/java/final-report/ARCHITECTURE-OVERVIEW.md
+cp "$PROJECT_ROOT/.analysis/java/stage1-artifacts/architecture-overview.md" "$PROJECT_ROOT/.analysis/java/final-report/ARCHITECTURE-OVERVIEW.md"
 ```
 
 10. **Create FINDINGS-DETAILED.json**: Export all upheld findings with complete structure (must include `example` field with `file`, `line_start`, `line_end`, and `code` for each finding)
