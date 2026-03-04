@@ -16,9 +16,9 @@ mkdir -p ~/code-audits && cd ~/code-audits
 cp /path/to/ai-codebase-audit/{config.yml,CLAUDE.md} .
 cp -r /path/to/ai-codebase-audit/.claude .
 
-# Add your projects (symlink recommended)
-ln -s /path/to/your/java-project ./my-java-app
-ln -s /path/to/your/react-app ./my-react-app
+# Copy your projects to the workspace
+cp -r /path/to/your/java-project ./my-java-app
+cp -r /path/to/your/react-app ./my-react-app
 ```
 
 ### 2. Configure

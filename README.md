@@ -127,7 +127,7 @@ The audit system requires a **separate workspace directory** (AUDIT_BASE_DIR) th
 ```
 
 **This is where**:
-- Your projects live (or symlinked)
+- Your projects live
 - You edit `config.yml` to configure which projects to audit
 - All results are written (logs/ and .analysis/ directories)
 
@@ -171,14 +171,9 @@ cp /path/to/ai-codebase-audit/config.yml .
 cp /path/to/ai-codebase-audit/CLAUDE.md .
 cp -r /path/to/ai-codebase-audit/.claude .
 
-# 3. Add your project(s) to this workspace directory
-#    Option A: Move projects here
-mv /path/to/your/java-project ./my-java-app
-mv /path/to/your/react-app ./my-react-app
-
-#    Option B: Create symlinks (recommended - keeps projects in original locations)
-ln -s /path/to/your/java-project ./my-java-app
-ln -s /path/to/your/react-app ./my-react-app
+# 3. Copy your project(s) to this workspace directory
+cp -r /path/to/your/java-project ./my-java-app
+cp -r /path/to/your/react-app ./my-react-app
 ```
 
 Your workspace should now look like:
@@ -187,8 +182,8 @@ Your workspace should now look like:
   ├── config.yml            ← Copied from ai-codebase-audit repo
   ├── CLAUDE.md             ← Copied from ai-codebase-audit repo
   ├── .claude/              ← Copied from ai-codebase-audit repo
-  ├── my-java-app/          ← Your project (moved or symlinked)
-  └── my-react-app/         ← Your project (moved or symlinked)
+  ├── my-java-app/          ← Your project (copied here)
+  └── my-react-app/         ← Your project (copied here)
 ```
 
 ### Step 1: Configure Environment Variables
