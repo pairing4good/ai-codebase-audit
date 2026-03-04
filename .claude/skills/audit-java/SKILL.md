@@ -110,10 +110,11 @@ if [ "$BUILD_TOOL" = "maven" ]; then
 elif [ "$BUILD_TOOL" = "gradle" ]; then
   if [ -f "./gradlew" ]; then
     ./gradlew clean compileJava compileTestJava --no-daemon --quiet
+    BUILD_STATUS=$?
   else
     gradle clean compileJava compileTestJava --no-daemon --quiet
+    BUILD_STATUS=$?
   fi
-  BUILD_STATUS=$?
 fi
 ```
 
