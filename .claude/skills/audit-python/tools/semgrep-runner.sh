@@ -20,7 +20,16 @@ fi
 # --config: Use Python OWASP and security rulesets
 # --json: JSON output
 # --quiet: Minimize output noise
-semgrep scan \
+
+# Debug mode: show full command
+if [ "$DEBUG_MODE" = "true" ]; then
+  echo "DEBUG: Running semgrep with configs: python, owasp-top-ten, django, flask, security-audit"
+  set -x
+fi
+
+# Capture stderr to detect actual errors (not just findings)
+ERROR_FILE=$(mktemp)
+if semgrep scan \
   --config "p/python" \
   --config "p/owasp-top-ten" \
   --config "p/django" \
@@ -35,7 +44,27 @@ semgrep scan \
   --exclude "__pycache__/" \
   --output "$OUTPUT_FILE" \
   "$SOURCE_DIR" \
-  2>&1 || true  # Don't fail if issues found
+  2>"$ERROR_FILE"; then
+  # Success
+  rm -f "$ERROR_FILE"
+else
+  # Tool failed - log error details but don't fail the analysis
+  EXIT_CODE=$?
+  echo "⚠️ Semgrep exited with code $EXIT_CODE" >&2
+  if [ -s "$ERROR_FILE" ]; then
+    echo "Error output:" >&2
+    cat "$ERROR_FILE" >&2
+  fi
+  rm -f "$ERROR_FILE"
+  # Create empty result if no output file
+  if [ ! -f "$OUTPUT_FILE" ]; then
+    echo '{"results":[]}' > "$OUTPUT_FILE"
+  fi
+fi
+
+if [ "$DEBUG_MODE" = "true" ]; then
+  set +x
+fi
 
 if [ -f "$OUTPUT_FILE" ]; then
   echo "✅ Semgrep scan complete: $OUTPUT_FILE"

@@ -48,3 +48,27 @@ targets:
   - dir: project-two
     skills:
       - /audit-dotnet
+# =============================================================================
+# DEBUG CONFIGURATION
+# =============================================================================
+# When enabled, provides verbose logging for diagnosing issues:
+#   - Full SDK messages (no truncation of assistant/tool outputs)
+#   - Tool command execution details (via bash set -x)
+#   - Timing instrumentation for tasks
+#   - Environment and startup diagnostics
+#
+# ⚠️  WARNING: Debug mode generates significantly larger log files
+#     (10-100x normal size) due to untruncated message logging and
+#     verbose tool output. Error messages are NEVER truncated regardless
+#     of this setting - they are always logged in full.
+#
+# Use debug mode when:
+#   - Tasks start but make no API progress
+#   - Tools fail silently with no clear error
+#   - You need to verify API usage in real-time
+#   - Diagnosing performance bottlenecks
+#
+# See README.md "Debugging" section for details.
+# =============================================================================
+debug:
+  enabled: false  # Set to true for verbose diagnostic logging

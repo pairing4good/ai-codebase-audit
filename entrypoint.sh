@@ -181,6 +181,34 @@ cat "${CONFIG_FILE}"
 sep
 
 # =============================================================================
+# Read debug configuration and export DEBUG_MODE environment variable
+# =============================================================================
+DEBUG_ENABLED=$(python3 - << 'PYEOF'
+import yaml
+try:
+    with open("/workdir/config.yml") as f:
+        cfg = yaml.safe_load(f)
+    debug_cfg = cfg.get("debug", {})
+    enabled = debug_cfg.get("enabled", False)
+    print("true" if enabled else "false")
+except Exception:
+    print("false")
+PYEOF
+)
+
+export DEBUG_MODE="${DEBUG_ENABLED}"
+
+if [[ "${DEBUG_MODE}" == "true" ]]; then
+    info "Debug mode: ENABLED (verbose logging active)"
+    info "  - SDK messages will not be truncated"
+    info "  - Tool commands will show execution details"
+    info "  - Log files will be significantly larger"
+else
+    info "Debug mode: disabled"
+fi
+sep
+
+# =============================================================================
 # Prepare each configured project directory
 #
 # Rename any existing .claude/ and CLAUDE.md so they cannot conflict, then

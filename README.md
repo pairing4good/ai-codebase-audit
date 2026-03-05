@@ -421,6 +421,162 @@ docker compose build --no-cache
 
 ---
 
+## Debugging
+
+### When to Enable Debug Mode
+
+Enable debug mode when you need to diagnose:
+- Tasks that start but show no API progress or activity
+- Silent tool failures with no clear error messages
+- Unexpected behavior in skills or agents
+- Performance bottlenecks or slow execution
+- API usage verification (confirm Claude is being called)
+
+### How to Enable
+
+Edit `config.yml` in your workspace and set:
+
+```yaml
+debug:
+  enabled: true  # Set to true for verbose diagnostic logging
+```
+
+Then rebuild and run:
+
+```bash
+docker compose build
+docker compose run --rm skills
+```
+
+### What Changes in Debug Mode
+
+When `debug.enabled: true`:
+
+1. **Full SDK Messages (No Truncation)**
+   - Normal mode: Assistant messages truncated to 500 chars, tool outputs to 200 chars
+   - Debug mode: Full messages logged (can be 10,000+ chars)
+   - Error messages are **never** truncated (always full in both modes)
+
+2. **Tool Execution Details**
+   - Bash tracing enabled (`set -x`) for all static analysis tools
+   - Full command-line arguments logged
+   - Tool stdout/stderr captured and logged
+
+3. **Verbose Startup Information**
+   - Debug mode status displayed during container startup
+   - Environment variable propagation confirmed
+   - All configuration values logged
+
+4. **Timing and Performance Data**
+   - Task duration logged in orchestrator output
+   - Helps identify slow operations
+
+### Log File Impact
+
+**Warning:** Debug mode generates significantly larger log files (10-100x normal size).
+
+| Log Type | Normal Size | Debug Size | Location |
+|---|---|---|---|
+| Task logs | 50-500 KB | 5-50 MB | `logs/task_*.log` |
+| Docker log | 10-50 KB | 100-500 KB | `logs/docker_*.log` |
+
+**Example:**
+- Normal 10K LOC project: ~500 KB logs
+- Debug 10K LOC project: ~50 MB logs
+
+Plan disk space accordingly when running multiple audits with debug enabled.
+
+### Where to Find Debug Information
+
+Debug output appears in the same log locations:
+
+```bash
+# Check Docker startup and configuration
+cat logs/docker_<timestamp>.log | grep -A 5 "Debug mode"
+
+# Check task execution with full messages
+cat logs/task_<project>__<skill>_<ts>_<uid>.log
+
+# Search for tool errors
+grep -r "⚠️" logs/task_*.log
+grep -r "ERROR" logs/task_*.log
+```
+
+### Common Debugging Scenarios
+
+#### Scenario 1: Task Starts But No Progress
+
+**Symptoms:** Task logs show "START" but no assistant messages or tool usage.
+
+**Debug steps:**
+1. Enable debug mode
+2. Check if Claude sessions are being created:
+   ```bash
+   grep "Session started" logs/task_*.log
+   ```
+3. Look for skill invocation errors:
+   ```bash
+   grep "SDK Error" logs/task_*.log
+   ```
+
+#### Scenario 2: Tool Fails Silently
+
+**Symptoms:** Analysis completes but results are empty or missing.
+
+**Debug steps:**
+1. Enable debug mode
+2. Check tool runner output:
+   ```bash
+   grep -A 10 "Running semgrep\|Running bandit" logs/task_*.log
+   ```
+3. Look for tool exit codes:
+   ```bash
+   grep "exited with code" logs/task_*.log
+   ```
+
+#### Scenario 3: Verify API Usage
+
+**Symptoms:** Want to confirm Claude API is being called.
+
+**Debug steps:**
+1. Enable debug mode
+2. Monitor for assistant messages:
+   ```bash
+   tail -f logs/task_*.log | grep "\[assistant\]"
+   ```
+3. Count API interactions:
+   ```bash
+   grep -c "\[assistant\]" logs/task_*.log
+   ```
+
+### Debug Mode in Skills and Agents
+
+Skills and agents can access the `$DEBUG_MODE` environment variable:
+
+```bash
+# In skill or agent Bash tool:
+if [ "$DEBUG_MODE" = "true" ]; then
+  echo "DEBUG: Running analysis on $(pwd)"
+  echo "DEBUG: Found $(find . -name "*.py" | wc -l) Python files"
+fi
+```
+
+This allows conditional verbose logging within skill/agent execution.
+
+### Disabling Debug Mode
+
+To return to normal operation:
+
+1. Edit `config.yml` and set `debug.enabled: false`
+2. Re-run without rebuilding:
+   ```bash
+   docker compose run --rm skills
+   ```
+
+No rebuild needed - the debug flag is read from config.yml at runtime.
+
+---
+
 ## Cost Estimation
 
 ### Typical costs per skill

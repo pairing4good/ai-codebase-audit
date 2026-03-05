@@ -100,7 +100,7 @@ def task_logger(log_dir: Path, dir_name: str, skill: str) -> logging.Logger:
 # ---------------------------------------------------------------------------
 
 def load_config(config_path: Path, workdir: Path,
-                orch: logging.Logger) -> tuple[str, dict, list[tuple[Path, str]]]:
+                orch: logging.Logger) -> tuple[str, dict, bool, list[tuple[Path, str]]]:
     if not config_path.exists():
         sys.exit(f"ERROR: config file not found: {config_path}")
 
@@ -116,8 +116,10 @@ def load_config(config_path: Path, workdir: Path,
         sys.exit("ERROR: ANTHROPIC_API_KEY environment variable is not set. "
                  "Please set it in your .env file (see .env.example).")
 
-    runner  = cfg.get("runner", {})
-    targets = cfg.get("targets", [])
+    runner      = cfg.get("runner", {})
+    debug_cfg   = cfg.get("debug", {})
+    debug_mode  = bool(debug_cfg.get("enabled", False))
+    targets     = cfg.get("targets", [])
     if not targets:
         sys.exit("ERROR: targets missing or empty in config.yml.")
 
@@ -200,7 +202,7 @@ def load_config(config_path: Path, workdir: Path,
 
     orch.info(f"Task ordering: breadth-first (all projects run skill 1, then skill 2, etc.)")
 
-    return api_key, runner, tasks
+    return api_key, runner, debug_mode, tasks
 
 
 # ---------------------------------------------------------------------------
@@ -218,17 +220,24 @@ def _is_rate_limit(exc: Exception) -> bool:
 
 async def stream_skill(skill: str, project_dir: Path, model: str,
                        max_turns: int, max_budget_usd: float,
-                       logger: logging.Logger) -> str:
+                       logger: logging.Logger, debug_mode: bool = False) -> str:
     try:
         from claude_agent_sdk import query, ClaudeAgentOptions
     except ImportError:
         raise RuntimeError("claude_agent_sdk not installed — pip install claude-agent-sdk")
+
+    # Prepare environment variables for skills/agents
+    # DEBUG_MODE allows skills and agents to enable verbose logging conditionally
+    debug_env = {
+        "DEBUG_MODE": "true" if debug_mode else "false",
+    }
 
     options = ClaudeAgentOptions(
         model=model,
         max_turns=max_turns,
         setting_sources=["project"],  # Loads skills from .claude/ directory
         cwd=str(project_dir),
+        env=debug_env,  # Pass debug environment to skills/agents
         allowed_tools=[
             "Skill",        # CRITICAL: Required to invoke skills
             "Task",         # For launching specialized agents
@@ -258,17 +267,37 @@ async def stream_skill(skill: str, project_dir: Path, model: str,
             elif t == "assistant":
                 content = getattr(msg, "message", "") or getattr(msg, "content", "")
                 if content:
-                    logger.info(f"[assistant] {str(content)[:500]}")
+                    # Debug mode: log full message. Normal mode: truncate to 500 chars
+                    if debug_mode:
+                        logger.info(f"[assistant] {str(content)}")
+                    else:
+                        logger.info(f"[assistant] {str(content)[:500]}")
             elif t == "tool_use":
-                logger.debug(f"[tool] {getattr(msg, 'name', '')}  "
-                             f"{json.dumps(getattr(msg, 'input', {}))[:200]}")
+                # Debug mode: log full input. Normal mode: truncate to 200 chars
+                tool_input = json.dumps(getattr(msg, 'input', {}))
+                if debug_mode:
+                    logger.debug(f"[tool] {getattr(msg, 'name', '')}  {tool_input}")
+                else:
+                    logger.debug(f"[tool] {getattr(msg, 'name', '')}  {tool_input[:200]}")
             elif t == "tool_result":
-                logger.debug(f"[tool_result] {str(getattr(msg, 'content', ''))[:200]}")
+                # Debug mode: log full result. Normal mode: truncate to 200 chars
+                tool_result = str(getattr(msg, 'content', ''))
+                if debug_mode:
+                    logger.debug(f"[tool_result] {tool_result}")
+                else:
+                    logger.debug(f"[tool_result] {tool_result[:200]}")
             elif t == "result":
                 result_text = getattr(msg, "result", "")
-                logger.info(f"[result] {str(result_text)[:800]}")
+                # Debug mode: log full result. Normal mode: truncate to 800 chars
+                if debug_mode:
+                    logger.info(f"[result] {str(result_text)}")
+                else:
+                    logger.info(f"[result] {str(result_text)[:800]}")
             elif t == "error":
-                raise RuntimeError(getattr(msg, "error", str(msg)))
+                # ALWAYS log full error message (never truncate errors)
+                error_msg = getattr(msg, "error", str(msg))
+                logger.error(f"SDK Error: {error_msg}")
+                raise RuntimeError(error_msg)
     except Exception as exc:
         if _is_rate_limit(exc):
             raise RateLimitError(str(exc)) from exc
@@ -284,7 +313,7 @@ async def stream_skill(skill: str, project_dir: Path, model: str,
 async def run_one(*, project_dir: Path, skill: str, model: str, max_turns: int,
                   timeout: int, max_budget_usd: float,
                   semaphore: asyncio.Semaphore, log_dir: Path,
-                  orch: logging.Logger) -> dict:
+                  orch: logging.Logger, debug_mode: bool = False) -> dict:
 
     dir_name   = project_dir.name
     safe_skill = skill.lstrip("/").replace("/", "_")
@@ -312,7 +341,7 @@ async def run_one(*, project_dir: Path, skill: str, model: str, max_turns: int,
             )
             async def _run():
                 return await stream_skill(skill, project_dir, model, max_turns,
-                                         max_budget_usd, logger)
+                                         max_budget_usd, logger, debug_mode)
 
             result_text = await asyncio.wait_for(_run(), timeout=timeout)
 
@@ -332,8 +361,10 @@ async def run_one(*, project_dir: Path, skill: str, model: str, max_turns: int,
             orch.warning(f"TIMEOUT  {task_id}")
 
         except Exception as exc:
+            # ALWAYS log full error with context (never truncate)
+            error_context = f"Task: {task_id}, Project: {project_dir}, Skill: {skill}"
             result.update(status="error", error=str(exc))
-            logger.error(f"Failed: {exc}", exc_info=True)
+            logger.error(f"Failed: {exc}\nContext: {error_context}", exc_info=True)
             orch.error(f"FAIL     {task_id}  {exc}")
 
         finally:
@@ -348,7 +379,8 @@ async def run_one(*, project_dir: Path, skill: str, model: str, max_turns: int,
 
 async def run_all(*, tasks: list[tuple[Path, str]], model: str, max_turns: int,
                   timeout: int, max_budget_usd: float,
-                  concurrency: int, log_dir: Path, orch: logging.Logger) -> list[dict]:
+                  concurrency: int, log_dir: Path, orch: logging.Logger,
+                  debug_mode: bool = False) -> list[dict]:
 
     semaphore = asyncio.Semaphore(concurrency)
     orch.info(f"Tasks: {len(tasks)}  concurrency: {concurrency}  model: {model}")
@@ -366,6 +398,7 @@ async def run_all(*, tasks: list[tuple[Path, str]], model: str, max_turns: int,
             semaphore=semaphore,
             log_dir=log_dir,
             orch=orch,
+            debug_mode=debug_mode,
         )
         for d, s in tasks
     ]))
@@ -419,7 +452,7 @@ def main():
     orch.info(f"config          = {config_path}")
     orch.info(f"audit_base_dir  = {workdir}")
 
-    api_key, runner, tasks = load_config(config_path, workdir, orch)
+    api_key, runner, debug_mode, tasks = load_config(config_path, workdir, orch)
     os.environ["ANTHROPIC_API_KEY"] = api_key
 
     model           = str(runner.get("model",           "claude-sonnet-4-6"))
@@ -434,11 +467,12 @@ def main():
     orch.info(f"timeout         = {timeout}s")
     orch.info(f"max_budget_usd  = ${max_budget_usd}")
     orch.info(f"permission_mode = bypassPermissions (hardcoded)")
+    orch.info(f"debug_mode      = {debug_mode}")
 
     results = asyncio.run(run_all(
         tasks=tasks, model=model, max_turns=max_turns, timeout=timeout,
         max_budget_usd=max_budget_usd, concurrency=concurrency,
-        log_dir=log_dir, orch=orch,
+        log_dir=log_dir, orch=orch, debug_mode=debug_mode,
     ))
 
     write_summary(results, log_dir, orch)
