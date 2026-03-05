@@ -246,20 +246,34 @@ for DIR_NAME in ${PROJECT_DIRS}; do
     # Remove any existing audit configuration files to ensure clean state
     # This prevents conflicts and ensures the authoritative versions are used
     if [[ -d "${PROJECT_DIR}/.claude" ]]; then
-        rm -rf "${PROJECT_DIR}/.claude"
+        if ! rm -rf "${PROJECT_DIR}/.claude" 2>&1; then
+            err "    ✗ Failed to remove existing .claude/ - check permissions"
+            err "    Aborting to prevent inconsistent configuration state"
+            exit 1
+        fi
         info "    Removed existing .claude/"
     fi
 
     if [[ -f "${PROJECT_DIR}/CLAUDE.md" ]]; then
-        rm -f "${PROJECT_DIR}/CLAUDE.md"
+        if ! rm -f "${PROJECT_DIR}/CLAUDE.md" 2>&1; then
+            err "    ✗ Failed to remove existing CLAUDE.md - check permissions"
+            err "    Aborting to prevent inconsistent configuration state"
+            exit 1
+        fi
         info "    Removed existing CLAUDE.md"
     fi
 
     # Copy authoritative audit configuration from workspace root
-    cp -r "/workdir/.claude" "${PROJECT_DIR}/.claude"
+    if ! cp -r "/workdir/.claude" "${PROJECT_DIR}/.claude" 2>&1; then
+        err "    ✗ Failed to copy .claude/ - check disk space and permissions"
+        exit 1
+    fi
     info "    ✓ .claude/ copied"
 
-    cp "/workdir/CLAUDE.md" "${PROJECT_DIR}/CLAUDE.md"
+    if ! cp "/workdir/CLAUDE.md" "${PROJECT_DIR}/CLAUDE.md" 2>&1; then
+        err "    ✗ Failed to copy CLAUDE.md - check disk space and permissions"
+        exit 1
+    fi
     info "    ✓ CLAUDE.md copied"
 
     # Create .analysis directory with proper permissions for sandboxed write access
