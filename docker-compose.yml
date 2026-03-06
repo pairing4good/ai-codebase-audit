@@ -39,7 +39,11 @@ services:
       - ${AUDIT_BASE_DIR}:/workdir:rw
       # TODO: Once we implement structured output validation, we can make
       # source directories truly read-only with separate .analysis mounts
-    network_mode: "none"  # Disable network access (prevents data exfiltration)
+    # network_mode: "none"  # Disabled - skills require network access for:
+    #   - Claude API calls (api.anthropic.com)
+    #   - Vulnerability research (WebFetch/WebSearch for CVE data, security advisories)
+    #   - Up-to-date security information (OWASP, GitHub advisories, Snyk, etc.)
+    # Security relies on ephemeral containers and limited filesystem access instead
     deploy:
       resources:
         limits:

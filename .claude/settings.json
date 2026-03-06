@@ -1,6 +1,6 @@
 {
-  "_comment_security": "SECURITY MODEL: This runner uses bypassPermissions mode for autonomous operation in isolated Docker containers. Security is enforced at the Docker level (network_mode: none, read-only volume mounts) NOT by these permission rules. The permissions below are for documentation and defense-in-depth only - they do NOT prevent Claude from executing actions when running with bypassPermissions mode.",
-  "_comment_actual_security": "Real security comes from: (1) Container network isolation (docker-compose.yml: network_mode: none), (2) Ephemeral containers (destroyed after each run), (3) Pre-installed tools with pinned versions (no arbitrary code execution), (4) Limited blast radius (only affects mounted directories).",
+  "_comment_security": "SECURITY MODEL: This runner uses bypassPermissions mode for autonomous operation in isolated Docker containers. Security is enforced at the Docker level (ephemeral containers, limited filesystem access) NOT by these permission rules. The permissions below are for documentation only - they do NOT prevent Claude from executing actions when running with bypassPermissions mode.",
+  "_comment_actual_security": "Real security comes from: (1) Ephemeral containers (destroyed after each run), (2) Pre-installed tools with pinned versions (no arbitrary code execution), (3) Limited blast radius (only affects mounted directories). NOTE: Network is enabled for Claude API and vulnerability research - code could theoretically be exfiltrated, so review skills before running on sensitive code.",
   "permissions": {
     "_comment_allow": "These are the INTENDED allowed operations. With bypassPermissions mode, Claude can execute these without approval. These serve as documentation of expected tool usage.",
     "allow": [
@@ -83,7 +83,7 @@
   },
   "defaultModel": "sonnet",
   "alwaysThinkingEnabled": false,
-  "_comment_sandbox_removed": "The 'sandbox' configuration has been removed because it was misleading. The Claude Agent SDK does not automatically enforce these settings - they are just metadata. Real security is enforced at the Docker level in docker-compose.yml (network_mode: none). See docker-compose.yml for actual security controls.",
+  "_comment_sandbox_removed": "The 'sandbox' configuration has been removed because it was misleading. The Claude Agent SDK does not automatically enforce these settings - they are just metadata. Real security is enforced at the Docker level via ephemeral containers and limited filesystem mounts. See docker-compose.yml for actual security controls. Network is enabled for API and research access.",
   "todoMode": "auto",
   "hooks": {
     "pre-audit": "git status --porcelain | wc -l",

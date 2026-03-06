@@ -513,32 +513,27 @@ grep -r "ERROR" logs/task_*.log
 
 **Symptoms:** Task logs show "START" but no assistant messages or tool usage. API balance doesn't decrease.
 
-**Most common cause:** Network isolation blocking API access.
-
-**Quick fix:**
-1. Check docker-compose.yml line 42:
+**Debug steps:**
+1. Verify API key is set correctly:
    ```bash
-   grep "network_mode" docker-compose.yml
+   grep ANTHROPIC_API_KEY .env
    ```
-2. If it says `network_mode: "none"`, comment it out:
+2. Enable debug mode in config.yml and check for errors:
    ```yaml
-   # network_mode: "none"  # Temporarily disabled - SDK needs API access
+   debug:
+     enabled: true
    ```
-3. Rebuild and retry:
-   ```bash
-   docker compose build
-   docker compose run --rm skills
-   ```
-
-**Other debug steps:**
-1. Enable debug mode in config.yml
-2. Check if Claude sessions are being created:
+3. Check if Claude sessions are being created:
    ```bash
    grep "Session started" logs/task_*.log
    ```
-3. Look for skill invocation errors:
+4. Look for skill invocation or network errors:
    ```bash
-   grep "SDK Error" logs/task_*.log
+   grep -E "SDK Error|Failed|Exception" logs/task_*.log
+   ```
+5. Test network connectivity from container:
+   ```bash
+   docker compose run --rm skills bash -c "curl -I https://api.anthropic.com"
    ```
 
 #### Scenario 2: Tool Fails Silently
@@ -729,11 +724,14 @@ This runner uses **`bypassPermissions`** mode for autonomous operation. Security
 
 ### Three Layers of Security
 
-**Layer 1: Network Isolation** ⚠️ CURRENTLY DISABLED
-- `network_mode: none` is commented out (SDK requires API access)
-- **TODO:** Implement restricted networking (allow only api.anthropic.com)
-- **Current state:** Container has network access but tools are still pre-installed
-- **Mitigation:** Use read-only source mounts when implementing structured output
+**Layer 1: Network Access** (Enabled by Design)
+- Network access is **required** for comprehensive security audits:
+  - Claude API calls (`api.anthropic.com`)
+  - Vulnerability research via WebFetch/WebSearch (CVE databases, security advisories)
+  - Up-to-date security information (OWASP, GitHub advisories, Snyk, NVD)
+- Static analysis tools (Semgrep, Snyk, etc.) may check online databases
+- **Trade-off:** Enables complete audits but allows potential data exfiltration
+- **Mitigation:** Review skills before running, use isolated VMs for sensitive code
 
 **Layer 2: Container Isolation**
 - Containers are ephemeral (destroyed after each run)
@@ -756,20 +754,21 @@ This runner uses **`bypassPermissions`** mode for autonomous operation. Security
 - They serve as documentation of intended tool usage patterns
 - Real security comes from Docker isolation (network, filesystem, ephemeral containers)
 
-**Why this is safe:**
+**Why this model is secure enough for most use cases:**
 - Even if skills malfunction and try to run `rm -rf /`, they only affect the container
-- Container network is disabled, so no data can be exfiltrated
 - Container is destroyed after run, so no persistent changes
 - Pre-installed tools prevent arbitrary code execution during runtime
+- Limited filesystem access (only mounted project directories)
+- **Note:** Network is enabled, so code could theoretically be exfiltrated - review skills first
 
 ### Security Best Practices
 
-1. **Network isolation temporarily disabled** - Required for Claude API access (see Layer 1 above)
-2. **Review skill definitions** - Understand what each skill does before running
+1. **Review skill definitions first** - Understand what each skill does before running (especially Bash commands)
+2. **For sensitive code** - Run in isolated VM or air-gapped environment to prevent exfiltration risk
 3. **Use ephemeral containers** - Always use `--rm` flag: `docker compose run --rm skills`
 4. **Backup before running** - Take snapshots of projects before first audit
 5. **Review `.analysis/` output** - Check what was written to analysis directories
-6. **Consider restricted networking** - Implement firewall rules to allow only api.anthropic.com
+6. **Trust but verify** - Skills are open source and auditable in `.claude/skills/`
 
 ### For CI/CD Pipelines
 
