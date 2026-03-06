@@ -511,10 +511,27 @@ grep -r "ERROR" logs/task_*.log
 
 #### Scenario 1: Task Starts But No Progress
 
-**Symptoms:** Task logs show "START" but no assistant messages or tool usage.
+**Symptoms:** Task logs show "START" but no assistant messages or tool usage. API balance doesn't decrease.
 
-**Debug steps:**
-1. Enable debug mode
+**Most common cause:** Network isolation blocking API access.
+
+**Quick fix:**
+1. Check docker-compose.yml line 42:
+   ```bash
+   grep "network_mode" docker-compose.yml
+   ```
+2. If it says `network_mode: "none"`, comment it out:
+   ```yaml
+   # network_mode: "none"  # Temporarily disabled - SDK needs API access
+   ```
+3. Rebuild and retry:
+   ```bash
+   docker compose build
+   docker compose run --rm skills
+   ```
+
+**Other debug steps:**
+1. Enable debug mode in config.yml
 2. Check if Claude sessions are being created:
    ```bash
    grep "Session started" logs/task_*.log
@@ -712,11 +729,11 @@ This runner uses **`bypassPermissions`** mode for autonomous operation. Security
 
 ### Three Layers of Security
 
-**Layer 1: Network Isolation**
-- `network_mode: none` in docker-compose.yml
-- No internet access during analysis (prevents data exfiltration)
-- Cannot download packages, make API calls, or phone home
-- Tools are pre-installed with pinned versions (see "Pre-installed Static Analysis Tools")
+**Layer 1: Network Isolation** ⚠️ CURRENTLY DISABLED
+- `network_mode: none` is commented out (SDK requires API access)
+- **TODO:** Implement restricted networking (allow only api.anthropic.com)
+- **Current state:** Container has network access but tools are still pre-installed
+- **Mitigation:** Use read-only source mounts when implementing structured output
 
 **Layer 2: Container Isolation**
 - Containers are ephemeral (destroyed after each run)
@@ -747,11 +764,12 @@ This runner uses **`bypassPermissions`** mode for autonomous operation. Security
 
 ### Security Best Practices
 
-1. **Never disable network isolation** - Keep `network_mode: none` in docker-compose.yml
+1. **Network isolation temporarily disabled** - Required for Claude API access (see Layer 1 above)
 2. **Review skill definitions** - Understand what each skill does before running
 3. **Use ephemeral containers** - Always use `--rm` flag: `docker compose run --rm skills`
 4. **Backup before running** - Take snapshots of projects before first audit
 5. **Review `.analysis/` output** - Check what was written to analysis directories
+6. **Consider restricted networking** - Implement firewall rules to allow only api.anthropic.com
 
 ### For CI/CD Pipelines
 
