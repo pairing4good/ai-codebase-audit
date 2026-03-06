@@ -232,12 +232,17 @@ async def stream_skill(skill: str, project_dir: Path, model: str,
         "DEBUG_MODE": "true" if debug_mode else "false",
     }
 
+    # SDK stderr callback - always capture
+    def handle_sdk_stderr(line: str) -> None:
+        logger.error(f"[SDK] {line}")
+
     options = ClaudeAgentOptions(
         model=model,
         max_turns=max_turns,
         setting_sources=["project"],  # Loads skills from .claude/ directory
         cwd=str(project_dir),
         env=debug_env,  # Pass debug environment to skills/agents
+        stderr=handle_sdk_stderr,  # Capture SDK diagnostics
         allowed_tools=[
             "Skill",        # CRITICAL: Required to invoke skills
             "Task",         # For launching specialized agents

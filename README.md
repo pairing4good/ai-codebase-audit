@@ -457,17 +457,22 @@ When `debug.enabled: true`:
    - Debug mode: Full messages logged (can be 10,000+ chars)
    - Error messages are **never** truncated (always full in both modes)
 
-2. **Tool Execution Details**
+2. **SDK Internal Diagnostics**
+   - Normal mode: Only SDK errors and warnings logged
+   - Debug mode: All SDK stderr output logged (including info/debug messages)
+   - Prevents "Check stderr output for details" with no actual details
+
+3. **Tool Execution Details**
    - Bash tracing enabled (`set -x`) for all static analysis tools
    - Full command-line arguments logged
    - Tool stdout/stderr captured and logged
 
-3. **Verbose Startup Information**
+4. **Verbose Startup Information**
    - Debug mode status displayed during container startup
    - Environment variable propagation confirmed
    - All configuration values logged
 
-4. **Timing and Performance Data**
+5. **Timing and Performance Data**
    - Task duration logged in orchestrator output
    - Helps identify slow operations
 
