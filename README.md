@@ -13,45 +13,40 @@ This tool uses **two separate directories**:
 ┌──────────────────────────────────────────────────────────────────────┐
 │ 1. ai-codebase-audit repo (where you cloned the GitHub repo)        │
 │    /path/to/ai-codebase-audit/                                       │
-│    ├── docker-compose.yml      ← Run docker compose here            │
-│    ├── Dockerfile                                                    │
-│    ├── .env                    ← Create and configure this          │
+│    ├── orchestrator_devcontainer.py  ← Main entry point             │
+│    ├── .devcontainer/                ← Container configuration       │
+│    │   ├── Dockerfile                                                │
+│    │   ├── devcontainer-entrypoint.sh                                │
+│    │   └── init-firewall.sh                                          │
+│    ├── .env                          ← Create and configure this    │
 │    ├── .env.example                                                  │
-│    ├── entrypoint.sh                                                 │
-│    ├── run_skills.py                                                 │
-│    ├── config.yml              ← Template to copy to workspace      │
-│    ├── CLAUDE.md               ← Template to copy to workspace      │
-│    └── .claude/                ← Template to copy to workspace      │
+│    ├── config.yml                    ← Template to copy to workspace│
+│    └── .claude/                      ← Template to copy to workspace│
 └──────────────────────────────────────────────────────────────────────┘
                                   ↓ Docker mounts ↓
 ┌──────────────────────────────────────────────────────────────────────┐
 │ 2. Audit workspace (separate directory you create)                  │
 │    ~/code-audits/              ← Set as AUDIT_BASE_DIR              │
 │    ├── config.yml              ← Copied from repo, edit here        │
-│    ├── CLAUDE.md               ← Copied from repo                   │
 │    ├── .claude/                ← Copied from repo                   │
 │    ├── my-java-app/            ← Your project #1                    │
 │    │   ├── src/                                                      │
 │    │   ├── pom.xml                                                   │
-│    │   ├── CLAUDE.md           ← Auto-copied at container startup   │
-│    │   ├── .claude/            ← Auto-copied at container startup   │
 │    │   └── .analysis/java/     ← Results written here               │
 │    ├── my-react-app/           ← Your project #2                    │
 │    │   ├── src/                                                      │
 │    │   ├── package.json                                              │
-│    │   ├── CLAUDE.md           ← Auto-copied at container startup   │
-│    │   ├── .claude/            ← Auto-copied at container startup   │
 │    │   └── .analysis/javascript/ ← Results written here             │
 │    └── logs/                   ← Logs written here                  │
-│        ├── docker_<ts>.log                                           │
-│        ├── python_<ts>.log                                           │
+│        ├── orchestrator_<ts>.log                                     │
+│        ├── task_<project>__<skill>_<ts>_<uid>.log                    │
 │        ├── summary_<ts>.txt                                          │
 │        └── result_*.txt                                              │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
 **Key points**:
-- **Run commands from**: ai-codebase-audit repo (where `docker-compose.yml` lives)
+- **Run commands from**: ai-codebase-audit repo (where `orchestrator_devcontainer.py` lives)
 - **Edit config.yml in**: Audit workspace (`~/code-audits/config.yml`)
 - **Results written to**: Audit workspace (`~/code-audits/logs/`, `.analysis/`)
 
@@ -60,14 +55,19 @@ This tool uses **two separate directories**:
 ### 1. ai-codebase-audit Repository (where you run commands)
 ```
 /path/to/ai-codebase-audit/        ← Where you cloned this GitHub repo
-  ├── docker-compose.yml           ← Docker configuration
-  ├── Dockerfile                   ← Container build instructions
+  ├── orchestrator_devcontainer.py ← Main entry point
+  ├── .devcontainer/               ← DevContainer configuration
+  │   ├── Dockerfile               ← Container build instructions
+  │   ├── devcontainer-entrypoint.sh ← Container startup script
+  │   ├── init-firewall.sh         ← Network security
+  │   └── init-env.sh              ← Environment setup
   ├── .env                         ← Environment config (you create this)
   ├── .env.example                 ← Template for .env
-  ├── entrypoint.sh                ← Container startup script
-  ├── run_skills.py                ← Python orchestrator
   ├── config.yml                   ← Template (copy to workspace)
-  ├── CLAUDE.md                    ← Template (copy to workspace)
+  ├── scripts/                     ← Utility scripts
+  │   ├── build-local.sh
+  │   ├── verify-build.sh
+  │   └── watch-logs.sh
   └── .claude/                     ← Template (copy to workspace)
       ├── settings.json
       ├── agents/                  ← Analysis agents
@@ -76,19 +76,18 @@ This tool uses **two separate directories**:
 
 **This is where you**:
 - Create and edit the `.env` file
-- Run `docker compose build` and `docker compose run --rm skills`
+- Run `python3 orchestrator_devcontainer.py`
 
 ### 2. Audit Workspace (where projects and results live)
 
 The audit system requires a **separate workspace directory** (AUDIT_BASE_DIR) that contains:
-1. Configuration files (config.yml, CLAUDE.md, .claude/) - copied from repo
+1. Configuration files (config.yml, .claude/) - copied from repo
 2. Your project directories to audit
 3. Logs directory (created automatically)
 
 ```
 /your/audit-workspace/             ← Set AUDIT_BASE_DIR to this path
   config.yml                       ← Copied from repo, edit to configure audits
-  CLAUDE.md                        ← Copied from repo (agent instructions)
   .claude/                         ← Copied from repo (skills and agents)
     settings.json                  ← Agent configuration
     agents/                        ← Specialized analysis agents
@@ -108,22 +107,18 @@ The audit system requires a **separate workspace directory** (AUDIT_BASE_DIR) th
     .git/
     src/
     pom.xml
-    CLAUDE.md                      ← Copied from parent at container startup
-    .claude/                       ← Copied from parent at container startup
     .analysis/java/                ← Audit results written here
   project-two/                     ← Your second project to audit
     .git/
     src/
     package.json
-    CLAUDE.md                      ← Copied from parent at container startup
-    .claude/                       ← Copied from parent at container startup
     .analysis/javascript/          ← Audit results written here
   logs/                            ← Created automatically
-    docker_<timestamp>.log         ← Container lifecycle logs
-    python_<timestamp>.log         ← Orchestration logs
-    task_<project>__<skill>.log    ← Per-task execution logs
-    result_<project>__<skill>.txt  ← Final skill results
+    orchestrator_<timestamp>.log   ← Main orchestrator logs
+    task_<project>__<skill>_<ts>_<uid>.log  ← Per-task execution logs
+    result_<project>__<skill>_<ts>_<uid>.txt ← Final skill results
     summary_<timestamp>.txt        ← Overall pass/fail summary
+    summary_<timestamp>.json       ← Machine-readable results
 ```
 
 **This is where**:
@@ -188,7 +183,7 @@ Duplicate skills listed for the same directory are skipped — each
    export AUDIT_BASE_DIR=~/code-audits
 
    # Copy framework files
-   cp config.yml CLAUDE.md ~/code-audits/
+   cp config.yml ~/code-audits/
    cp -r .claude ~/code-audits/
 
    # Clone target repos into workspace
@@ -313,8 +308,7 @@ All in `<AUDIT_BASE_DIR>/logs/`:
 
 | File | Contents |
 |---|---|
-| `docker_<ts>.log` | Startup, validation, prep, shutdown |
-| `python_<ts>.log` | Task queue, start, ok, fail |
+| `orchestrator_<ts>.log` | Main orchestrator: image building, container creation, task scheduling |
 | `task_<dir>__<skill>_<ts>_<uid>.log` | Full per-task output (uid prevents collisions) |
 | `result_<dir>__<skill>_<ts>_<uid>.txt` | Skill's final output (uid prevents collisions) |
 | `summary_<ts>.txt` | Pass/fail table |
@@ -491,11 +485,10 @@ debug:
   enabled: true  # Set to true for verbose diagnostic logging
 ```
 
-Then rebuild and run:
+Then run:
 
 ```bash
-docker compose build
-docker compose run --rm skills
+python3 orchestrator_devcontainer.py
 ```
 
 ### What Changes in Debug Mode
@@ -783,10 +776,10 @@ This runner uses **`bypassPermissions`** mode for autonomous operation. Security
 - No access to host system outside mounted volumes
 
 **Layer 3: Filesystem Restrictions**
-- Config files (config.yml, CLAUDE.md, .claude/) mounted read-only
-- Source code currently mounted read-write (needed for `.claude/` file copying)
+- Framework configs (.claude/) mounted read-only
+- Source code currently mounted read-write
 - Only `.analysis/` and `logs/` directories receive output
-- See docker-compose.yml for volume mount configuration
+- Volume mounts configured in orchestrator_devcontainer.py
 
 ### What `.claude/settings.json` Actually Does
 
@@ -821,3 +814,18 @@ This security model makes the runner **perfect for automated pipelines**:
 - Isolated execution (won't affect other jobs)
 - Deterministic results (pre-installed tool versions)
 - Safe for untrusted code analysis (container isolation)
+
+---
+
+## Entry Point
+
+The main entry point is [orchestrator_devcontainer.py](orchestrator_devcontainer.py), which:
+- Loads configuration from `config.yml`
+- Builds/verifies the Docker image from `.devcontainer/Dockerfile`
+- Creates isolated containers for each project+skill combination
+- Collects logs and generates summaries
+
+Run it with:
+```bash
+python3 orchestrator_devcontainer.py
+```

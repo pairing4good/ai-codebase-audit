@@ -112,4 +112,3 @@ Monitor costs using the Claude Console at https://console.anthropic.com
 
 - **Configuration**: See [README.md](README.md#configuration)
 - **Architecture**: See [docs/DEVCONTAINER-ARCHITECTURE.md](docs/DEVCONTAINER-ARCHITECTURE.md)
-- **Migration Guide**: See [MIGRATION_PLAN.md](MIGRATION_PLAN.md)
