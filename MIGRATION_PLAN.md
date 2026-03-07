@@ -255,24 +255,38 @@ orchestrator_devcontainer.py (host)
 
 ### Phase 3: Update Configuration Files
 
-#### 3.1 Update config.yml (minimal changes)
+#### 3.1 Update config.yml (minimal changes) ✅ COMPLETED
+
+**Status**: Updated at `config.yml` (valid YAML)
+
+**Changes Made**:
+1. ✅ Updated header: "DevContainer-Native Parallel Skill Runner"
+2. ✅ Added DEVCONTAINER ARCHITECTURE section explaining:
+   - N isolated containers (one per project+skill)
+   - Image built from .devcontainer/Dockerfile
+   - Read-only framework config mounts
+   - Read-write project/analysis mounts
+   - Ephemeral containers (destroyed after completion)
+3. ✅ Added `runner.image_tag: audit-runner:local` - Docker image tag
+4. ✅ Added `runner.rebuild: false` - Force rebuild toggle
+5. ✅ Updated `concurrency` comment to clarify "max parallel tasks (containers)"
+6. ✅ Kept all existing settings unchanged (model, max_turns, timeout, etc.)
+7. ✅ Kept targets section unchanged
+8. ✅ Kept debug section unchanged
+
+**New Settings**:
 ```yaml
 runner:
-  model: claude-sonnet-4-6
-  concurrency: 3
-  max_turns: 20
-  timeout: 300
-  max_budget_usd: 10.0
-  image_tag: audit-runner:local  # NEW: local build tag (not registry URL)
-  rebuild: false                  # NEW: force rebuild even if image exists
-
-targets:
-  - dir: project-one
-    skills:
-      - /audit-java
-      - /audit-javascript
-  # ... rest unchanged
+  # ... existing settings ...
+  image_tag: audit-runner:local  # NEW: Docker image tag
+  rebuild: false                  # NEW: Force rebuild toggle
 ```
+
+**Key Points**:
+- Image tag defaults to `audit-runner:local` (built locally, not from registry)
+- Rebuild can be forced via config or `FORCE_REBUILD=true` environment variable
+- All existing configurations preserved (backward compatible)
+- Header documentation updated to reflect devcontainer architecture
 
 #### 3.2 Update .env.example
 ```bash

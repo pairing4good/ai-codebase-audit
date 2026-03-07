@@ -1,5 +1,5 @@
 # =============================================================================
-# config.yml — Claude Parallel Skill Runner
+# config.yml — DevContainer-Native Parallel Skill Runner
 # =============================================================================
 #
 # This file must be in your AUDIT_BASE_DIR alongside:
@@ -10,34 +10,49 @@
 #
 # AUDIT_BASE_DIR is set in your .env file (see .env.example for structure)
 #
-# At startup, CLAUDE.md and .claude/ are copied into each configured project
-# directory. Any existing CLAUDE.md or .claude/ in those directories is
-# removed first. This ensures each project gets a clean, isolated copy of the
-# authoritative audit configuration with no conflicts.
+# DEVCONTAINER ARCHITECTURE
+#   The orchestrator spawns N isolated Docker containers (one per project+skill).
+#   Each container:
+#     - Is built from .devcontainer/Dockerfile (or uses cached image)
+#     - Mounts .claude/ read-only from framework directory
+#     - Mounts project directory and .analysis/ read-write
+#     - Runs ONE skill in complete isolation
+#     - Is destroyed after completion (ephemeral)
 #
-# Duplicate skills listed for the same directory are automatically skipped —
-# each skill runs exactly once per directory.
+#   Framework configs (.claude/, CLAUDE.md) are mounted read-only into each
+#   container - no file copying needed. Each container gets isolated access.
+#
+# Duplicate skills listed for the same directory run as separate containers —
+# each skill execution is fully isolated.
 #
 # API KEY
-#   The ANTHROPIC_API_KEY environment variable is read from your .env file.
+#   The ANTHROPIC_API_KEY environment variable is required.
+#   Set via: export ANTHROPIC_API_KEY="sk-ant-..."
 #   It CANNOT be set in this config.yml file for security reasons.
-#   See .env.example for setup instructions.
 #
 # PERMISSION MODE
-#   Hardcoded to 'bypassPermissions' for autonomous Docker operation.
+#   Containers run Claude with 'bypassPermissions' for autonomous operation.
 #   This cannot be changed via configuration for security and reliability.
 #
 # =============================================================================
 
 runner:
   model:            claude-sonnet-4-6  # claude-sonnet-4-6 | claude-opus-4-6
-  concurrency:      3                  # max parallel tasks
+  concurrency:      3                  # max parallel tasks (containers)
   max_turns:        20                 # max agent turns per skill run
   timeout:          300                # seconds per task
   max_budget_usd:   10.0               # PER-TASK spending limit (USD)
                                         # Typical: $0.50-$2 (small), $2-$6 (medium), $6-$15 (large)
                                         # Task stops gracefully if exceeded, partial results preserved
                                         # See README.md "Cost Estimation" for details
+
+  # DevContainer-specific settings
+  image_tag:        audit-runner:local # Docker image tag for devcontainer
+                                        # Built from .devcontainer/Dockerfile
+                                        # Uses Docker layer caching for fast rebuilds
+  rebuild:          false               # Force rebuild image even if it exists
+                                        # Set to true to rebuild after Dockerfile changes
+                                        # Or use: FORCE_REBUILD=true environment variable
 
 targets:
   - dir: project-one
