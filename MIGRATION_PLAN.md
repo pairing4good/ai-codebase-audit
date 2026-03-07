@@ -838,59 +838,115 @@ rm Dockerfile
 
 ### Phase 7: Add Developer Tools
 
-MANDITORY: IMPORTANT!!!! AVOID USING MOCKS!!!!  If they are needed ask before using them. 
+#### 7.1 Create `scripts/` directory ✅ COMPLETED
 
-#### 7.1 Create `scripts/` directory
-```
-scripts/
-  build-local.sh         # Build image manually
-  verify-build.sh        # Verify all tools installed
-  clean-images.sh        # Remove local images
-  test-single-skill.sh   # Test one project+skill
-  watch-logs.sh          # Tail all logs live
-```
+**Status**: Directory already exists from Phase 4 with 3 scripts
 
-#### 7.2 Create `scripts/test-single-skill.sh`
+**Existing Scripts** (from Phase 4):
+- ✅ `scripts/build-local.sh` (4.8KB, 167 lines)
+- ✅ `scripts/verify-build.sh` (5.7KB, 263 lines)
+- ✅ `scripts/clean-images.sh` (3.1KB, 114 lines)
+
+**New Scripts** (Phase 7):
+- ✅ `scripts/test-single-skill.sh` (7.8KB, 266 lines)
+- ✅ `scripts/watch-logs.sh` (7.1KB, 234 lines)
+
+**Total**: 5 developer tools
+
+#### 7.2 Create `scripts/test-single-skill.sh` ✅ COMPLETED
+
+**Status**: Created at [scripts/test-single-skill.sh](scripts/test-single-skill.sh) (266 lines, executable)
+
+**Features Implemented**:
+- ✅ Test single project+skill combination without full orchestrator
+- ✅ Auto-detects first project from config.yml if not specified
+- ✅ Creates temporary config with only specified project+skill
+- ✅ Command-line arguments:
+  - `PROJECT` - Project directory name (optional, defaults to first in config.yml)
+  - `SKILL` - Skill to run (optional, defaults to /audit-java)
+  - `-h, --help` - Show usage information
+- ✅ Environment variable support:
+  - `AUDIT_BASE_DIR` (required)
+  - `ANTHROPIC_API_KEY` (required)
+  - `DEBUG_MODE` (optional)
+  - `MODEL`, `MAX_TURNS`, `TIMEOUT` (optional overrides)
+- ✅ Comprehensive validation:
+  - Python dependencies (aiodocker, pyyaml)
+  - Docker running check
+  - Project directory exists
+  - Skill file exists
+- ✅ Colored output with clear status messages
+- ✅ Helpful error messages with troubleshooting hints
+- ✅ Clean exit codes (0=success, 1=error, 2=skill failed)
+- ✅ Temporary config cleanup on exit
+
+**Usage Examples**:
 ```bash
-#!/bin/bash
-# Test a single project+skill combination
+# Test specific project and skill
+./scripts/test-single-skill.sh project-one /audit-java
 
-PROJECT=${1:-project-one}
-SKILL=${2:-/audit-java}
+# Use defaults (first project, /audit-java)
+./scripts/test-single-skill.sh
 
-echo "Testing $PROJECT:$SKILL"
-
-python3 -c "
-import asyncio
-import sys
-sys.path.insert(0, '.')
-from orchestrator_devcontainer import run_skill_container, load_config
-import aiodocker
-import logging
-
-async def test():
-    docker = aiodocker.Docker()
-    config = load_config('$AUDIT_BASE_DIR/config.yml')
-    logger = logging.getLogger()
-
-    result = await run_skill_container(
-        docker, '$PROJECT', '$SKILL', config, logger
-    )
-
-    await docker.close()
-    print(result)
-
-asyncio.run(test())
-"
+# With debug mode enabled
+DEBUG_MODE=true ./scripts/test-single-skill.sh my-app /audit-javascript
 ```
 
-#### 7.3 Create `scripts/watch-logs.sh`
+**Key Differences from Migration Plan**:
+- **Not using Python inline**: Creates temporary config.yml instead
+- **Avoids mocks**: Uses real orchestrator with temporary config (no mocking)
+- **More robust**: Comprehensive validation and error handling
+- **Better UX**: Colored output, help text, clear messages
+
+#### 7.3 Create `scripts/watch-logs.sh` ✅ COMPLETED
+
+**Status**: Created at [scripts/watch-logs.sh](scripts/watch-logs.sh) (234 lines, executable)
+
+**Features Implemented**:
+- ✅ Watch container logs in real-time with `tail -f`
+- ✅ Command-line options:
+  - `--all, -a` - Show all log types (task + summary + docker)
+  - `--task, -t` - Show only task logs (default)
+  - `--summary, -s` - Show only summary logs
+  - `--docker, -d` - Show only docker logs
+  - `--latest, -l` - Show only latest log file
+  - `--pattern PATTERN` - Filter logs by grep pattern
+  - `-h, --help` - Show usage information
+- ✅ Multi-file watching support
+- ✅ Optional multitail integration (better multi-file viewing)
+- ✅ Fallback to standard `tail -f` if multitail not available
+- ✅ Grep filtering for pattern matching
+- ✅ Environment variable validation (AUDIT_BASE_DIR)
+- ✅ Directory existence checks
+- ✅ Colored output with clear status messages
+- ✅ File list display before watching
+
+**Usage Examples**:
 ```bash
-#!/bin/bash
-# Watch all container logs in real-time
+# Watch all task logs (default)
+./scripts/watch-logs.sh
 
-tail -f $AUDIT_BASE_DIR/logs/task_*.log
+# Watch latest task log only
+./scripts/watch-logs.sh --latest
+
+# Watch all log types
+./scripts/watch-logs.sh --all
+
+# Filter by pattern
+./scripts/watch-logs.sh --pattern "ERROR"
+./scripts/watch-logs.sh --pattern "project-one"
+
+# Watch summary logs
+./scripts/watch-logs.sh --summary
 ```
+
+**Key Differences from Migration Plan**:
+- **More sophisticated**: Multiple log types, filtering, pattern matching
+- **Better UX**: Colored output, help text, file list display
+- **Flexible**: Options for different use cases
+- **Robust**: Validation and error handling
+
+**Phase 7 Complete**: All developer tools created!
 
 ## File Changes Summary
 
