@@ -111,11 +111,39 @@ Transition from Docker Compose to **devcontainer-native architecture** where N i
 - **Added**: Skill file validation before execution
 - **Simplified**: Runs ONE skill in ONE isolated container (not N skills in one container)
 
-#### 1.5 Create `.devcontainer/README.md`
-- Document build-from-source approach
-- Explain why no prebuilt images
-- List all installed tools with versions
-- Build time expectations (~10-15 min first run)
+#### 1.5 Create `.devcontainer/README.md` ✅ COMPLETED
+- ✅ Comprehensive documentation of DevContainer configuration (405 lines)
+- ✅ Build-from-source philosophy explained (transparency, reproducibility, security)
+- ✅ Complete tool version table (language runtimes + static analysis tools)
+- ✅ Build time expectations (10-15 min first, ~30s subsequent)
+- ✅ Architecture differences from Anthropic's base (what we added/kept/changed)
+- ✅ Network security documentation (whitelisted domains, firewall behavior)
+- ✅ Security model explanation (container isolation, filesystem access, risks)
+- ✅ Environment variables reference (required, optional, automatic)
+- ✅ Usage examples (VS Code, orchestrator, manual execution)
+- ✅ Version manager usage guide (SDKMAN, nvm, pyenv, dotnet)
+- ✅ Troubleshooting section (common issues and fixes)
+- ✅ Maintenance guide (updating tools, adding languages, updating Anthropic's base)
+- ✅ Contributing guidelines
+
+**Status**: Created at `.devcontainer/README.md` (13KB, 405 lines)
+
+**Sections Included**:
+1. Overview and build philosophy
+2. File inventory
+3. Installed tools with version table
+4. Build time breakdown
+5. Architecture comparison with Anthropic
+6. Network security and whitelisted domains
+7. Security model and risk assessment
+8. Environment variables
+9. Usage examples (3 scenarios)
+10. Version manager commands
+11. Troubleshooting (6 common issues)
+12. Maintenance procedures
+13. Resources and contributing
+
+**Phase 1 Complete**: All `.devcontainer/` files created and documented!
 
 ### Phase 2: Create New Orchestrator
 
