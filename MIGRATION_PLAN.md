@@ -395,25 +395,50 @@ FORCE_REBUILD=false    # Force image rebuild toggle
 5. User and permissions (node user, writable workspace)
 6. Entrypoint script (exists and executable)
 
-#### 4.2 Add local build script (for testing)
-Create `scripts/build-local.sh`:
+#### 4.2 Add local build script (for testing) ✅ COMPLETED
+
+**Status**: Created at `scripts/build-local.sh` (167 lines, executable)
+
+**Features Implemented**:
+- ✅ Builds image from `.devcontainer/Dockerfile`
+- ✅ Command-line options:
+  - `--no-cache` - Build without Docker layer cache (clean build)
+  - `--tag TAG` - Custom image tag (default: audit-runner:local)
+  - `--verify` - Run verification script after build
+  - `-h, --help` - Show usage information
+- ✅ Automatic repository root detection
+- ✅ Build progress display (--progress=plain)
+- ✅ Image size reporting after successful build
+- ✅ Optional automatic verification
+- ✅ Clear success/failure reporting with helpful next steps
+- ✅ Error handling with common troubleshooting tips
+
+**Usage Examples**:
 ```bash
-#!/bin/bash
-# Build devcontainer image locally for testing
+# Basic build
+./scripts/build-local.sh
 
-cd "$(dirname "${BASH_SOURCE[0]}")/.."
+# Clean build (no cache)
+./scripts/build-local.sh --no-cache
 
-echo "Building devcontainer image from .devcontainer/Dockerfile..."
+# Build and verify
+./scripts/build-local.sh --verify
 
-docker build \
-  -f .devcontainer/Dockerfile \
-  -t audit-runner:local \
-  --progress=plain \
-  .
+# Custom tag
+./scripts/build-local.sh --tag audit-runner:v1.0.0
 
-echo "Build complete. Verifying..."
-./scripts/verify-build.sh
+# Combined
+./scripts/build-local.sh --no-cache --verify --tag my-image:latest
 ```
+
+**Output Information**:
+- Repository location
+- Dockerfile path
+- Image tag
+- Cache usage
+- Build status
+- Image size
+- Next steps (verification, usage with orchestrator)
 
 #### 4.3 Add clean script
 Create `scripts/clean-images.sh`:
