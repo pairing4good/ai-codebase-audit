@@ -171,57 +171,64 @@ pip3 install --break-system-packages aiodocker pyyaml
 
 **Note**: Used `--break-system-packages` flag for macOS externally-managed environment
 
-#### 2.2 Create `orchestrator_devcontainer.py`
+#### 2.2 Create `orchestrator_devcontainer.py` ✅ COMPLETED
 
-**Key Build Strategy**:
-```python
-async def ensure_image_built(docker, config):
-    """Build devcontainer image from Dockerfile if not exists"""
+**Status**: Created at `orchestrator_devcontainer.py` (479 lines, executable)
 
-    image_tag = config.get('image_tag', 'audit-runner:local')
+**Key Features Implemented**:
+- ✅ Async Docker SDK (aiodocker) for programmatic container management
+- ✅ Image building from `.devcontainer/Dockerfile` with caching
+- ✅ Force rebuild support via `FORCE_REBUILD` environment variable
+- ✅ Parallel container execution with semaphore-based concurrency control
+- ✅ One isolated container per project+skill combination
+- ✅ Read-only framework config mounts (`.claude/` shared across all containers)
+- ✅ Read-write project and output mounts (isolated per container)
+- ✅ Network capabilities for firewall (NET_ADMIN, NET_RAW)
+- ✅ Comprehensive logging with timestamps and task IDs
+- ✅ Timeout handling with graceful shutdown
+- ✅ Log collection from containers to centralized directory
+- ✅ Summary generation (text and JSON formats)
+- ✅ Error handling and exit code propagation
 
-    # Check if image exists
-    try:
-        await docker.images.inspect(image_tag)
-        logger.info(f"Image {image_tag} exists (using cache)")
-        return image_tag
-    except:
-        logger.info(f"Image {image_tag} not found, building from Dockerfile...")
-
-    # Build from .devcontainer/Dockerfile
-    # This reads the committed Dockerfile and builds locally
-    build_stream = await docker.images.build(
-        path=str(repo_root),  # ai-codebase-audit root
-        dockerfile='.devcontainer/Dockerfile',
-        tag=image_tag,
-        rm=True,  # Remove intermediate containers
-        stream=True,
-    )
-
-    # Stream build output
-    async for chunk in build_stream:
-        if 'stream' in chunk:
-            logger.info(chunk['stream'].strip())
-
-    logger.info(f"Image {image_tag} built successfully")
-    return image_tag
+**Architecture**:
+```
+orchestrator_devcontainer.py
+├── load_config()              # Load config.yml, validate environment
+├── ensure_image_built()       # Build from Dockerfile or use cache
+├── run_skill_container()      # Spawn isolated container for one skill
+│   ├── Create container with mounts
+│   ├── Start and wait for completion
+│   ├── Collect logs to centralized location
+│   └── Cleanup container
+├── run_all()                  # Orchestrate N parallel containers
+│   ├── Build image (once)
+│   ├── Generate task queue
+│   ├── Run with concurrency control (semaphore)
+│   └── Aggregate results
+└── write_summary()            # Generate summary files
 ```
 
-**Container Spawn Strategy** (same as before):
-- For each (project, skill) pair:
-  - Spawn isolated container using built image
-  - Mount framework configs read-only
-  - Mount project directory and .analysis/ read-write
-  - Run `/app/run_skill.sh <skill>` inside container
-  - Wait for completion, collect logs
-  - Remove container (ephemeral)
-- Aggregate results into summary
+**Volume Mounts**:
+- Framework `.claude/` → `/workspace/.claude:ro` (read-only, shared)
+- Project source → `/workspace/{project}:rw` (read-write, isolated)
+- Analysis output → `/workspace/{project}/.analysis:rw` (read-write, isolated)
+- Logs directory → `/workspace/logs:rw` (read-write, shared)
 
-**Key Difference from Original Plan**:
-- Build image on first run (or when Dockerfile changes)
-- Use local image tag (e.g., `audit-runner:local`)
-- NO push to registry
-- Docker caching makes subsequent builds fast
+**Environment Variables Passed to Each Container**:
+- `ANTHROPIC_API_KEY` - API key from environment
+- `SKILL_NAME` - Skill to execute (e.g., `/audit-java`)
+- `MODEL`, `MAX_TURNS`, `TIMEOUT`, `MAX_BUDGET_USD` - From config.yml
+- `DEBUG_MODE` - Verbose logging toggle
+- `TASK_TIMESTAMP`, `TASK_UID` - For log file naming
+- `NODE_OPTIONS`, `CLAUDE_CONFIG_DIR`, `DEVCONTAINER` - Devcontainer vars
+
+**Differences from Legacy run_skills.py**:
+- Uses aiodocker (async Docker SDK) instead of claude-agent-sdk
+- Spawns N Docker containers instead of N SDK sessions
+- Builds image from Dockerfile (vs assumes pre-built image)
+- Containers are fully isolated (vs tasks in same process)
+- Logs collected from container stdout/stderr
+- No retry logic yet (TODO: add if needed)
 
 #### 2.3 Create `run_skill.sh` (simplified entrypoint)
 - Sources `init-env.sh` for version managers
