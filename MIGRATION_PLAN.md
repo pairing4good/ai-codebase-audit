@@ -38,16 +38,27 @@ Transition from Docker Compose to **devcontainer-native architecture** where N i
 ```
 **Status**: Directory created at `/Users/davidkessler/git/ai-codebase-audit/.devcontainer/`
 
-#### 1.2 Create `.devcontainer/Dockerfile`
-- Copy existing root `Dockerfile` as base
-- Keep ALL existing content:
-  - Multi-language runtimes (Java/Node/Python/.NET)
-  - Version managers (SDKMAN, nvm, pyenv, dotnet)
-  - Static analysis tools with pinned versions
-  - Non-root `claude` user
-- Add devcontainer metadata labels
-- Change ENTRYPOINT to devcontainer-specific script
-- **Key**: Every tool installation in plain text RUN commands
+#### 1.2 Create `.devcontainer/Dockerfile` ✅ COMPLETED
+- ✅ Based on Anthropic's official `node:20` devcontainer base
+- ✅ Added multi-language runtimes (Java/Node/Python/.NET)
+- ✅ Integrated version managers (SDKMAN, nvm, pyenv, dotnet)
+- ✅ Pre-installed 15+ static analysis tools with pinned versions
+- ✅ Changed user from `claude` to `node` (Anthropic's convention)
+- ✅ Changed working directory from `/workdir` to `/workspace` (Anthropic's standard)
+- ✅ Installed Claude via npm (`@anthropic-ai/claude-code`) instead of Python SDK
+- ✅ Added zsh + powerline10k shell configuration
+- ✅ Included `init-firewall.sh` for network security
+- ✅ Added devcontainer metadata labels
+- ✅ Set ENTRYPOINT to `/app/devcontainer-entrypoint.sh`
+
+**Status**: Created at `.devcontainer/Dockerfile` (12KB) and `.devcontainer/init-firewall.sh` (4.5KB)
+
+**Key Changes from Original**:
+- Base: `node:20` instead of `debian:bookworm-slim`
+- User: `node` instead of `claude` (affects all volume mounts, permissions)
+- Workdir: `/workspace` instead of `/workdir` (affects all paths)
+- Claude: npm package instead of Python SDK
+- Shell: zsh with powerline10k for better interactive experience
 
 #### 1.3 Create `.devcontainer/devcontainer.json`
 ```json
