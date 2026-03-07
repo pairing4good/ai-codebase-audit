@@ -72,7 +72,17 @@ for domain in \
     "statsig.com" \
     "marketplace.visualstudio.com" \
     "vscode.blob.core.windows.net" \
-    "update.code.visualstudio.com"; do
+    "update.code.visualstudio.com" \
+    "pypi.org" \
+    "files.pythonhosted.org" \
+    "repo.maven.apache.org" \
+    "repo1.maven.org" \
+    "central.sonatype.com" \
+    "api.nuget.org" \
+    "www.nuget.org" \
+    "nvd.nist.gov" \
+    "cve.mitre.org" \
+    "snyk.io"; do
     echo "Resolving $domain..."
     ips=$(dig +noall +answer A "$domain" | awk '$4 == "A" {print $5}')
     if [ -z "$ips" ]; then

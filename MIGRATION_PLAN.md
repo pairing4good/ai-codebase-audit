@@ -60,24 +60,31 @@ Transition from Docker Compose to **devcontainer-native architecture** where N i
 - Claude: npm package instead of Python SDK
 - Shell: zsh with powerline10k for better interactive experience
 
-#### 1.3 Create `.devcontainer/devcontainer.json`
-```json
-{
-  "name": "AI Codebase Audit Runner",
-  "build": {
-    "dockerfile": "Dockerfile",
-    "context": ".."
-  },
-  "workspaceFolder": "/workspace",
-  "remoteUser": "claude",
-  "containerEnv": {
-    "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}",
-    "DEBUG_MODE": "${localEnv:DEBUG_MODE}"
-  }
-}
-```
-- Uses `"build"` property (not `"image"`) to force local build
-- Context is parent directory (access to .claude/, etc.)
+#### 1.3 Create `.devcontainer/devcontainer.json` ✅ COMPLETED
+- ✅ Based on Anthropic's official devcontainer.json structure
+- ✅ Build configuration with args (TZ, CLAUDE_CODE_VERSION, etc.)
+- ✅ Network capabilities for firewall (--cap-add=NET_ADMIN, NET_RAW)
+- ✅ VS Code extensions (claude-code, eslint, prettier, gitlens)
+- ✅ Terminal settings (zsh default, bash available)
+- ✅ Volume mounts for bash history and .claude config (per devcontainer ID)
+- ✅ Environment variables:
+  - Anthropic's: NODE_OPTIONS, CLAUDE_CONFIG_DIR, POWERLEVEL9K_DISABLE_GITSTATUS
+  - Custom: ANTHROPIC_API_KEY, DEBUG_MODE, SKILL_NAME
+- ✅ Firewall initialization via postStartCommand
+- ✅ remoteUser: `node`
+- ✅ workspaceFolder: `/workspace`
+
+**Status**: Created at `.devcontainer/devcontainer.json` (1.7KB)
+
+**Key Decisions Implemented**:
+- Moved `init-env.sh` to `.devcontainer/` (matching Anthropic's pattern)
+- Updated Dockerfile to reference `.devcontainer/init-env.sh`
+- Enhanced `init-firewall.sh` with whitelisted domains for:
+  - Claude API (api.anthropic.com)
+  - Package registries (npm, PyPI, Maven, NuGet)
+  - Vulnerability databases (nvd.nist.gov, cve.mitre.org, snyk.io)
+- Environment variables follow Anthropic's pattern with ${localEnv:VAR:default}
+- Orchestrator will handle workspace mounts (not in devcontainer.json)
 
 #### 1.4 Create `.devcontainer/devcontainer-entrypoint.sh`
 - Simplified version of current `entrypoint.sh`

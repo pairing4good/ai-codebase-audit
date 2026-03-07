@@ -49,7 +49,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # =============================================================================
 # 1b. Copy version manager initialization script
 # =============================================================================
-COPY init-env.sh /opt/init-env.sh
+COPY .devcontainer/init-env.sh /opt/init-env.sh
 RUN chmod +x /opt/init-env.sh
 
 # =============================================================================
@@ -289,9 +289,6 @@ USER node
 # DevContainer metadata labels
 LABEL dev.containers.image.vendor="ai-codebase-audit"
 LABEL dev.containers.image.version="1.0.0"
-LABEL dev.containers.metadata='{ \
-  "name": "AI Codebase Audit Runner", \
-  "description": "Multi-language code audit runner with Claude Agent SDK based on Anthropic'\''s official devcontainer" \
-}'
+LABEL dev.containers.metadata="{\"name\":\"AI Codebase Audit Runner\",\"description\":\"Multi-language code audit runner with Claude Agent SDK based on Anthropic's official devcontainer\"}"
 
 ENTRYPOINT ["/usr/bin/tini", "--", "/app/devcontainer-entrypoint.sh"]
