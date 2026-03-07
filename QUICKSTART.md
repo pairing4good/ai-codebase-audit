@@ -34,9 +34,8 @@ ANTHROPIC_API_KEY=sk-ant-api03-...
 mkdir -p ~/code-audits
 export AUDIT_BASE_DIR=~/code-audits
 
-# Copy framework files
-cp config.yml CLAUDE.md ~/code-audits/
-cp -r .claude ~/code-audits/
+# Copy config file (only file needed in workspace)
+cp config.yml ~/code-audits/
 
 # Clone target repos
 cd ~/code-audits
@@ -55,6 +54,8 @@ targets:
   - dir: project-two
     skills: [/audit-javascript]
 ```
+
+**Note**: The `.claude/` directory is mounted read-only from the framework root into each container. No file copying needed.
 
 ---
 
@@ -105,6 +106,32 @@ Outputs written to your **workspace** (`~/code-audits/`):
 - `logs/summary_<timestamp>.json` - Machine-readable results
 - `logs/task_<project>__<skill>_<ts>_<uid>.log` - Per-task execution logs
 - `<project>/.analysis/<language>/final-report/` - Full analysis artifacts
+
+**Workspace structure after run**:
+```
+~/code-audits/
+  config.yml                    # Configuration (copied from framework)
+  project-one/                  # Your cloned repo
+    .analysis/java/             # Created by container during analysis
+      final-report/
+  project-two/                  # Your cloned repo
+    .analysis/javascript/       # Created by container during analysis
+      final-report/
+  logs/                         # Created by orchestrator
+    summary_<timestamp>.txt
+    summary_<timestamp>.json
+    task_*.log
+```
+
+**Framework files** (not copied, mounted read-only):
+```
+~/git/ai-codebase-audit/
+  .claude/                      # Mounted into containers as /workspace/.claude:ro
+    agents/
+    skills/
+  .devcontainer/Dockerfile      # Image build source
+  orchestrator_devcontainer.py  # Run from here
+```
 
 ---
 

@@ -3,10 +3,11 @@
 # =============================================================================
 #
 # This file must be in your AUDIT_BASE_DIR alongside:
-#   CLAUDE.md          — Claude agent instructions
-#   .claude/           — Shared skills and agents
 #   project-one/       — Your actual project directories to audit
 #   project-two/       — Another project directory
+#
+# The .claude/ directory is mounted read-only from the framework root.
+# No need to copy CLAUDE.md or .claude/ to AUDIT_BASE_DIR.
 #
 # AUDIT_BASE_DIR is set in your .env file (see .env.example for structure)
 #
@@ -19,8 +20,8 @@
 #     - Runs ONE skill in complete isolation
 #     - Is destroyed after completion (ephemeral)
 #
-#   Framework configs (.claude/, CLAUDE.md) are mounted read-only into each
-#   container - no file copying needed. Each container gets isolated access.
+#   The .claude/ directory is mounted read-only into each container from the
+#   framework root - no file copying needed. Each container gets isolated access.
 #
 # Duplicate skills listed for the same directory run as separate containers —
 # each skill execution is fully isolated.
