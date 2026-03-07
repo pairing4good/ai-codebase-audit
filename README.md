@@ -746,7 +746,6 @@ The summary shows:
 |---|---|---|
 | `runner.model` | `claude-sonnet-4-6` | Model to use (`claude-sonnet-4-6` or `claude-opus-4-6`) |
 | `runner.concurrency` | `3` | Max parallel tasks |
-| `runner.max_turns` | `20` | Max agent turns per task |
 | `runner.timeout` | `300` | Per-task timeout in seconds |
 
 ---

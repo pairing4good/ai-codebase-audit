@@ -35,7 +35,7 @@ For each (project, skill) combination:
    - Mount: {project}/ (read-write, isolated per container)
    - Mount: {project}/.analysis/ (read-write, isolated per container)
    - Mount: logs/ (read-write, shared for centralized logging)
-   - Env: ANTHROPIC_API_KEY, SKILL_NAME, MODEL, MAX_TURNS, etc.
+   - Env: ANTHROPIC_API_KEY, SKILL_NAME, ANTHROPIC_MODEL, DEBUG_MODE, etc.
 
 3. Execute: /app/devcontainer-entrypoint.sh
    - Sources version managers (/opt/init-env.sh)
@@ -182,9 +182,7 @@ The orchestrator passes these environment variables to each container:
 - `SKILL_NAME` - Skill to execute (e.g., `/audit-java`)
 
 **From config.yml:**
-- `MODEL` - Model to use (e.g., `claude-sonnet-4-6`)
-- `MAX_TURNS` - Max agent turns (e.g., `20`)
-- `TIMEOUT` - Per-task timeout in seconds (e.g., `300`)
+- `ANTHROPIC_MODEL` - Model to use (e.g., `claude-sonnet-4-6`)
 - `DEBUG_MODE` - Verbose logging toggle (read from `config.yml debug.enabled`)
 
 **Automatic (for logging):**

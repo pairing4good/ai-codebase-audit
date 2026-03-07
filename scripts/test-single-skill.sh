@@ -21,7 +21,6 @@
 #   ANTHROPIC_API_KEY     Required - Anthropic API key
 #   DEBUG_MODE            Optional - Enable verbose logging in generated config (default: false)
 #   MODEL                 Optional - Model to use (default: from config.yml)
-#   MAX_TURNS             Optional - Max turns (default: from config.yml)
 #   TIMEOUT               Optional - Timeout in seconds (default: from config.yml)
 #
 # Note: This script generates a temporary config.yml with debug.enabled set from DEBUG_MODE.
@@ -198,7 +197,6 @@ cat > "$TEMP_CONFIG" <<EOF
 runner:
   model: ${MODEL:-claude-sonnet-4-6}
   concurrency: 1
-  max_turns: ${MAX_TURNS:-20}
   timeout: ${TIMEOUT:-300}
   image_tag: audit-runner:local
   rebuild: ${FORCE_REBUILD:-false}
