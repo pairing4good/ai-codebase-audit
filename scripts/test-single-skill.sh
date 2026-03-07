@@ -200,7 +200,6 @@ runner:
   concurrency: 1
   max_turns: ${MAX_TURNS:-20}
   timeout: ${TIMEOUT:-300}
-  max_budget_usd: ${MAX_BUDGET_USD:-10.0}
   image_tag: audit-runner:local
   rebuild: ${FORCE_REBUILD:-false}
 

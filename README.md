@@ -358,7 +358,6 @@ Partial results may contain clues about what was analyzed before failure.
 | Failure Type | Likely Cause | Solution |
 |---|---|---|
 | Timeout | Task exceeded `runner.timeout` (default 300s) | Increase timeout in config.yml or reduce codebase scope |
-| Budget exceeded | Task cost > `runner.max_budget_usd` (default $10) | Increase budget or use smaller model |
 | Out of memory | Container exceeded 4GB limit | Analyze fewer projects concurrently or reduce `runner.concurrency` |
 | Config error | Invalid skill path or duplicate skills | Fix config.yml based on error message |
 | Disk space | Insufficient space for analysis outputs | Free up space or increase volume size |
@@ -682,21 +681,6 @@ Costs vary based on codebase size, complexity, and model choice. These are **rou
 5. **Number of agents**: Each skill runs 4 agents (architecture, security, dependency, maintainability)
 6. **Static tool output**: Large tool outputs (e.g., from Semgrep, SpotBugs) increase cost
 
-### Budget control
-
-Set `max_budget_usd` in config.yml to prevent runaway costs:
-
-```yaml
-runner:
-  max_budget_usd: 10.0  # Per-task spending limit
-```
-
-**What happens when budget is exceeded:**
-- The skill stops gracefully
-- Partial analysis is preserved in `.analysis/<language>/`
-- Task is marked as failed with "budget exceeded" in logs
-- Container continues with remaining tasks
-
 ### Estimating total cost
 
 **Formula:**
@@ -754,8 +738,6 @@ The summary shows:
 | Multiple projects (5-10 medium) | $50.00 - $100.00 |
 | Organization-wide audit (20+ projects) | $200.00+ |
 
-**Note**: Set `max_budget_usd` to your per-skill limit, not total budget. The system applies this limit to each individual skill execution.
-
 ---
 
 ## config.yml options
@@ -766,7 +748,6 @@ The summary shows:
 | `runner.concurrency` | `3` | Max parallel tasks |
 | `runner.max_turns` | `20` | Max agent turns per task |
 | `runner.timeout` | `300` | Per-task timeout in seconds |
-| `runner.max_budget_usd` | `10.0` | **Per-task** spending limit in USD (see Cost Estimation above) |
 
 ---
 

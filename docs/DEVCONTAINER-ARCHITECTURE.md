@@ -185,7 +185,6 @@ The orchestrator passes these environment variables to each container:
 - `MODEL` - Model to use (e.g., `claude-sonnet-4-6`)
 - `MAX_TURNS` - Max agent turns (e.g., `20`)
 - `TIMEOUT` - Per-task timeout in seconds (e.g., `300`)
-- `MAX_BUDGET_USD` - Per-task spending limit (e.g., `10.0`)
 - `DEBUG_MODE` - Verbose logging toggle (read from `config.yml debug.enabled`)
 
 **Automatic (for logging):**

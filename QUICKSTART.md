@@ -102,7 +102,7 @@ Typical costs per skill (claude-sonnet-4-6):
 - Medium (10-50K LOC): $2.00 - $6.00
 - Large (50-150K LOC): $6.00 - $15.00
 
-Set `max_budget_usd` in config.yml to control costs.
+Monitor costs using the Claude Console at https://console.anthropic.com
 
 ---
 
