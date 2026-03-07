@@ -230,12 +230,28 @@ orchestrator_devcontainer.py
 - Logs collected from container stdout/stderr
 - No retry logic yet (TODO: add if needed)
 
-#### 2.3 Create `run_skill.sh` (simplified entrypoint)
-- Sources `init-env.sh` for version managers
-- Verifies tools available (fail fast if missing)
-- Sets up environment variables
-- Invokes Claude SDK with skill parameter: `claude --dangerously-skip-permissions "$SKILL_NAME"`
-- Writes results to logs directory with proper naming
+#### 2.3 Create `run_skill.sh` (simplified entrypoint) ✅ COMPLETED (Redundant with 1.4)
+
+**Status**: This step is **redundant** with Phase 1, Step 1.4
+
+**Explanation**: The `.devcontainer/devcontainer-entrypoint.sh` file created in step 1.4 already implements all the functionality described in this step:
+- ✅ Sources `init-env.sh` for version managers (line 24)
+- ✅ Verifies tools available with fail-fast (lines 48-107)
+- ✅ Sets up environment variables (inherits from orchestrator)
+- ✅ Invokes Claude CLI with skill parameter: `claude --dangerously-skip-permissions -p "${SKILL}"` (line 233)
+- ✅ Logs are automatically written to `/workspace/logs` by orchestrator
+
+**No additional file needed**: The devcontainer-entrypoint.sh serves as the per-container entrypoint that the orchestrator invokes. Creating a separate `run_skill.sh` would be redundant.
+
+**Architecture**:
+```
+orchestrator_devcontainer.py (host)
+  └─> spawns N containers
+       └─> each runs: /app/devcontainer-entrypoint.sh <skill>
+            └─> executes: claude --dangerously-skip-permissions -p <skill>
+```
+
+**Phase 2 Complete**: All orchestrator components created!
 
 ### Phase 3: Update Configuration Files
 
