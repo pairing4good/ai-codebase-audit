@@ -288,16 +288,36 @@ runner:
 - All existing configurations preserved (backward compatible)
 - Header documentation updated to reflect devcontainer architecture
 
-#### 3.2 Update .env.example
-```bash
-# Required
-AUDIT_BASE_DIR=/path/to/audit-workspace
-ANTHROPIC_API_KEY=sk-ant-api03-...
+#### 3.2 Update .env.example ✅ COMPLETED
 
-# Optional
-DEBUG_MODE=false
-FORCE_REBUILD=false  # Set to true to rebuild image on every run
+**Status**: Updated at `.env.example`
+
+**Changes Made**:
+1. ✅ Added section headers for clarity (REQUIRED vs OPTIONAL)
+2. ✅ Added `DEBUG_MODE=false` with comprehensive documentation:
+   - Enables verbose logging when true
+   - Full SDK messages and tool outputs
+   - Errors always logged regardless of setting
+3. ✅ Added `FORCE_REBUILD=false` with comprehensive documentation:
+   - Forces Docker image rebuild when true
+   - Uses cached image when false (faster)
+   - Useful after Dockerfile changes
+   - Note about config.yml alternative (runner.rebuild)
+4. ✅ Kept all existing variables unchanged (AUDIT_BASE_DIR, ANTHROPIC_API_KEY)
+5. ✅ Kept existing directory structure examples unchanged
+
+**New Optional Variables**:
+```bash
+# Optional (DevContainer-specific)
+DEBUG_MODE=false       # Verbose logging toggle
+FORCE_REBUILD=false    # Force image rebuild toggle
 ```
+
+**Documentation Added**:
+- Clear explanations of when to use each setting
+- Default values documented
+- Links to alternative configuration methods
+- Use cases for each variable
 
 #### 3.3 Keep .claude/ unchanged
 - All skills and agents work as-is
