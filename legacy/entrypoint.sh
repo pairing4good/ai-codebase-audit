@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# DEPRECATED: This file is deprecated as of 2026-03-07
+# Use orchestrator_devcontainer.py instead
+# See legacy/README.md for details
+#
 # =============================================================================
 # entrypoint.sh
 #

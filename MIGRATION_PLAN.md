@@ -757,7 +757,16 @@ ls ~/audit-workspace/project-one/.analysis/java/final-report/
 
 ### Phase 6: Deprecate Old Files
 
-#### 6.1 Create `legacy/` directory
+#### 6.1 Create `legacy/` directory ✅ COMPLETED
+
+**Status**: Created `legacy/` directory and moved 3 files
+
+**Files Moved**:
+- ✅ `docker-compose.yml` → `legacy/docker-compose.yml`
+- ✅ `run_skills.py` → `legacy/run_skills.py`
+- ✅ `entrypoint.sh` → `legacy/entrypoint.sh`
+
+**Command Executed**:
 ```bash
 mkdir legacy
 mv docker-compose.yml legacy/
@@ -765,45 +774,67 @@ mv run_skills.py legacy/
 mv entrypoint.sh legacy/
 ```
 
-#### 6.2 Add legacy/README.md
-```markdown
-# Legacy Docker Compose Approach
+#### 6.2 Add legacy/README.md ✅ COMPLETED
 
-This directory contains the previous Docker Compose-based orchestration.
+**Status**: Created at [legacy/README.md](legacy/README.md) (195 lines)
 
-**Status**: Deprecated as of 2026-03-07
+**Sections Included**:
+- ✅ Deprecation status and timeline
+- ✅ Files inventory with descriptions
+- ✅ Why Deprecated (6 key improvements)
+- ✅ Migration Guide (old vs new workflow)
+- ✅ Key Differences (detailed comparison table)
+- ✅ What Stayed the Same (backward compatibility)
+- ✅ What Changed (comparison table)
+- ✅ Troubleshooting Legacy Approach
+- ✅ Support Timeline (3-month deprecation plan)
+- ✅ Questions section
 
-**Migration**: Use `orchestrator_devcontainer.py` in project root instead.
+**Key Content**:
+- Deprecation date: 2026-03-07
+- Removal date: 2026-06-07 (3 months)
+- Comprehensive migration instructions
+- Side-by-side workflow comparison
+- Temporary legacy usage instructions
 
-**Removal**: Planned for 2026-06-07 (3 months)
+#### 6.3 Delete root Dockerfile ✅ COMPLETED
 
-## Files
+**Status**: Deleted successfully
 
-- `docker-compose.yml` - Old Docker Compose configuration
-- `run_skills.py` - Old Python orchestrator (single container, N tasks)
-- `entrypoint.sh` - Old container startup script
+**Rationale**: Replaced by `.devcontainer/Dockerfile`
 
-## Why Deprecated?
-
-The new devcontainer approach provides:
-- True container isolation (N containers, not N tasks)
-- Build-from-source transparency (no prebuilt images)
-- Standards compliance (official devcontainer spec)
-- Better security (container-level isolation)
-```
-
-#### 6.3 Delete root Dockerfile
+**Command Executed**:
 ```bash
-rm Dockerfile  # Replaced by .devcontainer/Dockerfile
+rm Dockerfile
 ```
 
-#### 6.4 Add deprecation notice to legacy files
-Add to top of each legacy file:
+**Verification**:
+- ✅ Root `Dockerfile` removed
+- ✅ `.devcontainer/Dockerfile` exists and is complete (12KB)
+- ✅ No conflicts between old and new Dockerfiles
+
+#### 6.4 Add deprecation notices to legacy files ✅ COMPLETED
+
+**Status**: Added deprecation notices to all 3 legacy files
+
+**Files Updated**:
+1. ✅ `legacy/docker-compose.yml` - Added comment block after header
+2. ✅ `legacy/run_skills.py` - Added to module docstring
+3. ✅ `legacy/entrypoint.sh` - Added comment block after shebang
+
+**Deprecation Notice**:
 ```bash
 # DEPRECATED: This file is deprecated as of 2026-03-07
 # Use orchestrator_devcontainer.py instead
 # See legacy/README.md for details
 ```
+
+**Placement**:
+- `docker-compose.yml`: After header comments, before `services:`
+- `run_skills.py`: Top of module docstring
+- `entrypoint.sh`: After shebang, before header comments
+
+**Phase 6 Complete**: All legacy files deprecated and documented!
 
 ### Phase 7: Add Developer Tools
 

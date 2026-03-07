@@ -1,4 +1,8 @@
 """
+DEPRECATED: This file is deprecated as of 2026-03-07
+Use orchestrator_devcontainer.py instead
+See legacy/README.md for details
+
 run_skills.py — Parallel Claude skill runner.
 
 Reads config.yml for api key, model, targets, and runner settings.
