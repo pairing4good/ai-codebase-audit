@@ -86,12 +86,30 @@ Transition from Docker Compose to **devcontainer-native architecture** where N i
 - Environment variables follow Anthropic's pattern with ${localEnv:VAR:default}
 - Orchestrator will handle workspace mounts (not in devcontainer.json)
 
-#### 1.4 Create `.devcontainer/devcontainer-entrypoint.sh`
-- Simplified version of current `entrypoint.sh`
-- No file copying (handled by orchestrator mounts)
-- Source version managers (init-env.sh)
-- Verify tool availability
-- Execute passed command (skill)
+#### 1.4 Create `.devcontainer/devcontainer-entrypoint.sh` ✅ COMPLETED
+- ✅ Simplified version of legacy `entrypoint.sh` (242 lines vs 374 lines)
+- ✅ No file copying - orchestrator handles all mounts
+- ✅ Sources version managers via `/opt/init-env.sh`
+- ✅ Logs toolchain versions (Java, Node, Python, .NET, git, Claude)
+- ✅ Verifies static analysis tools (semgrep, snyk, trivy, bandit, pylint, eslint, dotnet tools)
+- ✅ Validates ANTHROPIC_API_KEY presence
+- ✅ Validates skill file existence
+- ✅ Supports DEBUG_MODE environment variable
+- ✅ Executes single skill via `claude --dangerously-skip-permissions -p "${SKILL}"`
+- ✅ Accepts skill as command-line arg or SKILL_NAME env var
+- ✅ Security model documentation in logs
+
+**Status**: Created at `.devcontainer/devcontainer-entrypoint.sh` (8.2KB, 242 lines, executable)
+
+**Key Differences from Legacy entrypoint.sh**:
+- **Removed**: config.yml parsing (orchestrator handles this)
+- **Removed**: Project directory loop and file copying (orchestrator mounts per-container)
+- **Removed**: run_skills.py invocation (orchestrator spawns N containers directly)
+- **Removed**: Signal handling for Python orchestrator (not needed for single skill)
+- **Removed**: Disk space validation (orchestrator responsibility)
+- **Added**: Claude CLI version check (`claude --version`)
+- **Added**: Skill file validation before execution
+- **Simplified**: Runs ONE skill in ONE isolated container (not N skills in one container)
 
 #### 1.5 Create `.devcontainer/README.md`
 - Document build-from-source approach
