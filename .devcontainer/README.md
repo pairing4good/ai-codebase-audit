@@ -186,9 +186,10 @@ Network access is **required** for effective security audits. Containers are **e
 - `ANTHROPIC_API_KEY` - Your Claude API key from console.anthropic.com
 
 ### Optional
-- `DEBUG_MODE` - Set to `true` for verbose logging (default: `false`)
 - `SKILL_NAME` - Skill to execute (e.g., `/audit-java`, `/audit-python`)
 - `TZ` - Timezone (default: `America/Los_Angeles`)
+
+**Note:** Debug mode is configured via `debug.enabled` in `config.yml`, not environment variables.
 
 ### Automatic (from Anthropic's base)
 - `NODE_OPTIONS` - Set to `--max-old-space-size=4096` (4GB heap)

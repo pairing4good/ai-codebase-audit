@@ -20,7 +20,6 @@
 #
 # Environment variables (set by orchestrator):
 #   ANTHROPIC_API_KEY  - Claude API key (required)
-#   DEBUG_MODE         - Enable verbose logging (optional, default: false)
 #   SKILL_NAME         - Skill to execute (optional, can use $1 instead)
 # =============================================================================
 set -euo pipefail
@@ -221,13 +220,21 @@ sep
 # Execute skill via Claude CLI
 # =============================================================================
 info "Executing skill: ${SKILL}"
-info "Command: claude --dangerously-skip-permissions -p \"${SKILL}\""
+
+# Build Claude CLI command with debug flags if enabled
+CLAUDE_CMD="claude --dangerously-skip-permissions"
+if [[ "${DEBUG_MODE}" == "true" ]]; then
+    CLAUDE_CMD="$CLAUDE_CMD --debug --verbose"
+    info "Command: $CLAUDE_CMD -p \"${SKILL}\" (with debug enabled)"
+else
+    info "Command: $CLAUDE_CMD -p \"${SKILL}\""
+fi
 sep
 
 # Run Claude with the skill
 # Note: Using npm-installed @anthropic-ai/claude-code package
 # Output is captured by orchestrator via container logs
-claude --dangerously-skip-permissions -p "${SKILL}"
+$CLAUDE_CMD -p "${SKILL}"
 EXIT_CODE=$?
 
 sep

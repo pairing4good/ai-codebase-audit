@@ -108,7 +108,8 @@ Set `max_budget_usd` in config.yml to control costs.
 
 ## Need Help?
 
-- **Troubleshooting**: See [README.md](README.md#troubleshooting)
+**Troubleshooting**: Set `debug.enabled: true` in config.yml for verbose logs (see [README.md](README.md#debugging))
+
 - **Configuration**: See [README.md](README.md#configuration)
 - **Architecture**: See [docs/DEVCONTAINER-ARCHITECTURE.md](docs/DEVCONTAINER-ARCHITECTURE.md)
 - **Migration Guide**: See [MIGRATION_PLAN.md](MIGRATION_PLAN.md)

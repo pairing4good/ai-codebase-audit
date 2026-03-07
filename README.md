@@ -544,19 +544,32 @@ Plan disk space accordingly when running multiple audits with debug enabled.
 
 ### Where to Find Debug Information
 
-Debug output appears in the same log locations:
+Debug output is written to the `logs/` directory in your audit workspace. When debug mode is enabled (`debug.enabled: true` in `config.yml`), all logs contain significantly more detail:
 
 ```bash
-# Check Docker startup and configuration
-cat logs/docker_<timestamp>.log | grep -A 5 "Debug mode"
+# Orchestrator logs (main coordinator process)
+# Contains: image building, container creation, task scheduling
+cat logs/orchestrator_<timestamp>.log
 
-# Check task execution with full messages
-cat logs/task_<project>__<skill>_<ts>_<uid>.log
+# Individual task logs (one per project+skill execution)
+# Contains: entrypoint startup, Claude CLI output (with --debug --verbose),
+#           skill execution, tool commands (with bash set -x)
+cat logs/task_<project>__<skill>_<timestamp>_<uid>.log
 
-# Search for tool errors
+# Search for tool errors across all task logs
 grep -r "⚠️" logs/task_*.log
 grep -r "ERROR" logs/task_*.log
+
+# Search for debug statements
+grep -r "DEBUG:" logs/task_*.log
 ```
+
+**Debug mode enhancements:**
+- **Orchestrator**: Shows container configuration, mount paths, environment variables (API key masked)
+- **Claude CLI**: Runs with `--debug --verbose` flags for detailed execution traces
+- **Entrypoint**: Logs all startup checks, firewall initialization, skill validation
+- **Skills/Tools**: Bash commands shown with `set -x` (command echo before execution)
+- **Python logging**: Level set to `DEBUG` instead of `INFO`
 
 ### Common Debugging Scenarios
 
@@ -636,12 +649,12 @@ This allows conditional verbose logging within skill/agent execution.
 To return to normal operation:
 
 1. Edit `config.yml` and set `debug.enabled: false`
-2. Re-run without rebuilding:
+2. Re-run the orchestrator:
    ```bash
-   docker compose run --rm skills
+   python orchestrator_devcontainer.py
    ```
 
-No rebuild needed - the debug flag is read from config.yml at runtime.
+No rebuild needed - the debug setting is read from `config.yml` at runtime and passed to containers as they're created.
 
 ---
 

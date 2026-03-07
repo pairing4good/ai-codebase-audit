@@ -186,9 +186,7 @@ The orchestrator passes these environment variables to each container:
 - `MAX_TURNS` - Max agent turns (e.g., `20`)
 - `TIMEOUT` - Per-task timeout in seconds (e.g., `300`)
 - `MAX_BUDGET_USD` - Per-task spending limit (e.g., `10.0`)
-
-**Optional:**
-- `DEBUG_MODE` - Verbose logging toggle (default: `false`)
+- `DEBUG_MODE` - Verbose logging toggle (read from `config.yml debug.enabled`)
 
 **Automatic (for logging):**
 - `TASK_TIMESTAMP` - ISO 8601 timestamp for log file naming

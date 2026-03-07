@@ -19,10 +19,13 @@
 # Environment Variables:
 #   AUDIT_BASE_DIR        Required - Path to workspace directory
 #   ANTHROPIC_API_KEY     Required - Anthropic API key
-#   DEBUG_MODE            Optional - Enable verbose logging (default: false)
+#   DEBUG_MODE            Optional - Enable verbose logging in generated config (default: false)
 #   MODEL                 Optional - Model to use (default: from config.yml)
 #   MAX_TURNS             Optional - Max turns (default: from config.yml)
 #   TIMEOUT               Optional - Timeout in seconds (default: from config.yml)
+#
+# Note: This script generates a temporary config.yml with debug.enabled set from DEBUG_MODE.
+#       For production use, configure debug.enabled directly in config.yml instead.
 #
 # Exit codes:
 #   0 - Success

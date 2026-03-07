@@ -14,7 +14,6 @@ Usage:
 Environment variables:
     AUDIT_BASE_DIR       - Path to audit workspace (default: current directory)
     ANTHROPIC_API_KEY    - Claude API key (required)
-    DEBUG_MODE           - Enable verbose logging (default: false)
     FORCE_REBUILD        - Force image rebuild (default: false)
 """
 
@@ -52,7 +51,11 @@ def load_config(config_path: Path, audit_base_dir: Path) -> Dict[str, Any]:
         sys.exit("ERROR: ANTHROPIC_API_KEY environment variable is not set.")
 
     runner = cfg.get("runner", {})
-    debug_mode = os.environ.get("DEBUG_MODE", "false").lower() == "true"
+    debug_cfg = cfg.get("debug", {})
+
+    # Debug mode: read from config.yml only
+    debug_mode = debug_cfg.get("enabled", False)
+
     force_rebuild = os.environ.get("FORCE_REBUILD", "false").lower() == "true"
     targets = cfg.get("targets", [])
 
@@ -98,6 +101,11 @@ async def ensure_image_built(docker: aiodocker.Docker, config: Dict[str, Any], r
     # Build from .devcontainer/Dockerfile
     logger.info(f"Building image from {repo_root}/.devcontainer/Dockerfile")
     logger.info("This may take 10-15 minutes on first build (subsequent builds ~30s)")
+    if config['debug_mode']:
+        logger.debug(f"  Build context: {repo_root}")
+        logger.debug(f"  Dockerfile path: .devcontainer/Dockerfile")
+        logger.debug(f"  Image tag: {image_tag}")
+        logger.debug(f"  Remove intermediate containers: True")
 
     build_stream = docker.images.build(
         path_dockerfile='.devcontainer',
@@ -253,6 +261,8 @@ async def run_skill_container(
 
     # Clean up any existing Claude configs in the target project
     # This prevents conflicts with the framework's mounted .claude/ directory
+    if config['debug_mode']:
+        logger.debug(f"  Checking for existing Claude configs in: {project_path}")
     cleanup_project_claude_configs(project_path, logger)
 
     # Create log directory and .analysis directory
@@ -309,6 +319,21 @@ async def run_skill_container(
         }
 
         logger.info(f"  Creating container: {container_name}")
+        if config['debug_mode']:
+            logger.debug(f"    Image: {config['image_tag']}")
+            logger.debug(f"    Working dir: /workspace")
+            logger.debug(f"    Memory limit: 4GB")
+            logger.debug(f"    User: node")
+            logger.debug(f"    Mounts:")
+            for bind in container_config["HostConfig"]["Binds"]:
+                logger.debug(f"      - {bind}")
+            logger.debug(f"    Environment variables:")
+            for env in container_config["Env"]:
+                # Mask API key in logs
+                if "ANTHROPIC_API_KEY" in env:
+                    logger.debug(f"      - ANTHROPIC_API_KEY=***masked***")
+                else:
+                    logger.debug(f"      - {env}")
 
         # Create container
         container = await docker.containers.create(
@@ -502,14 +527,26 @@ def main():
     log_dir = audit_base_dir / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
 
-    # Setup logging
+    # Setup logging (both console and file)
     log_level = logging.DEBUG if config['debug_mode'] else logging.INFO
+
+    # Create orchestrator log file
+    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    orchestrator_log_file = log_dir / f"orchestrator_{timestamp}.log"
+
+    # Configure root logger
     logging.basicConfig(
         level=log_level,
         format="[%(asctime)s] [orchestrator] %(message)s",
         datefmt="%H:%M:%S",
+        handlers=[
+            logging.StreamHandler(),  # Console output
+            logging.FileHandler(orchestrator_log_file, mode='w')  # File output
+        ]
     )
     logger = logging.getLogger("orchestrator")
+
+    logger.info(f"Orchestrator logs will be written to: {orchestrator_log_file}")
 
     logger.info("=" * 64)
     logger.info("DevContainer-Native Parallel Skill Runner")

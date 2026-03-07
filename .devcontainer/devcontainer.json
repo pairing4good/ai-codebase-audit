@@ -50,7 +50,6 @@
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
     "POWERLEVEL9K_DISABLE_GITSTATUS": "true",
     "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}",
-    "DEBUG_MODE": "${localEnv:DEBUG_MODE:false}",
     "SKILL_NAME": "${localEnv:SKILL_NAME:/audit-java}"
   },
   "workspaceFolder": "/workspace",
