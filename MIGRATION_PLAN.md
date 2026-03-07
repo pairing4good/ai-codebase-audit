@@ -358,33 +358,42 @@ FORCE_REBUILD=false    # Force image rebuild toggle
 
 ### Phase 4: Update Build Process
 
-#### 4.1 Add build verification script
-Create `scripts/verify-build.sh`:
+#### 4.1 Add build verification script ✅ COMPLETED
+
+**Status**: Created at `scripts/verify-build.sh` (263 lines, executable)
+
+**Features Implemented**:
+- ✅ Comprehensive tool verification inside built container
+- ✅ Verifies all language runtimes (Java, Node.js, Python, .NET, git, Claude)
+- ✅ Verifies all static analysis tools (semgrep, snyk, trivy, bandit, pylint, mypy, eslint, dotnet tools)
+- ✅ Verifies version managers (SDKMAN, nvm, pyenv, dotnet-install.sh)
+- ✅ Verifies user and permissions (node user, workspace writable)
+- ✅ Verifies entrypoint script exists and is executable
+- ✅ Accepts optional image tag parameter (default: audit-runner:local)
+- ✅ Clear pass/fail reporting with exit codes
+- ✅ Helpful error messages and rebuild instructions
+
+**Usage**:
 ```bash
-#!/bin/bash
-# Verify all tools are installed correctly in built image
+# Verify default image
+./scripts/verify-build.sh
 
-docker run --rm audit-runner:local bash -c "
-  set -e
-  echo '=== Verifying Language Runtimes ==='
-  java -version
-  node --version
-  python --version
-  dotnet --version
-
-  echo '=== Verifying Static Analysis Tools ==='
-  semgrep --version
-  snyk --version
-  trivy --version
-  bandit --version
-  eslint --version
-
-  echo '=== Verifying Claude SDK ==='
-  claude --version
-
-  echo '=== All tools verified ==='
-"
+# Verify specific image tag
+./scripts/verify-build.sh audit-runner:v1.0.0
 ```
+
+**Exit Codes**:
+- 0 - All tools verified successfully
+- 1 - One or more tools missing or misconfigured
+- 2 - Docker image not found
+
+**Verification Sections**:
+1. Image existence check
+2. Language runtimes (6 tools)
+3. Static analysis tools (9 tools)
+4. Version managers (4 components)
+5. User and permissions (node user, writable workspace)
+6. Entrypoint script (exists and executable)
 
 #### 4.2 Add local build script (for testing)
 Create `scripts/build-local.sh`:
