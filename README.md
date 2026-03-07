@@ -372,9 +372,9 @@ Partial results may contain clues about what was analyzed before failure.
        skills:
          - /audit-java  # Only the skill that failed
    ```
-3. **Re-run the container**:
+3. **Re-run the orchestrator**:
    ```bash
-   docker compose run --rm skills
+   python3 orchestrator_devcontainer.py
    ```
 
 ### Preserving previous results
@@ -392,14 +392,81 @@ If you need to start completely fresh:
 
 ```bash
 # Remove all analysis outputs
+cd ~/code-audits
 find . -type d -name ".analysis" -exec rm -rf {} +
 
 # Remove all logs
 rm -rf logs/*
 
 # Remove Docker image to force rebuild
-docker compose down --rmi local
-docker compose build --no-cache
+docker rmi audit-runner:local
+python3 ~/git/ai-codebase-audit/orchestrator_devcontainer.py
+```
+
+---
+
+## Troubleshooting
+
+### Build Failures
+
+**Problem**: Docker build fails
+
+**Solutions**:
+1. Check disk space: `docker system df`
+2. Prune old images: `docker image prune -a`
+3. Retry with no cache: `./scripts/build-local.sh --no-cache --verify`
+4. Check Docker daemon is running: `docker info`
+
+### Container Spawn Failures
+
+**Problem**: Orchestrator can't spawn containers
+
+**Solutions**:
+1. Verify Docker running: `docker info`
+2. Check environment variable: `echo $AUDIT_BASE_DIR`
+3. Verify image exists: `docker images | grep audit-runner`
+4. Try manual build: `./scripts/build-local.sh --verify`
+
+### Tool Missing Errors
+
+**Problem**: Container reports missing static analysis tools
+
+**Solutions**:
+1. Force rebuild: `./scripts/clean-images.sh && python3 orchestrator_devcontainer.py`
+2. Verify build completed: `./scripts/verify-build.sh`
+3. Check build logs for installation errors in Dockerfile
+4. Ensure you're using the correct image tag in config.yml
+
+### Developer Tools
+
+Useful scripts for troubleshooting and development:
+
+```bash
+# Build image manually with verification
+./scripts/build-local.sh --verify
+
+# Verify all tools are installed correctly
+./scripts/verify-build.sh
+
+# Clean local images to force rebuild
+./scripts/clean-images.sh
+
+# Watch logs in real-time
+tail -f ~/code-audits/logs/task_*.log
+```
+
+**Force rebuild options**:
+```bash
+# Option 1: Environment variable
+export FORCE_REBUILD=true
+python3 orchestrator_devcontainer.py
+
+# Option 2: Config file
+# Edit config.yml: runner.rebuild: true
+
+# Option 3: Manual cleanup
+./scripts/clean-images.sh
+python3 orchestrator_devcontainer.py
 ```
 
 ---
