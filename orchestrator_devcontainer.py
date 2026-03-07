@@ -285,7 +285,7 @@ async def run_skill_container(
             "Env": [
                 f"ANTHROPIC_API_KEY={config['api_key']}",
                 f"SKILL_NAME={skill}",
-                f"MODEL={config['model']}",
+                f"ANTHROPIC_MODEL={config['model']}",
                 f"MAX_TURNS={config['max_turns']}",
                 f"TIMEOUT={config['timeout']}",
                 f"DEBUG_MODE={'true' if config['debug_mode'] else 'false'}",

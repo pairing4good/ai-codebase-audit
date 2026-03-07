@@ -38,7 +38,8 @@
 # =============================================================================
 
 runner:
-  model:            claude-sonnet-4-6  # claude-sonnet-4-6 | claude-opus-4-6
+  model:            claude-sonnet-4-6  # Model to use (claude-sonnet-4-6 | claude-opus-4-6)
+                                        # Passed as ANTHROPIC_MODEL to containers
   concurrency:      3                  # max parallel tasks (containers)
   max_turns:        20                 # max agent turns per skill run
   timeout:          300                # seconds per task
