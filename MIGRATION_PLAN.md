@@ -440,16 +440,45 @@ FORCE_REBUILD=false    # Force image rebuild toggle
 - Image size
 - Next steps (verification, usage with orchestrator)
 
-#### 4.3 Add clean script
-Create `scripts/clean-images.sh`:
-```bash
-#!/bin/bash
-# Remove locally built images to force rebuild
+#### 4.3 Add clean script ✅ COMPLETED
 
-docker rmi audit-runner:local 2>/dev/null || true
-docker image prune -f
-echo "Local images cleaned. Next run will rebuild from Dockerfile."
+**Status**: Created at `scripts/clean-images.sh` (114 lines, executable)
+
+**Features Implemented**:
+- ✅ Removes `audit-runner:local` image
+- ✅ Prunes unused Docker images
+- ✅ Command-line options:
+  - `--all` - Also remove dangling images and build cache (deep clean)
+  - `-h, --help` - Show usage information
+- ✅ Docker running check (fails gracefully if Docker not available)
+- ✅ Colored output for success/warning/error messages
+- ✅ Clear feedback on what was removed
+- ✅ Helpful next steps displayed after cleanup
+- ✅ Error handling with exit codes
+
+**Usage Examples**:
+```bash
+# Basic cleanup (remove audit-runner:local and prune unused images)
+./scripts/clean-images.sh
+
+# Deep cleanup (also remove dangling images and build cache)
+./scripts/clean-images.sh --all
+
+# Show help
+./scripts/clean-images.sh --help
 ```
+
+**Exit Codes**:
+- 0 - Success
+- 1 - Error (Docker not running or unknown option)
+
+**Output Information**:
+- Image removal status (success or already removed)
+- Prune results
+- Next steps (rebuild instructions)
+- Expected rebuild time estimate
+
+**Phase 4 Complete**: All build process scripts created!
 
 ### Phase 5: Update Documentation
 
