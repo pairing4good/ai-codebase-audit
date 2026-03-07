@@ -146,6 +146,63 @@ async def ensure_image_built(docker: aiodocker.Docker, config: Dict[str, Any], r
 # Container Runner
 # =============================================================================
 
+def cleanup_project_claude_configs(project_path: Path, logger: logging.Logger) -> None:
+    """
+    Rename any existing .claude/ directory and CLAUDE.md files in the target
+    project to prevent conflicts with the framework's mounted .claude/ directory.
+
+    This ensures Claude Code only discovers and uses the audit framework's
+    configuration, not any existing configuration in the target repository.
+
+    Renamed files:
+    - .claude/          → OLD-.claude/
+    - CLAUDE.md         → OLD-CLAUDE.md
+    - CLAUDE.local.md   → OLD-CLAUDE.local.md
+    """
+
+    renamed_items = []
+
+    # Check and rename .claude/ directory
+    claude_dir = project_path / ".claude"
+    if claude_dir.exists() and claude_dir.is_dir():
+        old_claude_dir = project_path / "OLD-.claude"
+        # If OLD-.claude already exists, add timestamp to avoid collision
+        if old_claude_dir.exists():
+            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            old_claude_dir = project_path / f"OLD-.claude.{timestamp}"
+        claude_dir.rename(old_claude_dir)
+        renamed_items.append(f".claude/ → {old_claude_dir.name}")
+
+    # Check and rename CLAUDE.md
+    claude_md = project_path / "CLAUDE.md"
+    if claude_md.exists() and claude_md.is_file():
+        old_claude_md = project_path / "OLD-CLAUDE.md"
+        # If OLD-CLAUDE.md already exists, add timestamp
+        if old_claude_md.exists():
+            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            old_claude_md = project_path / f"OLD-CLAUDE.md.{timestamp}"
+        claude_md.rename(old_claude_md)
+        renamed_items.append(f"CLAUDE.md → {old_claude_md.name}")
+
+    # Check and rename CLAUDE.local.md
+    claude_local_md = project_path / "CLAUDE.local.md"
+    if claude_local_md.exists() and claude_local_md.is_file():
+        old_claude_local_md = project_path / "OLD-CLAUDE.local.md"
+        # If OLD-CLAUDE.local.md already exists, add timestamp
+        if old_claude_local_md.exists():
+            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            old_claude_local_md = project_path / f"OLD-CLAUDE.local.md.{timestamp}"
+        claude_local_md.rename(old_claude_local_md)
+        renamed_items.append(f"CLAUDE.local.md → {old_claude_local_md.name}")
+
+    if renamed_items:
+        logger.info(f"  Renamed existing Claude configs in {project_path.name}:")
+        for item in renamed_items:
+            logger.info(f"    - {item}")
+    else:
+        logger.debug(f"  No existing Claude configs found in {project_path.name}")
+
+
 async def run_skill_container(
     docker: aiodocker.Docker,
     project_dir: str,
@@ -193,6 +250,10 @@ async def run_skill_container(
         logger.error(f"FAIL     {task_id}  {error_msg}")
         result.update(status="error", error=error_msg)
         return result
+
+    # Clean up any existing Claude configs in the target project
+    # This prevents conflicts with the framework's mounted .claude/ directory
+    cleanup_project_claude_configs(project_path, logger)
 
     # Create log directory and .analysis directory
     log_dir = audit_base_dir / "logs"

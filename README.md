@@ -135,16 +135,17 @@ The audit system requires a **separate workspace directory** (AUDIT_BASE_DIR) th
 
 ## How it works
 
-At container startup, `entrypoint.sh`:
-1. Validates `config.yml`, `CLAUDE.md`, and `.claude/` exist in AUDIT_BASE_DIR
+The orchestrator (`orchestrator_devcontainer.py`):
+1. Validates `config.yml` and `.claude/` exist in the framework directory
 2. For each configured project directory:
-   - Removes any existing `.claude/` and `CLAUDE.md` (ensures clean state)
-   - Copies `AUDIT_BASE_DIR/.claude/`  → `<project>/.claude/`
-   - Copies `AUDIT_BASE_DIR/CLAUDE.md` → `<project>/CLAUDE.md`
+   - Renames any existing `.claude/`, `CLAUDE.md`, and `CLAUDE.local.md` files with `OLD-` prefix (ensures clean state, preserves originals)
+   - Mounts the framework's `.claude/` directory as read-only at `/workspace/.claude`
+   - Mounts the project source code at `/workspace/<project-dir>`
+3. Spawns isolated containers (one per project+skill combination)
+4. Each container runs a single skill via Claude Code CLI
 
-`run_skills.py` then runs all skills in parallel directly against the project
-directories. Claude is invoked with `cwd` set to the project directory and
-finds `CLAUDE.md` and `.claude/` immediately at its root.
+Claude discovers the framework's mounted `.claude/` directory and uses the audit
+skills, never finding any renamed `OLD-` prefixed files in the target repositories.
 
 Skills write output to `.analysis/<language>/` inside each project, keeping
 parallel runs isolated with no risk of conflicts.
