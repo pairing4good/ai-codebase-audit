@@ -156,112 +156,95 @@ Duplicate skills listed for the same directory are skipped — each
 
 ## Setup
 
-### Step 0: Prepare Your Audit Workspace
+### Prerequisites
+- Docker installed and running
+- Python 3.11+ with pip
+- Git
 
-Before configuring the tool, you need to create a **separate workspace directory** that will contain both the audit configuration files and your project directories.
+### First-Time Setup
+
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/your-org/ai-codebase-audit.git
+   cd ai-codebase-audit
+   ```
+
+2. Install Python dependencies:
+   ```bash
+   pip install aiodocker pyyaml
+   ```
+
+3. Set environment variables:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your ANTHROPIC_API_KEY and AUDIT_BASE_DIR
+   ```
+
+4. Prepare your audit workspace (separate directory):
+   ```bash
+   # Create workspace directory
+   mkdir -p ~/code-audits
+   export AUDIT_BASE_DIR=~/code-audits
+
+   # Copy framework files
+   cp config.yml CLAUDE.md ~/code-audits/
+   cp -r .claude ~/code-audits/
+
+   # Clone target repos into workspace
+   cd ~/code-audits
+   git clone https://github.com/example/project-one
+   git clone https://github.com/example/project-two
+
+   # Edit config.yml to list your projects
+   nano config.yml
+   ```
+
+5. First run will build the devcontainer image (~10-15 minutes):
+   ```bash
+   cd ~/git/ai-codebase-audit
+   python3 orchestrator_devcontainer.py
+   ```
+
+   The Dockerfile will be built locally from `.devcontainer/Dockerfile`. Subsequent runs use Docker's cache and start much faster (~30 seconds).
+
+### Build from Source Philosophy
+
+This project builds containers from source (committed Dockerfile) rather than pulling prebuilt images. This ensures:
+
+- **Transparency**: All build steps visible in plain text
+- **Reproducibility**: Anyone can rebuild from git clone
+- **Security**: No dependency on external registries
+- **Auditability**: Tool versions pinned in committed Dockerfile
+
+First run takes 10-15 minutes to install all tools. Docker caching makes subsequent runs start in ~30 seconds.
+
+To force a rebuild:
+```bash
+export FORCE_REBUILD=true
+python3 orchestrator_devcontainer.py
+```
+
+Or manually:
+```bash
+./scripts/clean-images.sh
+python3 orchestrator_devcontainer.py
+```
+
+### Quick Start
+
+After setup, running audits is simple:
 
 ```bash
-# 1. Create a dedicated audit workspace directory (separate from ai-codebase-audit repo)
-mkdir -p ~/code-audits
-cd ~/code-audits
+# Make sure AUDIT_BASE_DIR is set
+export AUDIT_BASE_DIR=~/code-audits
 
-# 2. Copy required configuration files FROM the ai-codebase-audit repository TO your workspace
-#    Replace /path/to/ai-codebase-audit with where you cloned the GitHub repo
-cp /path/to/ai-codebase-audit/config.yml .
-cp /path/to/ai-codebase-audit/CLAUDE.md .
-cp -r /path/to/ai-codebase-audit/.claude .
-
-# 3. Copy your project(s) to this workspace directory
-cp -r /path/to/your/java-project ./my-java-app
-cp -r /path/to/your/react-app ./my-react-app
+# Run the orchestrator
+python3 orchestrator_devcontainer.py
 ```
 
-Your workspace should now look like:
-```
-~/code-audits/              ← This becomes your AUDIT_BASE_DIR
-  ├── config.yml            ← Copied from ai-codebase-audit repo
-  ├── CLAUDE.md             ← Copied from ai-codebase-audit repo
-  ├── .claude/              ← Copied from ai-codebase-audit repo
-  ├── my-java-app/          ← Your project (copied here)
-  └── my-react-app/         ← Your project (copied here)
-```
-
-### Step 1: Configure Environment Variables
-
-**Navigate to the ai-codebase-audit repository** (NOT your workspace):
-
-```bash
-# Go to the ai-codebase-audit repository directory
-cd /path/to/ai-codebase-audit
-
-# Copy the environment template
-cp .env.example .env
-```
-
-Edit `.env` and set:
-- `AUDIT_BASE_DIR`: **Absolute path** to the workspace directory you created in Step 0
-- `ANTHROPIC_API_KEY`: Your Anthropic API key from https://console.anthropic.com/settings/keys
-
-Example `.env` (in the ai-codebase-audit repo):
-```bash
-AUDIT_BASE_DIR=/Users/you/code-audits    # ← Absolute path to workspace from Step 0
-ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
-```
-
-**Important**:
-- The `.env` file lives in the **ai-codebase-audit repo**, NOT your workspace
-- `AUDIT_BASE_DIR` must be an **absolute path** to your workspace
-
-### Step 2: Configure Audit Targets
-
-Edit `config.yml` **in your audit workspace** (`~/code-audits/config.yml`), NOT in the ai-codebase-audit repo:
-
-```bash
-# Edit the config.yml in your workspace
-nano ~/code-audits/config.yml
-```
-
-Configure your runner settings and target projects:
-
-```yaml
-runner:
-  model: claude-sonnet-4-6
-  concurrency: 3
-  max_turns: 20
-  timeout: 300
-  max_budget_usd: 10.0  # Cost protection per task in USD
-
-targets:
-  - dir: my-java-app      # ← Must exactly match directory name from Step 0
-    skills:
-      - /audit-java
-
-  - dir: my-react-app     # ← Must exactly match directory name from Step 0
-    skills:
-      - /audit-javascript
-```
-
-**Important**: The `dir:` values must exactly match the project directory names in your workspace from Step 0.
-
-### Step 3: Build and Run
-
-**Navigate to the ai-codebase-audit repository** and run docker compose:
-
-```bash
-# Go to the ai-codebase-audit repository directory (where docker-compose.yml lives)
-cd /path/to/ai-codebase-audit
-
-# Build the Docker image
-docker compose build
-
-# Run the audits
-docker compose run --rm skills
-```
-
-**Key points**:
-- Run `docker compose` commands from the **ai-codebase-audit repo** directory
-- Docker will automatically mount your **audit workspace** (specified in `.env`) into the container
-- Results are written to your workspace directory (`~/code-audits/logs/` and `.analysis/`)
+Results will be written to:
+- `~/code-audits/logs/` - Execution logs and summaries
+- `~/code-audits/{project}/.analysis/` - Detailed analysis reports
 
 ---
 

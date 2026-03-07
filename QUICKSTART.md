@@ -1,32 +1,22 @@
 # Quick Start
 
-Run AI-powered security audits in 3 steps. Get your API key: https://console.anthropic.com/settings/keys
+Run AI-powered security audits in 5 steps. Get your API key: https://console.anthropic.com/settings/keys
 
 ---
 
-## Setup
-
-### 1. Create workspace and add projects
+## 1. Setup (5 minutes)
 
 ```bash
-# Create workspace (separate from this repo)
-mkdir -p ~/code-audits && cd ~/code-audits
+# Clone repo
+git clone https://github.com/your-org/ai-codebase-audit.git
+cd ai-codebase-audit
 
-# Copy config files from ai-codebase-audit repo
-cp /path/to/ai-codebase-audit/{config.yml,CLAUDE.md} .
-cp -r /path/to/ai-codebase-audit/.claude .
+# Install Python deps
+pip install aiodocker pyyaml
 
-# Copy your projects to the workspace
-cp -r /path/to/your/java-project ./my-java-app
-cp -r /path/to/your/react-app ./my-react-app
-```
-
-### 2. Configure
-
-**In the ai-codebase-audit repo** (NOT workspace), create `.env`:
-```bash
-cd /path/to/ai-codebase-audit
+# Configure
 cp .env.example .env
+# Edit .env: set ANTHROPIC_API_KEY and AUDIT_BASE_DIR
 ```
 
 Edit `.env`:
@@ -35,27 +25,75 @@ AUDIT_BASE_DIR=/Users/you/code-audits  # Absolute path to workspace
 ANTHROPIC_API_KEY=sk-ant-api03-...
 ```
 
-**In your workspace**, edit `config.yml`:
+---
+
+## 2. Prepare Workspace (5 minutes)
+
 ```bash
-nano ~/code-audits/config.yml
+# Create workspace directory
+mkdir -p ~/code-audits
+export AUDIT_BASE_DIR=~/code-audits
+
+# Copy framework files
+cp config.yml CLAUDE.md ~/code-audits/
+cp -r .claude ~/code-audits/
+
+# Clone target repos
+cd ~/code-audits
+git clone https://github.com/example/project-one
+git clone https://github.com/example/project-two
+
+# Edit config.yml to list your projects
+nano config.yml
 ```
 
-Set targets:
+Configure targets in `~/code-audits/config.yml`:
 ```yaml
 targets:
-  - dir: my-java-app        # Must match directory name
+  - dir: project-one      # Must match directory name
     skills: [/audit-java]
-  - dir: my-react-app
+  - dir: project-two
     skills: [/audit-javascript]
 ```
 
-### 3. Run
+---
 
-**From the ai-codebase-audit repo** (where `docker-compose.yml` lives):
+## 3. First Run (10-15 minutes build + analysis time)
+
 ```bash
-cd /path/to/ai-codebase-audit
-docker compose build
-docker compose run --rm skills
+cd ~/git/ai-codebase-audit
+python3 orchestrator_devcontainer.py
+
+# First run builds devcontainer image (~10-15 min)
+# Then runs analysis
+```
+
+**Note**: First run takes 10-15 minutes to build the Docker image from `.devcontainer/Dockerfile`. This builds all language runtimes and static analysis tools from source.
+
+---
+
+## 4. Subsequent Runs (~5 minutes analysis time)
+
+```bash
+# Docker cache makes image build ~30 seconds
+python3 orchestrator_devcontainer.py
+```
+
+**Note**: After the first run, Docker caching makes the image build nearly instant (~30 seconds). Analysis time remains the same.
+
+---
+
+## 5. View Results
+
+```bash
+# Summary
+cat ~/code-audits/logs/summary_*.txt
+
+# Detailed reports
+ls ~/code-audits/project-one/.analysis/java/final-report/
+
+# JSON results (machine-readable)
+cat ~/code-audits/logs/summary_*.json
 ```
 
 ---
@@ -64,33 +102,159 @@ docker compose run --rm skills
 
 Outputs written to your **workspace** (`~/code-audits/`):
 - `logs/summary_<timestamp>.txt` - Pass/fail overview
-- `logs/result_<project>__<skill>_<timestamp>.txt` - Detailed findings
-- `<project>/.analysis/<language>/` - Full analysis artifacts
+- `logs/summary_<timestamp>.json` - Machine-readable results
+- `logs/task_<project>__<skill>_<ts>_<uid>.log` - Per-task execution logs
+- `<project>/.analysis/<language>/final-report/` - Full analysis artifacts
 
 ---
 
 ## What it does
 
-Each audit runs 4 independent agents analyzing:
-- Architecture & design patterns
-- Security vulnerabilities (OWASP Top 10, CWE/SANS 25)
-- Dependencies & supply chain risks
-- Code quality & maintainability
+Each audit runs 6 stages:
 
-Then reconciles findings with static analysis tools (Semgrep, Snyk, etc.) and generates a final report.
+1. **Artifact Generation**: Maps codebase structure, dependencies, entry points
+2. **Parallel Independent Analysis**: 4 agents analyze concurrently:
+   - Architecture & design patterns
+   - Security vulnerabilities (OWASP Top 10, CWE/SANS 25)
+   - Dependencies & supply chain risks
+   - Code quality & maintainability
+3. **Static Analysis**: Runs language-specific tools (Semgrep, Snyk, Trivy, etc.)
+4. **Reconciliation**: Synthesizes agent findings with static analysis results
+5. **Adversarial Review**: Challenges findings to eliminate false positives
+6. **Final Report**: Generates comprehensive markdown report with remediation steps
+
+---
+
+## Build from Source Philosophy
+
+This tool builds containers **from source** (committed Dockerfile) rather than pulling prebuilt images:
+
+**Benefits**:
+- **Transparency**: All build steps visible in `.devcontainer/Dockerfile`
+- **Reproducibility**: Anyone can rebuild from `git clone`
+- **Security**: No dependency on external registries
+- **Auditability**: Security teams can review exact build steps
+
+**Trade-off**: First run takes 10-15 minutes to build (vs instant pull). Docker caching makes subsequent runs fast (~30 seconds).
+
+**Force rebuild**:
+```bash
+# Option 1: Environment variable
+export FORCE_REBUILD=true
+python3 orchestrator_devcontainer.py
+
+# Option 2: Manual cleanup
+./scripts/clean-images.sh
+python3 orchestrator_devcontainer.py
+```
 
 ---
 
 ## Advanced
 
-Available skills: `/audit-java`, `/audit-javascript`, `/audit-python`, `/audit-dotnet`
+### Available Skills
+- `/audit-java` - Java/Spring Boot/Maven/Gradle
+- `/audit-javascript` - JavaScript/TypeScript/React/Node.js
+- `/audit-python` - Python/Django/Flask
+- `/audit-dotnet` - C#/F#/ASP.NET Core
 
-Config options (in workspace `config.yml`):
+### Config Options
+
+Edit `~/code-audits/config.yml`:
+
 ```yaml
 runner:
-  model: claude-sonnet-4-6   # or claude-opus-4-6 (3x cost)
-  concurrency: 3             # parallel tasks
+  model: claude-sonnet-4-6   # or claude-opus-4-6 (3x cost, deeper insights)
+  concurrency: 3             # max parallel containers
+  max_turns: 20              # max agent turns per task
+  timeout: 300               # per-task timeout (seconds)
   max_budget_usd: 10.0       # cost limit per task
+  image_tag: audit-runner:local  # Docker image tag
+  rebuild: false             # force rebuild toggle
+
+debug:
+  enabled: false             # verbose logging (10-100x larger logs)
 ```
 
-See [README.md](README.md) for cost estimates, troubleshooting, and security details.
+### Developer Tools
+
+```bash
+# Build image manually
+./scripts/build-local.sh --verify
+
+# Verify all tools installed
+./scripts/verify-build.sh
+
+# Clean local images (force rebuild)
+./scripts/clean-images.sh
+
+# Watch logs in real-time
+tail -f ~/code-audits/logs/task_*.log
+```
+
+---
+
+## Troubleshooting
+
+### Build Failures
+
+**Problem**: Docker build fails
+
+**Solutions**:
+1. Check disk space: `docker system df`
+2. Prune old images: `docker image prune -a`
+3. Retry with no cache: `./scripts/build-local.sh --no-cache --verify`
+
+### Container Spawn Failures
+
+**Problem**: Orchestrator can't spawn containers
+
+**Solutions**:
+1. Verify Docker running: `docker info`
+2. Check environment: `echo $AUDIT_BASE_DIR`
+3. Verify image exists: `docker images | grep audit-runner`
+
+### Tool Missing Errors
+
+**Problem**: Container reports missing tools
+
+**Solutions**:
+1. Force rebuild: `./scripts/clean-images.sh && python3 orchestrator_devcontainer.py`
+2. Verify build: `./scripts/verify-build.sh`
+3. Check build logs for installation errors
+
+### Task Failures
+
+**Problem**: Skills fail during execution
+
+**Solutions**:
+1. Check summary: `cat ~/code-audits/logs/summary_*.txt`
+2. Review task logs: `cat ~/code-audits/logs/task_<project>__<skill>_*.log`
+3. Enable debug mode: `debug.enabled: true` in config.yml
+4. Increase timeout or budget in config.yml
+
+---
+
+## Cost Estimation
+
+Typical costs per skill with `claude-sonnet-4-6` (default):
+
+| Project Size | Lines of Code | Cost per Skill |
+|--------------|---------------|----------------|
+| Small        | < 10,000      | $0.50 - $2.00  |
+| Medium       | 10K - 50K     | $2.00 - $6.00  |
+| Large        | 50K - 150K    | $6.00 - $15.00 |
+| Very Large   | > 150K        | $15.00 - $30.00+ |
+
+**Note**: `claude-opus-4-6` costs ~3x more but provides deeper insights.
+
+**Budget control**: Set `max_budget_usd` in config.yml to prevent runaway costs.
+
+---
+
+## More Information
+
+- [README.md](README.md) - Complete documentation
+- [docs/DEVCONTAINER-ARCHITECTURE.md](docs/DEVCONTAINER-ARCHITECTURE.md) - Architecture details
+- [MIGRATION_PLAN.md](MIGRATION_PLAN.md) - Migration from Docker Compose
+- [.devcontainer/README.md](.devcontainer/README.md) - DevContainer configuration

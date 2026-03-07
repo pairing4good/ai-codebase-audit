@@ -482,9 +482,23 @@ FORCE_REBUILD=false    # Force image rebuild toggle
 
 ### Phase 5: Update Documentation
 
-#### 5.1 Update README.md
+#### 5.1 Update README.md ✅ COMPLETED
 
-**Replace "Setup" section**:
+**Status**: Updated [README.md](README.md)
+
+**Changes Made**:
+- ✅ Replaced entire "Setup" section with DevContainer-based instructions
+- ✅ Added Prerequisites section (Docker, Python 3.11+, Git)
+- ✅ Added First-Time Setup with 5 clear steps
+- ✅ Added Build from Source Philosophy explanation
+- ✅ Added Quick Start section for subsequent runs
+- ✅ Updated instructions to use `orchestrator_devcontainer.py`
+- ✅ Documented build time expectations (10-15 min first, ~30s cached)
+- ✅ Added force rebuild instructions
+- ✅ Removed all Docker Compose references
+- ✅ Updated workspace setup instructions
+
+**Old Section Replaced**:
 ```markdown
 ## Setup
 
@@ -546,7 +560,28 @@ python orchestrator_devcontainer.py
 ```
 ```
 
-#### 5.2 Create docs/DEVCONTAINER-ARCHITECTURE.md
+#### 5.2 Create docs/DEVCONTAINER-ARCHITECTURE.md ✅ COMPLETED
+
+**Status**: Created at [docs/DEVCONTAINER-ARCHITECTURE.md](docs/DEVCONTAINER-ARCHITECTURE.md) (528 lines)
+
+**Sections Included**:
+- ✅ Build-from-Source Approach (why, process, lifecycle)
+- ✅ Architecture Comparison (DevContainer vs Legacy Docker Compose)
+- ✅ What Changed from Anthropic's Base (added, kept, modified)
+- ✅ Image Size Optimization (intentional trade-offs)
+- ✅ Network Security (firewall, whitelisted domains)
+- ✅ Rebuild Triggers (4 methods documented)
+- ✅ Volume Mounts (isolated per container)
+- ✅ Environment Variables (required, optional, automatic)
+- ✅ Benefits Over Prebuilt Images (7 key benefits)
+- ✅ Tradeoffs Accepted (4 documented)
+- ✅ Build Time Expectations (first run, subsequent, rebuild)
+- ✅ Testing Strategy (6 test scenarios)
+- ✅ Troubleshooting (4 common issues)
+- ✅ Maintenance (updating tools, adding languages, updating base)
+- ✅ Resources and Contributing
+
+**Key Content**:
 ```markdown
 # DevContainer Architecture
 
@@ -621,7 +656,37 @@ Docker caching means rebuilds are fast unless:
 - Tool version pins changed
 ```
 
-#### 5.3 Update QUICKSTART.md
+#### 5.3 Update QUICKSTART.md ✅ COMPLETED
+
+**Status**: Updated [QUICKSTART.md](QUICKSTART.md) (261 lines)
+
+**Changes Made**:
+- ✅ Replaced entire file with DevContainer-based quick start
+- ✅ Added 5-step numbered guide (Setup, Workspace, First Run, Subsequent Runs, Results)
+- ✅ Added time estimates for each step
+- ✅ Added Build from Source Philosophy section
+- ✅ Added Advanced section (skills, config options, developer tools)
+- ✅ Added comprehensive Troubleshooting section (4 common issues)
+- ✅ Added Cost Estimation table
+- ✅ Added More Information section with links to other docs
+- ✅ Removed all Docker Compose references
+- ✅ Updated all commands to use `orchestrator_devcontainer.py`
+
+**Sections Included**:
+1. Setup (5 minutes) - Clone, install deps, configure
+2. Prepare Workspace (5 minutes) - Create workspace, copy files, clone repos
+3. First Run (10-15 minutes) - Build image and run analysis
+4. Subsequent Runs (~5 minutes) - Fast cached builds
+5. View Results - Summary, detailed reports, JSON
+6. Results - Output locations and formats
+7. What it does - 6-stage analysis workflow
+8. Build from Source Philosophy - Benefits and trade-offs
+9. Advanced - Skills, config options, developer tools
+10. Troubleshooting - 4 common scenarios
+11. Cost Estimation - Per-skill costs by project size
+12. More Information - Links to other docs
+
+**Old Content Replaced**:
 ```markdown
 ## Quick Start
 
@@ -688,6 +753,8 @@ ls ~/audit-workspace/project-one/.analysis/java/final-report/
 ```
 ```
 
+**Phase 5 Complete**: All documentation updated for DevContainer architecture!
+
 ### Phase 6: Deprecate Old Files
 
 #### 6.1 Create `legacy/` directory
@@ -739,6 +806,8 @@ Add to top of each legacy file:
 ```
 
 ### Phase 7: Add Developer Tools
+
+MANDITORY: IMPORTANT!!!! AVOID USING MOCKS!!!!  If they are needed ask before using them. 
 
 #### 7.1 Create `scripts/` directory
 ```
