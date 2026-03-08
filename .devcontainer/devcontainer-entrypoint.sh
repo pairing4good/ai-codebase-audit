@@ -38,6 +38,10 @@ sep()  { echo "============================================================"; }
 # Source version managers (consolidated)
 # =============================================================================
 info "Sourcing version managers..."
+
+# Unset NPM_CONFIG_PREFIX to avoid conflict with nvm
+unset NPM_CONFIG_PREFIX 2>/dev/null || true
+
 source /opt/init-env.sh
 ok "Version managers loaded"
 

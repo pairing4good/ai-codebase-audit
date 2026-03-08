@@ -21,6 +21,7 @@ import asyncio
 import json
 import logging
 import os
+import signal
 import subprocess
 import sys
 import uuid
@@ -130,21 +131,32 @@ async def ensure_image_built(docker: aiodocker.Docker, config: Dict[str, Any], r
         )
 
         # Stream output line by line
-        for line in process.stdout:
-            line = line.rstrip()
-            if line:
-                logger.info(f"  {line}")
+        try:
+            for line in process.stdout:
+                line = line.rstrip()
+                if line:
+                    logger.info(f"  {line}")
+        except KeyboardInterrupt:
+            logger.warning("Build interrupted by user")
+            process.terminate()
+            process.wait(timeout=5)
+            raise
 
         # Wait for completion
         returncode = process.wait()
 
-        if returncode != 0:
+        if returncode == 130:
+            # Build was cancelled (Ctrl-C)
+            raise KeyboardInterrupt("Build cancelled by user")
+        elif returncode != 0:
             sys.exit(f"ERROR: Docker build failed with exit code {returncode}")
 
         logger.info(f"Image {image_tag} built successfully")
 
     except FileNotFoundError:
         sys.exit("ERROR: 'docker' command not found. Is Docker installed and in PATH?")
+    except KeyboardInterrupt:
+        raise  # Re-raise to be caught by main
     except Exception as e:
         sys.exit(f"ERROR: Failed to build image: {e}")
 
@@ -177,7 +189,7 @@ def cleanup_project_claude_configs(project_path: Path, logger: logging.Logger) -
         old_claude_dir = project_path / "OLD-.claude"
         # If OLD-.claude already exists, add timestamp to avoid collision
         if old_claude_dir.exists():
-            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             old_claude_dir = project_path / f"OLD-.claude.{timestamp}"
         claude_dir.rename(old_claude_dir)
         renamed_items.append(f".claude/ → {old_claude_dir.name}")
@@ -188,7 +200,7 @@ def cleanup_project_claude_configs(project_path: Path, logger: logging.Logger) -
         old_claude_md = project_path / "OLD-CLAUDE.md"
         # If OLD-CLAUDE.md already exists, add timestamp
         if old_claude_md.exists():
-            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             old_claude_md = project_path / f"OLD-CLAUDE.md.{timestamp}"
         claude_md.rename(old_claude_md)
         renamed_items.append(f"CLAUDE.md → {old_claude_md.name}")
@@ -199,7 +211,7 @@ def cleanup_project_claude_configs(project_path: Path, logger: logging.Logger) -
         old_claude_local_md = project_path / "OLD-CLAUDE.local.md"
         # If OLD-CLAUDE.local.md already exists, add timestamp
         if old_claude_local_md.exists():
-            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             old_claude_local_md = project_path / f"OLD-CLAUDE.local.md.{timestamp}"
         claude_local_md.rename(old_claude_local_md)
         renamed_items.append(f"CLAUDE.local.md → {old_claude_local_md.name}")
@@ -232,7 +244,7 @@ async def run_skill_container(
 
     task_id = f"{project_dir}:{skill}"
     container_name = f"audit-{project_dir}-{skill.lstrip('/')}".replace("/", "-").replace("_", "-")
-    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     uid = uuid.uuid4().hex[:8]
 
     logger.info(f"START    {task_id}")
@@ -490,7 +502,7 @@ def write_summary(results: List[Dict[str, Any]], log_dir: Path, logger: logging.
     text = "\n".join(lines)
     print(text)
 
-    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     (log_dir / f"summary_{ts}.txt").write_text(text)
     (log_dir / f"summary_{ts}.json").write_text(json.dumps(results, indent=2))
     logger.info(f"Summary → {log_dir}/summary_{ts}.[txt|json]")
@@ -560,15 +572,24 @@ def main():
     logger.info("=" * 64)
     logger.info("")
 
-    # Run all tasks
-    results = asyncio.run(run_all(config, repo_root, logger))
+    # Run all tasks with graceful shutdown handling
+    try:
+        results = asyncio.run(run_all(config, repo_root, logger))
 
-    # Write summary
-    write_summary(results, log_dir, logger)
+        # Write summary
+        write_summary(results, log_dir, logger)
 
-    # Exit with error if any tasks failed
-    if any(r["status"] != "success" for r in results):
-        sys.exit(1)
+        # Exit with error if any tasks failed
+        if any(r["status"] != "success" for r in results):
+            sys.exit(1)
+
+    except KeyboardInterrupt:
+        logger.info("")
+        logger.info("=" * 64)
+        logger.info("Received interrupt signal (Ctrl-C)")
+        logger.info("Shutting down gracefully...")
+        logger.info("=" * 64)
+        sys.exit(130)  # Standard exit code for SIGINT
 
 
 if __name__ == "__main__":
