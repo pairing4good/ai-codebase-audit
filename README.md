@@ -167,7 +167,7 @@ Duplicate skills listed for the same directory are skipped — each
 
 2. Install Python dependencies:
    ```bash
-   pip install aiodocker pyyaml
+   pip install aiodocker pyyaml python-dotenv
    ```
 
 3. Set environment variables:
@@ -227,6 +227,40 @@ python3 orchestrator_devcontainer.py
 ```
 
 ### Quick Start
+
+**Prerequisites**: Python 3.11+ with pip ([install guide](#prerequisites-1))
+
+#### Running Audits
+
+After setup, running audits is simple:
+
+```bash
+# Make sure AUDIT_BASE_DIR is set
+export AUDIT_BASE_DIR=~/code-audits
+
+# Run the orchestrator
+python3 orchestrator_devcontainer.py
+```
+
+Results will be written to:
+- `~/code-audits/logs/` - Execution logs and summaries
+- `~/code-audits/{project}/.analysis/` - Detailed analysis reports
+
+#### Prerequisites
+
+Before running the orchestrator, ensure you have Python 3.11+ with pip installed:
+
+- **macOS**: `brew install python3` ([Homebrew](https://brew.sh))
+- **Ubuntu/Debian**: `sudo apt update && sudo apt install python3 python3-pip`
+- **Windows**: Download from [python.org](https://www.python.org/downloads/)
+- **Verify**: `python3 --version && pip3 --version`
+
+If you already have Python 3 but pip is missing:
+```bash
+python3 -m ensurepip --upgrade
+```
+
+#### Running Audits
 
 After setup, running audits is simple:
 

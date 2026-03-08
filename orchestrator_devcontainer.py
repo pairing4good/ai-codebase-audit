@@ -30,6 +30,10 @@ from typing import Any, Dict, List
 
 import aiodocker
 import yaml
+from dotenv import load_dotenv
+
+# Load .env file if it exists
+load_dotenv()
 
 
 # =============================================================================

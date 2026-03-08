@@ -2,6 +2,10 @@
 
 Run AI-powered codebase audits in 3 steps.
 
+**Prerequisites**: Python 3.11+ with pip installed
+- **Verify**: `python3 --version && pip3 --version`
+(see [README.md](README.md#Quick_Start))
+
 ---
 
 ## 1. Setup
@@ -10,7 +14,9 @@ Run AI-powered codebase audits in 3 steps.
 # Clone and configure
 git clone https://github.com/your-org/ai-codebase-audit.git
 cd ai-codebase-audit
-pip install aiodocker pyyaml
+pip install aiodocker pyyaml python-dotenv
+# or
+pip3 install aiodocker pyyaml python-dotenv
 
 # Set environment
 cp .env.example .env
