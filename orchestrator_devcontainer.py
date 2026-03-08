@@ -18,10 +18,12 @@ Environment variables:
 """
 
 import asyncio
+import io
 import json
 import logging
 import os
 import sys
+import tarfile
 import uuid
 from argparse import ArgumentParser
 from datetime import datetime
@@ -109,15 +111,21 @@ async def ensure_image_built(docker: aiodocker.Docker, config: Dict[str, Any], r
         logger.debug(f"  Image tag: {image_tag}")
         logger.debug(f"  Remove intermediate containers: True")
 
-    build_stream = docker.images.build(
-        path_dockerfile='.devcontainer',
-        dockerfile='Dockerfile',
-        buildargs={},
+    # Create tar archive of build context
+    dockerfile_path = repo_root / '.devcontainer' / 'Dockerfile'
+    tar_obj = io.BytesIO()
+    with tarfile.open(fileobj=tar_obj, mode='w') as tar:
+        # Add entire repo root as build context
+        tar.add(str(repo_root), arcname='.')
+    tar_obj.seek(0)
+
+    build_stream = await docker.images.build(
+        fileobj=tar_obj,
         tag=image_tag,
-        rm=True,  # Remove intermediate containers
-        stream=True,
-        encoding='utf-8',
-        path=str(repo_root),  # Build context is repo root
+        rm=True,
+        encoding='application/json',
+        path_dockerfile='.devcontainer/Dockerfile',
+        buildargs={},
     )
 
     # Stream build output
@@ -530,7 +538,7 @@ def main():
     log_level = logging.DEBUG if config['debug_mode'] else logging.INFO
 
     # Create orchestrator log file
-    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     orchestrator_log_file = log_dir / f"orchestrator_{timestamp}.log"
 
     # Configure root logger
