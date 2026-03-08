@@ -18,12 +18,11 @@ Environment variables:
 """
 
 import asyncio
-import io
 import json
 import logging
 import os
+import subprocess
 import sys
-import tarfile
 import uuid
 from argparse import ArgumentParser
 from datetime import datetime
@@ -102,60 +101,52 @@ async def ensure_image_built(docker: aiodocker.Docker, config: Dict[str, Any], r
     else:
         logger.info(f"Force rebuild requested, building {image_tag} from Dockerfile...")
 
-    # Build from .devcontainer/Dockerfile
+    # Build from .devcontainer/Dockerfile using Docker CLI
     logger.info(f"Building image from {repo_root}/.devcontainer/Dockerfile")
     logger.info("This may take 10-15 minutes on first build (subsequent builds ~30s)")
-    if config['debug_mode']:
-        logger.debug(f"  Build context: {repo_root}")
-        logger.debug(f"  Dockerfile path: .devcontainer/Dockerfile")
-        logger.debug(f"  Image tag: {image_tag}")
-        logger.debug(f"  Remove intermediate containers: True")
 
-    # Create tar archive of build context
     dockerfile_path = repo_root / '.devcontainer' / 'Dockerfile'
-    tar_obj = io.BytesIO()
-    with tarfile.open(fileobj=tar_obj, mode='w') as tar:
-        # Add entire repo root as build context
-        tar.add(str(repo_root), arcname='.')
-    tar_obj.seek(0)
 
-    build_stream = await docker.images.build(
-        fileobj=tar_obj,
-        tag=image_tag,
-        rm=True,
-        encoding='application/json',
-        path_dockerfile='.devcontainer/Dockerfile',
-        buildargs={},
-    )
+    # Build command
+    cmd = [
+        'docker', 'build',
+        '-f', str(dockerfile_path),
+        '-t', image_tag,
+        '--rm',
+        str(repo_root)  # Build context
+    ]
 
-    # Stream build output
-    build_success = False
-    async for chunk in build_stream:
-        if 'stream' in chunk:
-            msg = chunk['stream'].strip()
-            if msg:
-                logger.info(f"  {msg}")
-        elif 'error' in chunk:
-            logger.error(f"Build error: {chunk['error']}")
-            sys.exit(f"ERROR: Failed to build image: {chunk['error']}")
-        elif 'status' in chunk:
-            # Progress messages like "Downloading", "Extracting"
-            if config['debug_mode']:
-                logger.debug(f"  {chunk.get('status', '')}")
+    if config['debug_mode']:
+        logger.debug(f"  Build command: {' '.join(cmd)}")
 
-        # Check for successful build
-        if 'aux' in chunk and 'ID' in chunk['aux']:
-            build_success = True
+    # Run docker build with real-time output streaming
+    try:
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1
+        )
 
-    if build_success:
+        # Stream output line by line
+        for line in process.stdout:
+            line = line.rstrip()
+            if line:
+                logger.info(f"  {line}")
+
+        # Wait for completion
+        returncode = process.wait()
+
+        if returncode != 0:
+            sys.exit(f"ERROR: Docker build failed with exit code {returncode}")
+
         logger.info(f"Image {image_tag} built successfully")
-    else:
-        # Verify image was created
-        try:
-            await docker.images.inspect(image_tag)
-            logger.info(f"Image {image_tag} built successfully")
-        except aiodocker.exceptions.DockerError:
-            sys.exit(f"ERROR: Image build did not complete successfully")
+
+    except FileNotFoundError:
+        sys.exit("ERROR: 'docker' command not found. Is Docker installed and in PATH?")
+    except Exception as e:
+        sys.exit(f"ERROR: Failed to build image: {e}")
 
     return image_tag
 
