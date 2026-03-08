@@ -169,19 +169,29 @@ async def ensure_image_built(docker: aiodocker.Docker, config: Dict[str, Any], r
 
 def cleanup_project_claude_configs(project_path: Path, logger: logging.Logger) -> None:
     """
-    Rename any existing .claude/ directory and CLAUDE.md files in the target
-    project to prevent conflicts with the framework's mounted .claude/ directory.
+    Rename any existing .claude/, .analysis/ directories and CLAUDE.md files
+    in the target project to prevent conflicts.
 
-    This ensures Claude Code only discovers and uses the audit framework's
-    configuration, not any existing configuration in the target repository.
+    This ensures:
+    - Claude Code uses the framework's mounted .claude/ directory
+    - Each audit run gets a fresh .analysis/ directory
 
-    Renamed files:
-    - .claude/          → OLD-.claude/
-    - CLAUDE.md         → OLD-CLAUDE.md
-    - CLAUDE.local.md   → OLD-CLAUDE.local.md
+    Renamed files/directories:
+    - .claude/          → OLD-.claude/ (or OLD-.claude)
+    - CLAUDE.md         → OLD-CLAUDE.md (or OLD-CLAUDE.md)
+    - CLAUDE.local.md   → OLD-CLAUDE.local.md (or OLD-CLAUDE.local.md)
+    - .analysis/        → .analysis-{timestamp}/
     """
 
     renamed_items = []
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # Check and rename .analysis/ directory (always use timestamp for fresh runs)
+    analysis_dir = project_path / ".analysis"
+    if analysis_dir.exists() and analysis_dir.is_dir():
+        archived_analysis_dir = project_path / f".analysis-{timestamp}"
+        analysis_dir.rename(archived_analysis_dir)
+        renamed_items.append(f".analysis/ → {archived_analysis_dir.name}")
 
     # Check and rename .claude/ directory
     claude_dir = project_path / ".claude"
