@@ -168,6 +168,45 @@ async def ensure_image_built(docker: aiodocker.Docker, config: Dict[str, Any], r
 # Container Runner
 # =============================================================================
 
+async def cleanup_existing_containers(docker: aiodocker.Docker, logger: logging.Logger) -> None:
+    """
+    Remove any existing containers with names matching 'audit-*' pattern.
+    This prevents 409 Conflict errors from leftover containers.
+
+    Called at startup to ensure clean slate before creating new containers.
+    """
+    try:
+        # List all containers (including stopped ones)
+        containers = await docker.containers.list(all=True)
+
+        removed_count = 0
+        for container_info in containers:
+            container_name = container_info['Names'][0].lstrip('/')  # Remove leading slash
+
+            # Check if this is one of our audit containers
+            if container_name.startswith('audit-'):
+                try:
+                    container = await docker.containers.get(container_info['Id'])
+                    state = container_info.get('State', 'unknown')
+
+                    logger.info(f"  Removing existing container: {container_name} (state: {state})")
+                    await container.delete(force=True)
+                    removed_count += 1
+
+                except aiodocker.exceptions.DockerError as e:
+                    logger.warning(f"  Failed to remove container {container_name}: {e}")
+
+        if removed_count > 0:
+            logger.info(f"  Cleaned up {removed_count} existing container(s)")
+        else:
+            logger.debug("  No existing audit containers found")
+
+    except aiodocker.exceptions.DockerError as e:
+        logger.warning(f"Failed to list containers during cleanup: {e}")
+    except Exception as e:
+        logger.warning(f"Unexpected error during container cleanup: {e}")
+
+
 def cleanup_project_claude_configs(project_path: Path, logger: logging.Logger) -> None:
     """
     Rename any existing .claude/, .analysis/ directories and CLAUDE.md files
@@ -339,6 +378,16 @@ async def run_skill_container(
             "User": "node",  # Run as node user (matches Dockerfile)
         }
 
+        # Pre-creation check: remove container if it already exists (failsafe)
+        # This shouldn't normally happen due to startup cleanup, but provides defense in depth
+        try:
+            existing_container = await docker.containers.get(container_name)
+            logger.warning(f"  Container {container_name} already exists, removing...")
+            await existing_container.delete(force=True)
+        except aiodocker.exceptions.DockerError:
+            # Container doesn't exist, which is expected
+            pass
+
         logger.info(f"  Creating container: {container_name}")
         if config['debug_mode']:
             logger.debug(f"    Image: {config['image_tag']}")
@@ -418,13 +467,42 @@ async def run_skill_container(
             )
             logger.info(f"OK       {task_id}  → {result_file.name}")
         else:
+            # Enhanced logging for exit code 143 (SIGTERM) to diagnose issues
+            error_detail = f"Exit code {exit_code}"
+
+            if exit_code == 143:
+                # Exit code 143 = 128 + 15 (SIGTERM)
+                logger.error(f"FAIL     {task_id}  (exit code 143 - SIGTERM)")
+                logger.error(f"  Container was terminated by SIGTERM signal")
+                logger.error(f"  Possible causes:")
+                logger.error(f"    - Container exceeded memory limit (4GB)")
+                logger.error(f"    - Docker daemon restart or OOM killer")
+                logger.error(f"    - External 'docker stop' command")
+                logger.error(f"  Check container logs in: {log_file.name}")
+
+                # Try to get container stats for diagnostics (if container still exists)
+                try:
+                    stats = await container.stats(stream=False)
+                    if stats:
+                        memory_usage = stats.get('memory_stats', {}).get('usage', 0)
+                        memory_limit = stats.get('memory_stats', {}).get('limit', 0)
+                        if memory_limit > 0:
+                            memory_pct = (memory_usage / memory_limit) * 100
+                            logger.error(f"  Memory usage at termination: {memory_usage / (1024**3):.2f}GB / {memory_limit / (1024**3):.2f}GB ({memory_pct:.1f}%)")
+                except Exception:
+                    # Stats may not be available for terminated container
+                    pass
+
+                error_detail = "Exit code 143 (SIGTERM - container was killed)"
+            else:
+                logger.error(f"FAIL     {task_id}  (exit code {exit_code})")
+
             result.update(
                 status="error",
                 exit_code=exit_code,
                 log_file=str(log_file),
-                error=f"Exit code {exit_code}",
+                error=error_detail,
             )
-            logger.error(f"FAIL     {task_id}  (exit code {exit_code})")
 
         # Cleanup container
         logger.info(f"  Removing container: {container_name}")
@@ -433,6 +511,15 @@ async def run_skill_container(
     except Exception as exc:
         logger.error(f"FAIL     {task_id}  {exc}", exc_info=config['debug_mode'])
         result.update(status="error", error=str(exc))
+
+        # Ensure container cleanup even on exception
+        try:
+            # Check if container was created before attempting cleanup
+            if 'container' in locals():
+                logger.info(f"  Cleaning up failed container: {container_name}")
+                await container.delete(force=True)
+        except Exception as cleanup_exc:
+            logger.warning(f"  Failed to cleanup container {container_name}: {cleanup_exc}")
 
     finally:
         elapsed = asyncio.get_event_loop().time() - start_time
@@ -464,6 +551,12 @@ async def run_all(config: Dict[str, Any], repo_root: Path, logger: logging.Logge
         # Ensure image is built
         image_tag = await ensure_image_built(docker, config, repo_root, logger)
         logger.info(f"Using image: {image_tag}")
+        logger.info("")
+
+        # Clean up any existing audit containers before starting
+        logger.info("Cleaning up existing audit containers...")
+        await cleanup_existing_containers(docker, logger)
+        logger.info("")
 
         # Generate tasks
         tasks = []
