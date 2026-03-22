@@ -1,38 +1,55 @@
 # =============================================================================
-# Claude Parallel Skill Runner
+# AI Codebase Audit Runner - DevContainer Edition
 # =============================================================================
+# Built on Anthropic's official devcontainer base with multi-language support
+#
+# Base: node:20 (from Anthropic's official devcontainer)
+# Extended with:
+#   - Java (SDKMAN: 21 + 17)
+#   - Python (pyenv: 3.12 + 3.11)
+#   - .NET (side-by-side: 8 + 6)
+#   - 15+ static analysis tools (pre-installed for security)
+#
 # Version managers:
 #   Java    → SDKMAN   (sdk install java X | sdk use java X)
 #   Node.js → nvm      (nvm install X | nvm use X)
 #   Python  → pyenv    (pyenv install X | pyenv global X)
 #   .NET    → dotnet-install.sh side-by-side (pin via global.json)
 #
-# Pre-installed:
+# Pre-installed language versions:
+#   Node.js 20 LTS       + 18 LTS (from base + nvm)
 #   Java    21 (Temurin) + 17 (Temurin)
-#   Node.js 20 LTS       + 18 LTS
 #   Python  3.12         + 3.11
 #   .NET    8            + 6
 # =============================================================================
 
-FROM debian:bookworm-slim
+FROM node:20
+
+ARG TZ
+ENV TZ="$TZ"
+
+ARG CLAUDE_CODE_VERSION=latest
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 # =============================================================================
-# 1. Base packages
+# 1. System Dependencies (Anthropic's base + multi-language build tools)
 # =============================================================================
-RUN apt-get update -qq \
- && apt-get install -y --no-install-recommends \
-      bash build-essential bzip2 ca-certificates curl git gnupg \
-      libbz2-dev libffi-dev liblzma-dev libncursesw5-dev libreadline-dev \
-      libsqlite3-dev libssl-dev libxml2-dev libxmlsec1-dev \
-      tini tk-dev unzip wget xz-utils zip zlib1g-dev \
- && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  # Anthropic's devcontainer tools
+  less git procps sudo fzf zsh man-db unzip gnupg2 gh \
+  iptables ipset iproute2 dnsutils aggregate jq nano vim \
+  # Multi-language build dependencies
+  bash build-essential bzip2 ca-certificates curl \
+  libbz2-dev libffi-dev liblzma-dev libncursesw5-dev libreadline-dev \
+  libsqlite3-dev libssl-dev libxml2-dev libxmlsec1-dev \
+  tini tk-dev wget xz-utils zip zlib1g-dev \
+  && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # =============================================================================
 # 1b. Copy version manager initialization script
 # =============================================================================
-COPY init-env.sh /opt/init-env.sh
+COPY .devcontainer/init-env.sh /opt/init-env.sh
 RUN chmod +x /opt/init-env.sh
 
 # =============================================================================
@@ -53,20 +70,20 @@ RUN bash -c "source ${SDKMAN_DIR}/bin/sdkman-init.sh \
     && sdk install java 17.0.13-tem"
 
 # =============================================================================
-# 3. nvm + Node.js
+# 3. nvm + Node.js (additional versions beyond base node:20)
 # =============================================================================
 ENV NVM_DIR=/opt/nvm
-ENV PATH="${NVM_DIR}/versions/node/v20/bin:${PATH}"
 
 RUN mkdir -p "${NVM_DIR}" \
  && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh \
     | NVM_DIR="${NVM_DIR}" bash
 
+# Install Node 20 (already available from base, but also via nvm for consistency)
 RUN bash -c "source ${NVM_DIR}/nvm.sh \
     && nvm install 20 \
-    && nvm alias default 20 \
-    && node --version && npm --version"
+    && nvm alias default 20"
 
+# Install Node 18 as additional version
 RUN bash -c "source ${NVM_DIR}/nvm.sh && nvm install 18"
 
 # =============================================================================
@@ -96,10 +113,11 @@ RUN mkdir -p "${DOTNET_ROOT}" \
  && dotnet --version
 
 # =============================================================================
-# 6. Python runner packages & setuptools (required for pkg_resources)
+# 6. Python packages for orchestration
 # =============================================================================
 # Pin setuptools<70 because pkg_resources was removed in setuptools 70+
-RUN pip install --no-cache-dir 'setuptools<70' wheel claude-agent-sdk pyyaml tenacity
+# Note: NOT installing claude-agent-sdk (using npm version instead per Q3)
+RUN pip install --no-cache-dir 'setuptools<70' wheel pyyaml tenacity
 
 # =============================================================================
 # 6b. Static Analysis Tools (Pre-installed for security)
@@ -109,10 +127,8 @@ RUN pip install --no-cache-dir 'setuptools<70' wheel claude-agent-sdk pyyaml ten
 # installed from verified sources during Docker build with pinned versions.
 
 # Semgrep - SAST tool for security analysis (all languages)
-# Note: Verify setuptools, then install semgrep
 RUN python -c "import pkg_resources; print('pkg_resources found')" && \
-    pip install --no-cache-dir semgrep==1.100.0 && \
-    python -c "import pkg_resources; print('pkg_resources still available after semgrep install')"
+    pip install --no-cache-dir semgrep==1.100.0
 
 # Snyk CLI - Dependency vulnerability scanner (all languages)
 RUN bash -c "source ${NVM_DIR}/nvm.sh && npm install -g snyk@1.1293.1"
@@ -145,7 +161,7 @@ RUN bash -c "source ${NVM_DIR}/nvm.sh && npm install -g \
     @typescript-eslint/parser@8.18.0 \
     @typescript-eslint/eslint-plugin@8.18.0"
 
-# Verify all tools are accessible (except .NET tools, which need to be installed per-user)
+# Verify all tools are accessible
 RUN semgrep --version \
  && bash -c "source ${NVM_DIR}/nvm.sh && snyk --version" \
  && trivy --version \
@@ -157,12 +173,43 @@ RUN semgrep --version \
  && bash -c "source ${NVM_DIR}/nvm.sh && eslint --version"
 
 # =============================================================================
-# 7. Source version managers in all bash sessions
+# 7. Anthropic DevContainer: User Setup & Permissions
 # =============================================================================
-# (Will be configured for claude user in step 10)
+ARG USERNAME=node
+
+# Ensure node user has access to shared directories
+RUN mkdir -p /usr/local/share/npm-global && \
+  chown -R node:node /usr/local/share
+
+# Persist bash history
+RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
+  && mkdir /commandhistory \
+  && touch /commandhistory/.bash_history \
+  && chown -R $USERNAME /commandhistory
+
+# Set DEVCONTAINER environment variable
+ENV DEVCONTAINER=true
+
+# Create workspace and config directories and set permissions
+RUN mkdir -p /workspace /home/node/.claude && \
+  chown -R node:node /workspace /home/node/.claude
+
+# Grant node user ownership of version managers and tools
+RUN chown -R node:node ${SDKMAN_DIR} ${NVM_DIR} ${PYENV_ROOT} ${DOTNET_ROOT}
+
+WORKDIR /workspace
 
 # =============================================================================
-# 8. Environment + git config
+# 8. Anthropic DevContainer: git-delta (enhanced diff viewer)
+# =============================================================================
+ARG GIT_DELTA_VERSION=0.18.2
+RUN ARCH=$(dpkg --print-architecture) && \
+  wget "https://github.com/dandavison/delta/releases/download/${GIT_DELTA_VERSION}/git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
+  dpkg -i "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
+  rm "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb"
+
+# =============================================================================
+# 9. Environment + git config
 # =============================================================================
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -172,32 +219,76 @@ RUN git config --global safe.directory '*' \
  && git config --global core.fileMode false
 
 # =============================================================================
-# 9. App files
+# 10. Switch to non-root user
 # =============================================================================
-RUN mkdir -p /app
-COPY entrypoint.sh /app/entrypoint.sh
-COPY run_skills.py /app/run_skills.py
-RUN chmod +x /app/entrypoint.sh
+USER node
 
 # =============================================================================
-# 10. Create non-root user (required for bypassPermissions mode)
+# 11. Anthropic DevContainer: Shell Configuration (zsh + powerline10k)
 # =============================================================================
-# Claude Agent SDK refuses to run --dangerously-skip-permissions as root
-RUN useradd -m -u 1000 -s /bin/bash claude \
- && mkdir -p /workdir \
- && chown -R claude:claude /workdir /app \
- && chown -R claude:claude ${SDKMAN_DIR} ${NVM_DIR} ${PYENV_ROOT} ${DOTNET_ROOT} \
- && echo 'source /opt/init-env.sh' >> /home/claude/.bashrc
+ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
+ENV PATH=$PATH:/usr/local/share/npm-global/bin
 
-USER claude
+# Set the default shell to zsh
+ENV SHELL=/bin/zsh
 
-# .NET global tools must be installed as the user that will run them
+# Set the default editor
+ENV EDITOR=nano
+ENV VISUAL=nano
+
+# Install zsh with powerline10k theme
+ARG ZSH_IN_DOCKER_VERSION=1.2.0
+RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/v${ZSH_IN_DOCKER_VERSION}/zsh-in-docker.sh)" -- \
+  -p git \
+  -p fzf \
+  -a "source /usr/share/doc/fzf/examples/key-bindings.zsh" \
+  -a "source /usr/share/doc/fzf/examples/completion.zsh" \
+  -a "export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
+  -a "source /opt/init-env.sh" \
+  -x
+
+# Also add init-env.sh to bashrc for bash compatibility
+RUN echo 'source /opt/init-env.sh' >> /home/node/.bashrc
+
+# =============================================================================
+# 12. Anthropic DevContainer: Install Claude Code (npm version)
+# =============================================================================
+RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
+
+# =============================================================================
+# 13. .NET global tools (must be installed as the user that will run them)
+# =============================================================================
 RUN dotnet tool install --global dotnet-outdated-tool --version 4.6.4 \
  && dotnet tool install --global security-scan --version 5.6.7
 
-# Add .NET tools to PATH for claude user
-ENV PATH="/home/claude/.dotnet/tools:${PATH}"
+# Add .NET tools to PATH for node user
+ENV PATH="/home/node/.dotnet/tools:${PATH}"
 
-WORKDIR /workdir
+# =============================================================================
+# 14. App files (simplified for devcontainer architecture)
+# =============================================================================
+USER root
+RUN mkdir -p /app
+COPY .devcontainer/devcontainer-entrypoint.sh /app/devcontainer-entrypoint.sh
+RUN chmod +x /app/devcontainer-entrypoint.sh && \
+  chown node:node /app/devcontainer-entrypoint.sh
 
-ENTRYPOINT ["/usr/bin/tini", "--", "/app/entrypoint.sh"]
+# =============================================================================
+# 15. Anthropic DevContainer: Firewall Setup
+# =============================================================================
+COPY .devcontainer/init-firewall.sh /usr/local/bin/init-firewall.sh
+RUN chmod +x /usr/local/bin/init-firewall.sh && \
+  echo "node ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/node-firewall && \
+  chmod 0440 /etc/sudoers.d/node-firewall
+
+# =============================================================================
+# 16. Final setup
+# =============================================================================
+USER node
+
+# DevContainer metadata labels
+LABEL dev.containers.image.vendor="ai-codebase-audit"
+LABEL dev.containers.image.version="1.0.0"
+LABEL dev.containers.metadata="{\"name\":\"AI Codebase Audit Runner\",\"description\":\"Multi-language code audit runner with Claude Agent SDK based on Anthropic's official devcontainer\"}"
+
+ENTRYPOINT ["/usr/bin/tini", "--", "/app/devcontainer-entrypoint.sh"]

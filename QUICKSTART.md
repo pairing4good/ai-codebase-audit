@@ -1,96 +1,120 @@
 # Quick Start
 
-Run AI-powered security audits in 3 steps. Get your API key: https://console.anthropic.com/settings/keys
+Run AI-powered codebase audits in 3 steps.
+
+**Prerequisites**: Python 3.11+ with pip installed
+- **Verify**: `python3 --version && pip3 --version`
+(see [README.md](README.md#Quick_Start))
 
 ---
 
-## Setup
-
-### 1. Create workspace and add projects
+## 1. Setup
 
 ```bash
-# Create workspace (separate from this repo)
-mkdir -p ~/code-audits && cd ~/code-audits
+# Clone and configure
+git clone https://github.com/your-org/ai-codebase-audit.git
+cd ai-codebase-audit
+pip install aiodocker pyyaml python-dotenv
+# or
+pip3 install aiodocker pyyaml python-dotenv
 
-# Copy config files from ai-codebase-audit repo
-cp /path/to/ai-codebase-audit/{config.yml,CLAUDE.md} .
-cp -r /path/to/ai-codebase-audit/.claude .
-
-# Copy your projects to the workspace
-cp -r /path/to/your/java-project ./my-java-app
-cp -r /path/to/your/react-app ./my-react-app
-```
-
-### 2. Configure
-
-**In the ai-codebase-audit repo** (NOT workspace), create `.env`:
-```bash
-cd /path/to/ai-codebase-audit
+# Set environment
 cp .env.example .env
+# Edit .env: add your ANTHROPIC_API_KEY and AUDIT_BASE_DIR path
 ```
 
-Edit `.env`:
+Get your API key: https://console.anthropic.com/settings/keys
+
+---
+
+## 2. Prepare Workspace
+
 ```bash
-AUDIT_BASE_DIR=/Users/you/code-audits  # Absolute path to workspace
-ANTHROPIC_API_KEY=sk-ant-api03-...
+# Create workspace and copy config
+mkdir -p ~/code-audits
+cp config.yml ~/code-audits/
+
+# Clone your repos to audit
+cd ~/code-audits
+git clone https://github.com/your-org/your-project
+
+# Configure which skills to run
+nano config.yml
 ```
 
-**In your workspace**, edit `config.yml`:
-```bash
-nano ~/code-audits/config.yml
-```
-
-Set targets:
+Edit `config.yml` to list your projects:
 ```yaml
 targets:
-  - dir: my-java-app        # Must match directory name
-    skills: [/audit-java]
-  - dir: my-react-app
-    skills: [/audit-javascript]
+  - dir: your-project
+    skills: [/audit-java]  # or /audit-javascript, /audit-python, /audit-dotnet
 ```
 
-### 3. Run
+---
 
-**From the ai-codebase-audit repo** (where `docker-compose.yml` lives):
+## 3. Run Analysis
+
 ```bash
-cd /path/to/ai-codebase-audit
-docker compose build
-docker compose run --rm skills
+cd ~/git/ai-codebase-audit
+python3 orchestrator_devcontainer.py
 ```
 
----
-
-## Results
-
-Outputs written to your **workspace** (`~/code-audits/`):
-- `logs/summary_<timestamp>.txt` - Pass/fail overview
-- `logs/result_<project>__<skill>_<timestamp>.txt` - Detailed findings
-- `<project>/.analysis/<language>/` - Full analysis artifacts
+**First run**: 10-15 minutes (builds Docker image)
+**Subsequent runs**: ~5 minutes (uses cached image)
 
 ---
 
-## What it does
+## View Results
 
-Each audit runs 4 independent agents analyzing:
-- Architecture & design patterns
-- Security vulnerabilities (OWASP Top 10, CWE/SANS 25)
-- Dependencies & supply chain risks
-- Code quality & maintainability
+```bash
+# Summary
+cat ~/code-audits/logs/summary_*.txt
 
-Then reconciles findings with static analysis tools (Semgrep, Snyk, etc.) and generates a final report.
-
----
-
-## Advanced
-
-Available skills: `/audit-java`, `/audit-javascript`, `/audit-python`, `/audit-dotnet`
-
-Config options (in workspace `config.yml`):
-```yaml
-runner:
-  model: claude-sonnet-4-6   # or claude-opus-4-6 (3x cost)
-  concurrency: 3             # parallel tasks
-  max_budget_usd: 10.0       # cost limit per task
+# Detailed reports
+ls ~/code-audits/your-project/.analysis/*/final-report/
 ```
 
-See [README.md](README.md) for cost estimates, troubleshooting, and security details.
+Results written to `~/code-audits/`:
+- `logs/summary_*.txt` - Pass/fail overview
+- `logs/summary_*.json` - Machine-readable results
+- `<project>/.analysis/<language>/final-report/` - Full analysis
+
+---
+
+## What It Does
+
+Each audit runs 6 automated stages:
+1. **Artifact Generation** - Maps codebase structure
+2. **Parallel Analysis** - 4 agents analyze architecture, security, dependencies, quality
+3. **Static Analysis** - Runs tools (Semgrep, Snyk, Trivy, etc.)
+4. **Reconciliation** - Synthesizes findings
+5. **Adversarial Review** - Eliminates false positives
+6. **Final Report** - Comprehensive markdown with remediation
+
+---
+
+## Available Skills
+
+- `/audit-java` - Java/Spring Boot/Maven/Gradle
+- `/audit-javascript` - JavaScript/TypeScript/React/Node.js
+- `/audit-python` - Python/Django/Flask
+- `/audit-dotnet` - C#/F#/ASP.NET Core
+
+---
+
+## Cost Estimation
+
+Typical costs per skill (claude-sonnet-4-6):
+- Small projects (<10K LOC): $0.50 - $2.00
+- Medium (10-50K LOC): $2.00 - $6.00
+- Large (50-150K LOC): $6.00 - $15.00
+
+Monitor costs using the Claude Console at https://console.anthropic.com
+
+---
+
+## Need Help?
+
+**Troubleshooting**: Set `debug.enabled: true` in config.yml for verbose logs (see [README.md](README.md#debugging))
+
+- **Configuration**: See [README.md](README.md#configuration)
+- **Architecture**: See [docs/DEVCONTAINER-ARCHITECTURE.md](docs/DEVCONTAINER-ARCHITECTURE.md)
