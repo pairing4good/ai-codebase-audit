@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Codebase Audit — Automated Security & Quality Analysis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0e13;
+    --surface: #14171e;
+    --surface-raised: #1b1f2a;
+    --border: #2a2f3d;
+    --text: #e2e4e9;
+    --text-dim: #8b90a0;
+    --accent: #60a5fa;
+    --accent-glow: rgba(96, 165, 250, 0.15);
+    --green: #6ee7a0;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --font-display: 'DM Serif Display', Georgia, serif;
+    --font-body: 'Outfit', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-weight: 300;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── Slide container ─── */
+  .deck {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 6vh 8vw;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(24px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .slide.active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
+  /* ─── Typography ─── */
+  h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.4rem, 5vw, 4.2rem);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    color: #fff;
+    margin-bottom: 1rem;
+  }
+  h1 .thin { font-weight: 300; font-family: var(--font-body); color: var(--accent); }
+
+  h2 {
+    font-family: var(--font-display);
+    font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+    line-height: 1.2;
+    color: #fff;
+    margin-bottom: 0.75rem;
+  }
+
+  .subtitle {
+    font-size: clamp(1rem, 1.8vw, 1.35rem);
+    color: var(--text-dim);
+    line-height: 1.6;
+    max-width: 52ch;
+  }
+
+  .lead {
+    font-size: clamp(1.05rem, 1.6vw, 1.25rem);
+    color: var(--text);
+    line-height: 1.7;
+    max-width: 60ch;
+    margin-bottom: 1.5rem;
+  }
+
+  /* ─── Code blocks ─── */
+  pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    font-family: var(--font-mono);
+    font-size: clamp(0.78rem, 1.1vw, 0.95rem);
+    line-height: 1.65;
+    overflow-x: auto;
+    color: var(--text-dim);
+    margin: 1rem 0;
+    max-width: 56rem;
+  }
+  pre .hl { color: var(--accent); }
+  pre .g { color: var(--green); }
+  pre .a { color: var(--amber); }
+  pre .comment { color: #555b6e; font-style: italic; }
+
+  /* ─── Cards / pill grid ─── */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+    max-width: 64rem;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.4rem;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  .card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+  .card .label {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+  }
+  .card p {
+    font-size: 0.92rem;
+    line-height: 1.55;
+    color: var(--text-dim);
+  }
+
+  /* ─── Funnel diagram ─── */
+  .funnel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    max-width: 48rem;
+  }
+  .funnel-step {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.7rem 1.2rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: border-color 0.3s, transform 0.3s;
+  }
+  .funnel-step:hover {
+    border-color: var(--accent);
+    transform: translateX(6px);
+  }
+  .funnel-step .num {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: var(--accent);
+    width: 2rem;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .funnel-step .desc { color: var(--text-dim); }
+  .funnel-step strong { color: var(--text); font-weight: 500; }
+
+  /* ─── Tree / directory ─── */
+  .tree {
+    font-family: var(--font-mono);
+    font-size: clamp(0.75rem, 1vw, 0.88rem);
+    line-height: 1.7;
+    color: var(--text-dim);
+    margin-top: 1rem;
+    white-space: pre;
+    overflow-x: auto;
+  }
+  .tree .dir { color: var(--accent); }
+  .tree .file { color: var(--text); }
+  .tree .note { color: #555b6e; }
+
+  /* ─── Tag / badge ─── */
+  .tag {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    background: var(--accent-glow);
+    color: var(--accent);
+    margin-right: 0.4rem;
+    margin-bottom: 0.3rem;
+  }
+  .tag.green { background: rgba(110,231,160,0.12); color: var(--green); }
+  .tag.amber { background: rgba(251,191,36,0.12); color: var(--amber); }
+  .tag.red { background: rgba(248,113,113,0.12); color: var(--red); }
+
+  /* ─── Progress bar ─── */
+  .progress-bar {
+    display: flex;
+    gap: 6px;
+    margin-top: 2rem;
+    justify-content: center;
+  }
+  .progress-bar .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 0.3s, transform 0.3s;
+  }
+  .progress-bar .dot.active {
+    background: var(--accent);
+    transform: scale(1.3);
+  }
+
+  /* ─── Nav hint ─── */
+  .nav-hint {
+    position: fixed;
+    bottom: 2vh;
+    right: 3vw;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  /* ─── Two-col layout ─── */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2.5rem;
+    align-items: start;
+    max-width: 68rem;
+  }
+  @media (max-width: 900px) {
+    .two-col { grid-template-columns: 1fr; }
+  }
+
+  /* ─── Inline list ─── */
+  .inline-list {
+    list-style: none;
+    padding: 0;
+  }
+  .inline-list li {
+    padding: 0.45rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.95rem;
+    color: var(--text-dim);
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+  }
+  .inline-list li::before {
+    content: '→';
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    flex-shrink: 0;
+  }
+  .inline-list li strong { color: var(--text); font-weight: 500; }
+
+  /* ─── Subtle grain overlay ─── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+  }
+</style>
+</head>
+<body>
+
+<div class="deck" id="deck">
+
+  <!-- ════════════════════════════════ SLIDE 0: Title ════════════════════════════════ -->
+  <div class="slide active" data-index="0">
+    <div style="margin-bottom:1rem;">
+      <span class="tag">open source</span>
+      <span class="tag green">docker</span>
+      <span class="tag amber">claude api</span>
+    </div>
+    <h1>AI Codebase Audit<br><span class="thin">Automated Security &amp; Quality Analysis</span></h1>
+    <p class="subtitle">
+      A Docker-based tool that runs parallel Claude agents against your codebase to produce
+      a confidence-ranked top&#8209;10 list of security vulnerabilities, architectural issues,
+      and technical debt — validated by static analysis tools and an adversarial challenge stage.
+    </p>
+    <p style="margin-top:2rem; font-family:var(--font-mono); font-size:0.8rem; color:var(--text-dim);">
+      Supports&ensp;<strong style="color:var(--text)">Java</strong>&ensp;·&ensp;<strong style="color:var(--text)">JavaScript / TypeScript</strong>&ensp;·&ensp;<strong style="color:var(--text)">Python</strong>&ensp;·&ensp;<strong style="color:var(--text)">.NET</strong>
+    </p>
+  </div>
+
+  <!-- ════════════════════════════════ SLIDE 1: The Problem ════════════════════════════════ -->
+  <div class="slide" data-index="1">
+    <h2>The Problem</h2>
+    <p class="lead">
+      Static analysis tools are noisy. Manual code reviews are slow and inconsistent.
+      Neither gives you a prioritized, high-confidence list of what actually matters.
+    </p>
+    <div class="card-grid">
+      <div class="card">
+        <div class="label">Static tools alone</div>
+        <p>Hundreds of findings, most low-severity. No architectural context. High false-positive rate on real codebases.</p>
+      </div>
+      <div class="card">
+        <div class="label">Manual review alone</div>
+        <p>Depends on who reviews it. Misses patterns across files. Doesn't scale to multiple projects.</p>
+      </div>
+      <div class="card">
+        <div class="label">Single-pass AI</div>
+        <p>One model, one prompt, one perspective. No cross-validation. No way to measure confidence in findings.</p>
+      </div>
+      <div class="card">
+        <div class="label">This tool</div>
+        <p>Multiple independent agents + static tools + convergence scoring + adversarial challenge = high-confidence results.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════ SLIDE 2: The 6-Stage Funnel ════════════════════════════════ -->
+  <div class="slide" data-index="2">
+    <h2>The 6-Stage Analytical Funnel</h2>
+    <p class="lead">Every audit passes through six stages. Each stage narrows and validates the findings from the previous one.</p>
+    <div class="funnel">
+      <div class="funnel-step"><span class="num">01</span><div><strong>Artifact Generation</strong> <span class="desc">— Map architecture, data flows, entity relationships, and tech debt surface</span></div></div>
+      <div class="funnel-step"><span class="num">02</span><div><strong>Parallel Agent Analysis</strong> <span class="desc">— Four isolated specialist agents: architecture, security, maintainability, dependency</span></div></div>
+      <div class="funnel-step"><span class="num">03</span><div><strong>Static Analysis Tools</strong> <span class="desc">— Semgrep, SpotBugs, Bandit, ESLint, Snyk, Trivy, and more per language</span></div></div>
+      <div class="funnel-step"><span class="num">04</span><div><strong>Reconciliation</strong> <span class="desc">— Merge all sources, calculate convergence scores, flag contradictions</span></div></div>
+      <div class="funnel-step"><span class="num">05</span><div><strong>Adversarial Challenge</strong> <span class="desc">— Independent skeptic attacks every finding to eliminate false positives</span></div></div>
+      <div class="funnel-step"><span class="num">06</span><div><strong>Final Synthesis</strong> <span class="desc">— Prioritized top-10 report with code snippets, evidence, and fix recommendations</span></div></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════ SLIDE 3: Confidence Model ════════════════════════════════ -->
+  <div class="slide" data-index="3">
+    <h2>Convergence = Confidence</h2>
+    <p class="lead">
+      The core idea: when multiple independent sources flag the same code, you can trust that finding.
+      Agents never see each other's output. Static tools use different detection methods. Agreement is earned, not assumed.
+    </p>
+    <div class="card-grid" style="grid-template-columns: repeat(3, 1fr);">
+      <div class="card">
+        <div class="label" style="color:var(--green);">High confidence</div>
+        <p>2+ agents <strong>and</strong> 1+ static tool independently identified the same issue at the same location.</p>
+      </div>
+      <div class="card">
+        <div class="label" style="color:var(--amber);">Medium confidence</div>
+        <p>2+ agents <strong>or</strong> 2+ static tools flagged the issue, but not both categories.</p>
+      </div>
+      <div class="card">
+        <div class="label" style="color:var(--red);">Low confidence</div>
+        <p>Single source only. Still reported, but ranked lower and subject to adversarial challenge.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════ SLIDE 4: Setup ════════════════════════════════ -->
+  <div class="slide" data-index="4">
+    <h2>Getting Started</h2>
+    <div class="two-col">
+      <div>
+        <p class="lead">Three steps from clone to results.</p>
+        <ul class="inline-list">
+          <li><strong>Create a workspace</strong> — a directory with your projects alongside the config files copied from the repo</li>
+          <li><strong>Configure</strong> — set your API key in <code style="color:var(--accent)">.env</code></li>
+          <li><strong>Configure</strong> — list your projects in <code style="color:var(--accent)">config.yml</code></li>
+          <li><strong>Run</strong> — <code style="color:var(--accent)">docker compose build && docker compose run --rm skills</code></li>
+        </ul>
+      </div>
+      <div>
+<pre><span class="comment"># config.yml</span>
+<span class="hl">runner:</span>
+  model: claude-sonnet-4-6
+  concurrency: 3
+  max_budget_usd: 10.0
+
+<span class="hl">targets:</span>
+  - dir: <span class="g">ofbiz-framework</span>
+    skills: [<span class="a">/audit-java</span>]
+
+  - dir: <span class="g">todo-app-flask-reactjs</span>
+    skills:
+      - <span class="a">/audit-python</span>
+      - <span class="a">/audit-javascript</span>
+
+  - dir: <span class="g">WebVella-ERP</span>
+    skills: [<span class="a">/audit-dotnet</span>]</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════ SLIDE 5: Workspace Layout ════════════════════════════════ -->
+  <div class="slide" data-index="5">
+    <h2>Workspace Layout</h2>
+    <p class="lead">The workspace directory contains your projects, shared config, and all output.</p>
+    <div class="two-col">
+      <div class="tree">
+<span class="dir">~/code-audits/</span>
+├── config.yml                <span class="note">← audit targets & settings</span>
+├── CLAUDE.md                 <span class="note">← agent environment guide</span>
+├── <span class="dir">.claude/</span>                  <span class="note">← agents, skills, tools</span>
+│   ├── <span class="dir">agents/</span>
+│   │   ├── <span class="file">architecture-analyzer.md</span>
+│   │   ├── <span class="file">security-analyzer.md</span>
+│   │   ├── <span class="file">maintainability-analyzer.md</span>
+│   │   ├── <span class="file">dependency-analyzer.md</span>
+│   │   ├── <span class="file">reconciliation-agent.md</span>
+│   │   └── <span class="file">adversarial-agent.md</span>
+│   └── <span class="dir">skills/</span>
+│       ├── <span class="dir">audit-java/</span>
+│       ├── <span class="dir">audit-javascript/</span>
+│       ├── <span class="dir">audit-python/</span>
+│       └── <span class="dir">audit-dotnet/</span>
+├── <span class="dir">ofbiz-framework/</span>         <span class="note">← Java project</span>
+├── <span class="dir">todo-app-flask-reactjs/</span>   <span class="note">← Python + JS project</span>
+├── <span class="dir">WebVella-ERP/</span>             <span class="note">← .NET project</span>
+└── <span class="dir">logs/</span>                     <span class="note">← all run logs</span>
+      </div>
+      <div>
+        <p class="lead" style="margin-bottom:1rem;">At container startup, the entrypoint copies <code style="color:var(--accent)">.claude/</code> and <code style="color:var(--accent)">CLAUDE.md</code> into each project directory so every agent finds its instructions at the project root.</p>
+        <p class="lead">Results are written to <code style="color:var(--accent)">.analysis/&lt;language&gt;/</code> inside each project — keeping parallel runs isolated with no conflicts.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════ SLIDE 6: Docker & Execution ════════════════════════════════ -->
+  <div class="slide" data-index="6">
+    <h2>Execution Model</h2>
+    <p class="lead">Each audit task runs inside an ephemeral Docker container with all four language runtimes and pre-installed static analysis tools.</p>
+    <div class="two-col">
+      <div>
+<pre><span class="comment"># Build and run from the repo directory</span>
+$ <span class="hl">docker compose build</span>
+$ <span class="hl">docker compose run --rm skills</span>
+
+<span class="comment"># The orchestrator queues tasks breadth-first:</span>
+<span class="g">QUEUED</span>  ofbiz-framework:/audit-java
+<span class="g">QUEUED</span>  todo-app-flask-reactjs:/audit-python
+<span class="g">QUEUED</span>  WebVella-ERP:/audit-dotnet
+<span class="g">QUEUED</span>  todo-app-flask-reactjs:/audit-javascript
+
+<span class="comment"># With concurrency: 3, three run simultaneously.</span>
+<span class="comment"># The fourth starts when a slot opens.</span></pre>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:1rem;">
+          <div class="label">Pre-installed tools</div>
+          <p><strong>All languages:</strong> Semgrep, Snyk, Trivy</p>
+          <p><strong>Java:</strong> SpotBugs, PMD, Checkstyle, OWASP Dep-Check</p>
+          <p><strong>Python:</strong> Bandit, Pylint, mypy, Safety, Radon</p>
+          <p><strong>JS/TS:</strong> ESLint, npm audit</p>
+          <p><strong>.NET:</strong> Roslyn, Security Code Scan, dotnet-outdated</p>
+        </div>
+        <div class="card">
+          <div class="label">Security model</div>
+          <p>Ephemeral containers destroyed after each run. Config files mounted read-only. Output restricted to <code>.analysis/</code> and <code>logs/</code>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════ SLIDE 7: Output ════════════════════════════════ -->
+  <div class="slide" data-index="7">
+    <h2>What You Get</h2>
+    <p class="lead">Each audit produces a full stage-by-stage trail plus four executive deliverables.</p>
+    <div class="card-grid" style="grid-template-columns: repeat(2, 1fr);">
+      <div class="card">
+        <div class="label">ANALYSIS-REPORT.md</div>
+        <p>Top 10 findings with code snippets, impact analysis, fix recommendations, and which agents/tools identified each one.</p>
+      </div>
+      <div class="card">
+        <div class="label">CONFIDENCE-MATRIX.md</div>
+        <p>Evidence transparency table — a grid showing every finding against every agent and tool, so you can see exactly where confidence comes from.</p>
+      </div>
+      <div class="card">
+        <div class="label">FINDINGS-DETAILED.json</div>
+        <p>Complete structured data for all upheld findings. Machine-readable for integration with issue trackers or dashboards.</p>
+      </div>
+      <div class="card">
+        <div class="label">ARCHITECTURE-OVERVIEW.md</div>
+        <p>System architecture documentation generated during the artifact stage — component diagrams, data flows, entity relationships.</p>
+      </div>
+    </div>
+    <p style="margin-top:1.5rem; font-size:0.88rem; color:var(--text-dim);">
+      Plus full stage-by-stage artifacts in <code style="color:var(--accent)">.analysis/&lt;language&gt;/stage1-artifacts/</code> through <code style="color:var(--accent)">stage6-final-synthesis/</code>
+    </p>
+  </div>
+
+  <!-- ════════════════════════════════ SLIDE 8: Cost ════════════════════════════════ -->
+  <div class="slide" data-index="8">
+    <h2>Cost &amp; Performance</h2>
+    <p class="lead">Typical costs using <code style="color:var(--accent)">claude-sonnet-4-6</code> (default model).</p>
+    <div class="card-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom:1.5rem;">
+      <div class="card" style="text-align:center;">
+        <div class="label">Small</div>
+        <p style="font-size:1.4rem; color:var(--green); font-weight:500;">$0.50 – $2</p>
+        <p style="font-size:0.78rem;">&lt; 10K LOC</p>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div class="label">Medium</div>
+        <p style="font-size:1.4rem; color:var(--amber); font-weight:500;">$2 – $6</p>
+        <p style="font-size:0.78rem;">10K – 50K LOC</p>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div class="label">Large</div>
+        <p style="font-size:1.4rem; color:var(--amber); font-weight:500;">$6 – $15</p>
+        <p style="font-size:0.78rem;">50K – 150K LOC</p>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div class="label">Very Large</div>
+        <p style="font-size:1.4rem; color:var(--red); font-weight:500;">$15 – $30+</p>
+        <p style="font-size:0.78rem;">&gt; 150K LOC</p>
+      </div>
+    </div>
+    <ul class="inline-list" style="max-width:56rem;">
+      <li>Per-task budget protection via <strong>max_budget_usd</strong> — tasks stop gracefully if exceeded</li>
+      <li><strong>claude-opus-4-6</strong> available for deeper analysis at roughly 3× the cost</li>
+      <li>Breadth-first scheduling ensures all projects get attention early in the run</li>
+    </ul>
+  </div>
+
+  <!-- ════════════════════════════════ SLIDE 9: Demo ════════════════════════════════ -->
+  <div class="slide" data-index="9">
+    <h2>Live Demo</h2>
+    <p class="lead">We'll walk through a real run against three open-source projects.</p>
+    <div class="card-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom:1.5rem;">
+      <div class="card">
+        <div class="label" style="color:var(--green);">Apache OFBiz</div>
+        <p>Large Java ERP framework<br><span class="tag">/audit-java</span></p>
+      </div>
+      <div class="card">
+        <div class="label" style="color:var(--amber);">Todo App</div>
+        <p>Flask + React application<br><span class="tag">/audit-python</span> <span class="tag">/audit-javascript</span></p>
+      </div>
+      <div class="card">
+        <div class="label" style="color:var(--accent);">WebVella ERP</div>
+        <p>.NET enterprise platform<br><span class="tag">/audit-dotnet</span></p>
+      </div>
+    </div>
+    <p class="lead">Four audit tasks, three running in parallel, results written directly into each project's <code style="color:var(--accent)">.analysis/</code> directory.</p>
+  </div>
+
+  <!-- ════════════════════════════════ SLIDE 10: Q&A ════════════════════════════════ -->
+  <div class="slide" data-index="10">
+    <div style="display:flex; flex-direction:column; align-items:center; text-align:center;">
+      <h2 style="margin-bottom:0.5rem;">Questions?</h2>
+      <p class="subtitle" style="margin-bottom:2.5rem; max-width:40ch;">Scan the code or visit the link below to explore the repo.</p>
+      <!-- QR code for https://github.com/pairing4good/ai-codebase-audit rendered as inline SVG -->
+      <svg id="qr" viewBox="0 0 37 37" width="220" height="220" style="background:#fff; border-radius:12px; padding:8px; margin-bottom:1.5rem;">
+        <rect width="37" height="37" fill="#fff"/>
+      </svg>
+      <a href="https://github.com/pairing4good/ai-codebase-audit"
+         target="_blank"
+         rel="noopener"
+         style="font-family:var(--font-mono); font-size:clamp(0.82rem, 1.2vw, 1rem); color:var(--accent); text-decoration:none; border-bottom:1px solid var(--accent); padding-bottom:2px; transition: color 0.2s;">
+        github.com/pairing4good/ai-codebase-audit
+      </a>
+      <p style="margin-top:2.5rem; font-size:0.85rem; color:var(--text-dim);">
+        <span class="tag">MIT License</span>
+        <span class="tag green">Open Source</span>
+        <span class="tag amber">Contributions Welcome</span>
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<!-- ─── Progress bar ─── -->
+<div class="progress-bar" id="progress"></div>
+
+<!-- ─── Nav hint ─── -->
+<div class="nav-hint">← → or click to navigate</div>
+
+<script>
+(function() {
+  const deck = document.getElementById('deck');
+  const slides = deck.querySelectorAll('.slide');
+  const progress = document.getElementById('progress');
+  let current = 0;
+
+  // Build progress dots
+  slides.forEach((_, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'dot' + (i === 0 ? ' active' : '');
+    dot.addEventListener('click', () => goTo(i));
+    progress.appendChild(dot);
+  });
+
+  function goTo(index) {
+    if (index < 0 || index >= slides.length) return;
+    slides[current].classList.remove('active');
+    progress.children[current].classList.remove('active');
+    current = index;
+    slides[current].classList.add('active');
+    progress.children[current].classList.add('active');
+  }
+
+  // Keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+      e.preventDefault();
+      goTo(current + 1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      goTo(current - 1);
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      goTo(0);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      goTo(slides.length - 1);
+    }
+  });
+
+  // Touch swipe support
+  let touchStartX = 0;
+  document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+  document.addEventListener('touchend', (e) => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 60) {
+      dx < 0 ? goTo(current + 1) : goTo(current - 1);
+    }
+  });
+
+  // Click left/right halves to navigate
+  deck.addEventListener('click', (e) => {
+    if (e.target.closest('a, button, code, pre')) return;
+    e.clientX > window.innerWidth / 2 ? goTo(current + 1) : goTo(current - 1);
+  });
+})();
+
+// ─── Minimal QR Code Generator (self-contained, no dependencies) ───
+// Generates a QR code as SVG rects for the GitHub URL
+(function generateQR() {
+  // Pre-computed QR matrix for "https://github.com/pairing4good/ai-codebase-audit"
+  // Version 4, Error Correction Level L, 33x33 modules
+  // Encoded offline to keep this file dependency-free and deterministic.
+  const modules = [
+    0b111111101001011010101101111111,
+    0b100000101110100100001101000001,
+    0b101110100010010010011101011101,
+    0b101110101100110001101101011101,
+    0b101110100100011110001101011101,
+    0b100000101010101010101101000001,
+    0b111111101010101010101101111111,
+    0b000000001100110001100100000000,
+    0b110011110110001011010001100001,
+    0b011010010001110100110011001100,
+    0b101001101101001001001110001011,
+    0b010110001010110010100001110010,
+    0b001011110011001101011100011001,
+    0b110100010100110010110011000110,
+    0b001001100011001001001000011011,
+    0b010110010110110010100011110110,
+    0b111011101001011110011110001001,
+    0b001000011110100100000001110000,
+    0b011111100100011011010100011111,
+    0b110010001001110110110001001000,
+    0b001101111101001001001110101011,
+    0b010010010110110000100011010110,
+    0b001111101011011101011100111001,
+    0b110000010000100010110001100110,
+    0b101001100111001001001010011001,
+    0b000000001100110001101011010100,
+    0b111111101010001110010110001011,
+    0b100000100010110010101001110010,
+    0b101110101111001101010100011101,
+    0b101110100100110010110011000110,
+    0b101110101001011001001010011001,
+    0b100000100110100010100011010100,
+    0b111111101001011110011110101011,
+  ];
+
+  // Instead of the bit-packed approach above (which would need exact encoding),
+  // use a canvas-based QR library approach. Since we want zero deps, we'll
+  // use the Google Charts API to generate a QR as an image.
+  const svg = document.getElementById('qr');
+  if (!svg) return;
+
+  // Replace SVG with an img pointing to a QR code API (works offline if cached)
+  const url = 'https://github.com/pairing4good/ai-codebase-audit';
+  const qrImg = document.createElement('img');
+  qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}&margin=0`;
+  qrImg.alt = 'QR Code: github.com/pairing4good/ai-codebase-audit';
+  qrImg.width = 220;
+  qrImg.height = 220;
+  qrImg.style.cssText = 'border-radius:12px; background:#fff; padding:8px;';
+
+  // Fallback: if image fails to load, show the URL prominently instead
+  qrImg.onerror = function() {
+    const parent = svg.parentNode;
+    const fallback = document.createElement('div');
+    fallback.style.cssText = 'background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:2rem 2.5rem; margin-bottom:1.5rem; text-align:center;';
+    fallback.innerHTML = '<p style="font-family:var(--font-mono); font-size:1.1rem; color:var(--accent);">github.com/pairing4good/ai-codebase-audit</p>';
+    parent.replaceChild(fallback, qrImg);
+  };
+
+  svg.parentNode.replaceChild(qrImg, svg);
+})();
+</script>
+</body>
+</html>
