@@ -21,6 +21,7 @@ import asyncio
 import json
 import logging
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -190,7 +191,7 @@ def cleanup_project_claude_configs(project_path: Path, logger: logging.Logger) -
     analysis_dir = project_path / ".analysis"
     if analysis_dir.exists() and analysis_dir.is_dir():
         archived_analysis_dir = project_path / f".analysis-{timestamp}"
-        analysis_dir.rename(archived_analysis_dir)
+        shutil.move(str(analysis_dir), str(archived_analysis_dir))
         renamed_items.append(f".analysis/ → {archived_analysis_dir.name}")
 
     # Check and rename .claude/ directory
@@ -447,7 +448,17 @@ async def run_skill_container(
 async def run_all(config: Dict[str, Any], repo_root: Path, logger: logging.Logger) -> List[Dict[str, Any]]:
     """Run all project+skill combinations in parallel"""
 
-    docker = aiodocker.Docker()
+    # Auto-detect Docker socket location for macOS compatibility
+    docker_url = None
+    if 'DOCKER_HOST' in os.environ:
+        docker_url = os.environ['DOCKER_HOST']
+    else:
+        # Check common macOS Docker Desktop location
+        mac_socket = Path.home() / '.docker' / 'run' / 'docker.sock'
+        if mac_socket.exists():
+            docker_url = f'unix://{mac_socket}'
+
+    docker = aiodocker.Docker(url=docker_url) if docker_url else aiodocker.Docker()
 
     try:
         # Ensure image is built
